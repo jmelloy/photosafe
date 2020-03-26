@@ -1,18 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder.AppleTV.Storyboard" version="3.0" toolsVersion="11542" systemVersion="16C39" targetRuntime="AppleTV" propertyAccessControl="none" useAutolayout="YES" colorMatched="YES" initialViewController="YyW-FY-ilL">
-    <device id="appleTV" orientation="landscape">
-        <adaptation id="light"/>
-    </device>
+<document type="com.apple.InterfaceBuilder.AppleTV.Storyboard" version="3.0" toolsVersion="15705" targetRuntime="AppleTV" propertyAccessControl="none" useAutolayout="YES" colorMatched="YES" initialViewController="YyW-FY-ilL">
+    <device id="appleTV" appearance="light"/>
     <dependencies>
-        <deployment identifier="tvOS"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="11524"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="15706"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
         <!--Asset Grid View Controller-->
         <scene sceneID="1js-rZ-uoo">
             <objects>
-                <collectionViewController id="uZN-iM-VWn" customClass="AssetGridViewController" customModule="SamplePhotosApp" customModuleProvider="target" sceneMemberID="viewController">
+                <collectionViewController id="uZN-iM-VWn" customClass="AssetGridViewController" customModule="PhotoBrowse" customModuleProvider="target" sceneMemberID="viewController">
                     <collectionView key="view" multipleTouchEnabled="YES" contentMode="scaleToFill" dataMode="prototypes" id="GPf-Pl-xo6">
                         <rect key="frame" x="0.0" y="0.0" width="1285" height="1080"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
@@ -23,7 +20,7 @@
                             <inset key="sectionInset" minX="30" minY="0.0" maxX="30" maxY="0.0"/>
                         </collectionViewFlowLayout>
                         <cells>
-                            <collectionViewCell opaque="NO" multipleTouchEnabled="YES" contentMode="center" reuseIdentifier="GridViewCell" id="P1W-st-1B8" customClass="GridViewCell" customModule="SamplePhotosApp" customModuleProvider="target">
+                            <collectionViewCell opaque="NO" multipleTouchEnabled="YES" contentMode="center" reuseIdentifier="GridViewCell" id="P1W-st-1B8" customClass="GridViewCell" customModule="PhotoBrowse" customModuleProvider="target">
                                 <rect key="frame" x="30" y="0.0" width="280" height="280"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                 <view key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center">
@@ -53,7 +50,7 @@
                                 <connections>
                                     <outlet property="imageView" destination="zju-ST-Rcb" id="o4N-oo-IbL"/>
                                     <outlet property="livePhotoBadgeImageView" destination="HJJ-W8-i4Z" id="HAI-iE-HYt"/>
-                                    <segue destination="bCd-wL-H8p" kind="show" identifier="showAsset" action="showDetailViewController:sender:" id="7FM-u3-Rfu"/>
+                                    <segue destination="bCd-wL-H8p" kind="show" identifier="showAsset" id="7FM-u3-Rfu"/>
                                 </connections>
                             </collectionViewCell>
                         </cells>
@@ -65,6 +62,8 @@
                     <navigationItem key="navigationItem" id="YYJ-cl-BUI"/>
                     <connections>
                         <outlet property="addButtonItem" destination="1oI-Z1-ujj" id="K51-8L-feH"/>
+                        <outlet property="collectionView" destination="GPf-Pl-xo6" id="tOx-VJ-4Zm"/>
+                        <outlet property="collectionViewFlowLayout" destination="SiP-rR-HIh" id="ReP-aT-V5P"/>
                     </connections>
                 </collectionViewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="JPu-Zl-zKS" userLabel="First Responder" sceneMemberID="firstResponder"/>
@@ -79,13 +78,13 @@
         <!--Asset View Controller-->
         <scene sceneID="az8-GC-4Sk">
             <objects>
-                <viewController id="bCd-wL-H8p" customClass="AssetViewController" customModule="SamplePhotosApp" customModuleProvider="target" sceneMemberID="viewController">
+                <viewController id="bCd-wL-H8p" customClass="AssetViewController" customModule="PhotoBrowse" customModuleProvider="target" sceneMemberID="viewController">
                     <layoutGuides>
                         <viewControllerLayoutGuide type="top" id="6ri-2e-T1u"/>
                         <viewControllerLayoutGuide type="bottom" id="AOS-Mc-JYH"/>
                     </layoutGuides>
                     <view key="view" contentMode="scaleToFill" id="Uk4-X8-vlf">
-                        <rect key="frame" x="0.0" y="0.0" width="1285" height="1080"/>
+                        <rect key="frame" x="0.0" y="0.0" width="1920" height="1080"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <progressView opaque="NO" contentMode="scaleToFill" verticalHuggingPriority="750" fixedFrame="YES" progress="0.5" translatesAutoresizingMaskIntoConstraints="NO" id="JJB-9e-QzR">
@@ -93,10 +92,10 @@
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                             </progressView>
                             <imageView userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="Sgg-Mw-sxc">
-                                <rect key="frame" x="0.0" y="145" width="1285" height="935"/>
+                                <rect key="frame" x="0.0" y="145" width="1920" height="935"/>
                             </imageView>
                             <view contentMode="scaleAspectFit" translatesAutoresizingMaskIntoConstraints="NO" id="BUX-Ue-KcN" customClass="PHLivePhotoView">
-                                <rect key="frame" x="0.0" y="145" width="1285" height="935"/>
+                                <rect key="frame" x="0.0" y="145" width="1920" height="935"/>
                                 <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
                             </view>
                         </subviews>
@@ -161,20 +160,20 @@
         <!--Photos-->
         <scene sceneID="he0-o0-ZkF">
             <objects>
-                <tableViewController clearsSelectionOnViewWillAppear="NO" id="rjh-Es-5bR" customClass="MasterViewController" customModule="SamplePhotosApp" customModuleProvider="target" sceneMemberID="viewController">
+                <tableViewController clearsSelectionOnViewWillAppear="NO" id="rjh-Es-5bR" customClass="MasterViewController" customModule="PhotoBrowse" customModuleProvider="target" sceneMemberID="viewController">
                     <tableView key="view" clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="plain" separatorStyle="default" rowHeight="66" sectionHeaderHeight="40" sectionFooterHeight="40" id="Ktr-pj-pIF">
                         <rect key="frame" x="0.0" y="0.0" width="634" height="1080"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <prototypes>
                             <tableViewCell contentMode="scaleToFill" selectionStyle="default" indentationWidth="10" reuseIdentifier="allPhotos" textLabel="IAQ-pK-Ek6" style="IBUITableViewCellStyleDefault" id="R4c-1u-qra">
-                                <rect key="frame" x="0.0" y="40" width="634" height="66"/>
+                                <rect key="frame" x="90" y="40" width="499" height="66"/>
                                 <autoresizingMask key="autoresizingMask"/>
                                 <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" tableViewCell="R4c-1u-qra" id="o1Q-8L-jQQ">
-                                    <rect key="frame" x="0.0" y="0.0" width="618" height="66"/>
+                                    <rect key="frame" x="0.0" y="0.0" width="499" height="66"/>
                                     <autoresizingMask key="autoresizingMask"/>
                                     <subviews>
                                         <label opaque="NO" multipleTouchEnabled="YES" contentMode="left" text="Title" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" id="IAQ-pK-Ek6">
-                                            <rect key="frame" x="20" y="0.0" width="578" height="66"/>
+                                            <rect key="frame" x="20" y="0.0" width="459" height="66"/>
                                             <autoresizingMask key="autoresizingMask"/>
                                             <fontDescription key="fontDescription" type="system" pointSize="38"/>
                                             <nil key="textColor"/>
@@ -187,14 +186,14 @@
                                 </connections>
                             </tableViewCell>
                             <tableViewCell contentMode="scaleToFill" selectionStyle="default" indentationWidth="10" reuseIdentifier="collection" textLabel="kS8-tq-WcS" style="IBUITableViewCellStyleDefault" id="NZP-NC-HmX">
-                                <rect key="frame" x="0.0" y="120" width="634" height="66"/>
+                                <rect key="frame" x="90" y="120" width="499" height="66"/>
                                 <autoresizingMask key="autoresizingMask"/>
                                 <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" tableViewCell="NZP-NC-HmX" id="bji-Q3-kOT">
-                                    <rect key="frame" x="0.0" y="0.0" width="618" height="66"/>
+                                    <rect key="frame" x="0.0" y="0.0" width="499" height="66"/>
                                     <autoresizingMask key="autoresizingMask"/>
                                     <subviews>
                                         <label opaque="NO" multipleTouchEnabled="YES" contentMode="left" text="Title" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" id="kS8-tq-WcS">
-                                            <rect key="frame" x="20" y="0.0" width="578" height="66"/>
+                                            <rect key="frame" x="20" y="0.0" width="459" height="66"/>
                                             <autoresizingMask key="autoresizingMask"/>
                                             <fontDescription key="fontDescription" type="system" pointSize="38"/>
                                             <nil key="textColor"/>
@@ -223,7 +222,7 @@
             <objects>
                 <navigationController id="5o7-R4-v7l" sceneMemberID="viewController">
                     <navigationBar key="navigationBar" contentMode="scaleToFill" id="eZn-FG-CfB">
-                        <rect key="frame" x="0.0" y="0.0" width="1920" height="145"/>
+                        <rect key="frame" x="0.0" y="60" width="634" height="145"/>
                         <autoresizingMask key="autoresizingMask"/>
                     </navigationBar>
                     <connections>
@@ -253,12 +252,12 @@
                 <navigationController automaticallyAdjustsScrollViewInsets="NO" id="AqZ-RF-JG4" sceneMemberID="viewController">
                     <toolbarItems/>
                     <navigationBar key="navigationBar" contentMode="scaleToFill" id="LoG-VL-lpn">
-                        <rect key="frame" x="0.0" y="0.0" width="1920" height="145"/>
+                        <rect key="frame" x="0.0" y="0.0" width="1285.5" height="145"/>
                         <autoresizingMask key="autoresizingMask"/>
                     </navigationBar>
                     <nil name="viewControllers"/>
                     <toolbar key="toolbar" opaque="NO" clearsContextBeforeDrawing="NO" contentMode="scaleToFill" id="96b-7U-gNF">
-                        <rect key="frame" x="0.0" y="1036" width="1285" height="44"/>
+                        <rect key="frame" x="-634.5" y="0.0" width="0.0" height="0.0"/>
                         <autoresizingMask key="autoresizingMask"/>
                     </toolbar>
                     <connections>
@@ -270,11 +269,6 @@
             <point key="canvasLocation" x="-2171" y="3562"/>
         </scene>
     </scenes>
-    <simulatedMetricsContainer key="defaultSimulatedMetrics">
-        <nil key="statusBar"/>
-        <simulatedOrientationMetrics key="orientation" orientation="landscapeRight"/>
-        <simulatedScreenMetrics key="destination"/>
-    </simulatedMetricsContainer>
     <inferredMetricsTieBreakers>
         <segue reference="uva-be-2hc"/>
     </inferredMetricsTieBreakers>

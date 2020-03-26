@@ -25,6 +25,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0A4565D6CD362A6B9B8A1288 /* SampleCode.xcconfig */ = {isa = PBXFileReference; name = SampleCode.xcconfig; path = Configuration/SampleCode.xcconfig; sourceTree = "<group>"; };
 		118FE1121CEF0525004F2F51 /* PhotoBrowse.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PhotoBrowse.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		118FE1151CEF0525004F2F51 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = AppDelegate.swift; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
 		118FE1171CEF0525004F2F51 /* MasterViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = MasterViewController.swift; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
@@ -40,8 +41,7 @@
 		119E70161CF3CC1700F01BF5 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		11E1BB9A1CF1371A0057E18F /* GridViewCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GridViewCell.swift; sourceTree = "<group>"; };
 		11E1BB9D1CF137450057E18F /* AssetViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = AssetViewController.swift; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
-		8BC6B2508BC6AFD000000001 /* SampleCode.xcconfig */ = {isa = PBXFileReference; name = SampleCode.xcconfig; path = Configuration/SampleCode.xcconfig; sourceTree = "<group>"; };
-		8BD69F308BD6A1A000000001 /* LICENSE.txt */ = {isa = PBXFileReference; includeInIndex = 1; path = LICENSE.txt; sourceTree = "<group>"; };
+		595AD1A071A236344A7705F6 /* LICENSE.txt */ = {isa = PBXFileReference; includeInIndex = 1; path = LICENSE.txt; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -70,8 +70,8 @@
 				118FE1141CEF0525004F2F51 /* iOS */,
 				118FE12E1CEF07DE004F2F51 /* tvOS */,
 				118FE1131CEF0525004F2F51 /* Products */,
-				8BC6FE008BC704B000000001 /* Configuration */,
-				8BD699E08BD6D29000000001 /* LICENSE */,
+				F2FC21B092134D81E4A005FE /* Configuration */,
+				6BDCEA721C0B3AADC4B429F4 /* LICENSE */,
 			);
 			sourceTree = "<group>";
 		};
@@ -117,21 +117,21 @@
 			path = Shared;
 			sourceTree = "<group>";
 		};
-		8BC6FE008BC704B000000001 /* Configuration */ = {
+		6BDCEA721C0B3AADC4B429F4 /* LICENSE */ = {
 			isa = PBXGroup;
 			children = (
-				8BC6B2508BC6AFD000000001 /* SampleCode.xcconfig */,
-			);
-			name = Configuration;
-			sourceTree = "<group>";
-		};
-		8BD699E08BD6D29000000001 /* LICENSE */ = {
-			isa = PBXGroup;
-			children = (
-				8BD69F308BD6A1A000000001 /* LICENSE.txt */,
+				595AD1A071A236344A7705F6 /* LICENSE.txt */,
 			);
 			name = LICENSE;
 			path = LICENSE;
+			sourceTree = "<group>";
+		};
+		F2FC21B092134D81E4A005FE /* Configuration */ = {
+			isa = PBXGroup;
+			children = (
+				0A4565D6CD362A6B9B8A1288 /* SampleCode.xcconfig */,
+			);
+			name = Configuration;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -144,7 +144,6 @@
 				118FE10E1CEF0525004F2F51 /* Sources */,
 				118FE10F1CEF0525004F2F51 /* Frameworks */,
 				118FE1101CEF0525004F2F51 /* Resources */,
-				76B1C173212D632F0025EEF3,
 			);
 			buildRules = (
 			);
@@ -162,7 +161,6 @@
 				118FE1291CEF07DE004F2F51 /* Sources */,
 				118FE12A1CEF07DE004F2F51 /* Frameworks */,
 				118FE12B1CEF07DE004F2F51 /* Resources */,
-				76B1C174212D633C0025EEF3,
 			);
 			buildRules = (
 			);
@@ -185,18 +183,19 @@
 				TargetAttributes = {
 					118FE1111CEF0525004F2F51 = {
 						CreatedOnToolsVersion = 8.0;
-						LastSwiftMigration = 1000;
+						LastSwiftMigration = 1140;
 						ProvisioningStyle = Automatic;
 					};
 					118FE12C1CEF07DE004F2F51 = {
 						CreatedOnToolsVersion = 8.0;
+						LastSwiftMigration = 1140;
 						ProvisioningStyle = Automatic;
 					};
 				};
 			};
 			buildConfigurationList = 118FE10D1CEF0525004F2F51 /* Build configuration list for PBXProject "PhotoBrowse" */;
 			compatibilityVersion = "Xcode 3.2";
-			developmentRegion = English;
+			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
@@ -292,7 +291,7 @@
 /* Begin XCBuildConfiguration section */
 		118FE1241CEF0525004F2F51 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 8BC6B2508BC6AFD000000001 /* SampleCode.xcconfig */;
+			baseConfigurationReference = 0A4565D6CD362A6B9B8A1288 /* SampleCode.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -352,7 +351,7 @@
 		};
 		118FE1251CEF0525004F2F51 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 8BC6B2508BC6AFD000000001 /* SampleCode.xcconfig */;
+			baseConfigurationReference = 0A4565D6CD362A6B9B8A1288 /* SampleCode.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -405,7 +404,7 @@
 		};
 		118FE1271CEF0525004F2F51 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 8BC6B2508BC6AFD000000001 /* SampleCode.xcconfig */;
+			baseConfigurationReference = 0A4565D6CD362A6B9B8A1288 /* SampleCode.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				DEVELOPMENT_TEAM = "";
@@ -414,13 +413,13 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.example.apple-samplecode.PhotoBrowse${SAMPLE_CODE_DISAMBIGUATOR}";
 				PRODUCT_NAME = PhotoBrowse;
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
 		};
 		118FE1281CEF0525004F2F51 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 8BC6B2508BC6AFD000000001 /* SampleCode.xcconfig */;
+			baseConfigurationReference = 0A4565D6CD362A6B9B8A1288 /* SampleCode.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				DEVELOPMENT_TEAM = "";
@@ -429,13 +428,13 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.example.apple-samplecode.PhotoBrowse${SAMPLE_CODE_DISAMBIGUATOR}";
 				PRODUCT_NAME = PhotoBrowse;
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
 		};
 		118FE13A1CEF07DE004F2F51 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 8BC6B2508BC6AFD000000001 /* SampleCode.xcconfig */;
+			baseConfigurationReference = 0A4565D6CD362A6B9B8A1288 /* SampleCode.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
@@ -446,13 +445,14 @@
 				PRODUCT_NAME = PhotoBrowse;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = appletvos;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 3;
 			};
 			name = Debug;
 		};
 		118FE13B1CEF07DE004F2F51 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 8BC6B2508BC6AFD000000001 /* SampleCode.xcconfig */;
+			baseConfigurationReference = 0A4565D6CD362A6B9B8A1288 /* SampleCode.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
@@ -463,6 +463,7 @@
 				PRODUCT_NAME = PhotoBrowse;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = appletvos;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 3;
 			};
 			name = Release;

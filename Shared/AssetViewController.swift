@@ -193,12 +193,12 @@ class AssetViewController: UIViewController {
             // Remove the asset from the selected album.
             PHPhotoLibrary.shared().performChanges({
                 let request = PHAssetCollectionChangeRequest(for: self.assetCollection)!
-                request.removeAssets([self.asset] as NSArray)
+                request.removeAssets([self.asset as Any] as NSArray)
             }, completionHandler: completion)
         } else {
             // Delete the asset from the photo library.
             PHPhotoLibrary.shared().performChanges({
-                PHAssetChangeRequest.deleteAssets([self.asset] as NSArray)
+                PHAssetChangeRequest.deleteAssets([self.asset as Any] as NSArray)
             }, completionHandler: completion)
         }
     }
@@ -413,7 +413,7 @@ class AssetViewController: UIViewController {
             applyingCIFiltersWithHandler: { request in
                 let filtered = request.sourceImage.applyingFilter(filterName, parameters: [:])
                 request.finish(with: filtered, context: nil)
-        })
+            })
         
         // Export the video composition to the output URL.
         guard let export = AVAssetExportSession(asset: avAsset, presetName: AVAssetExportPresetHighestQuality)
