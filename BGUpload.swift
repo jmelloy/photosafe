@@ -65,27 +65,20 @@ class BGUpload: NSObject, PHPhotoLibraryChangeObserver {
             
             var request = URLRequest(url: url)
             request.httpMethod = "POST"
+
+            let boundary = UUID().uuidString
             
+            request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
             var uploadTask: URLSessionUploadTask?
             
-            if let data:Data = photo.pngData() {
-                request.addValue("image/png", forHTTPHeaderField: "Content-Type")
-
-                uploadTask = session.uploadTask(with: request, from: data, completionHandler: {
-                    data, response, error in
-                        print(data)
-                        print(response)
-                        print(error)
-                })
-            } else if let data:Data = photo.jpegData(compressionQuality: 1.0) {
+            if let data:Data = photo.jpegData(compressionQuality: 1.0) {
                 print(data)
                 request.addValue("image/jpeg", forHTTPHeaderField: "Content-Type")
 
                 uploadTask = session.uploadTask(with: request, from: data, completionHandler: {
                     data, response, error in
-                        print(data)
-                        print(response)
-                        print(error)
+                        print("Response \(response) - \(error)")
                 })
 
             }
