@@ -45,6 +45,10 @@ class AssetGridViewController: UICollectionViewController {
             allPhotosOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
             fetchResult = PHAsset.fetchAssets(with: allPhotosOptions)
         }
+        
+        let task = BGUpload()
+        task.handlePhotoSync()
+
     }
     
     deinit {
