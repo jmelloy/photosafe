@@ -11,7 +11,7 @@ SECRET_KEY = env(
     default="FIcsXJ8lAWQZEGD1vGZyGWapB8w8q3SzfnqzCP7VmHdB8RzMVbwC0AlRV9yfOtRP",
 )
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
-ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1"]
+ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1", "Universe-Macbook-Pro.local"]
 
 # CACHES
 # ------------------------------------------------------------------------------
