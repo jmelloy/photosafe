@@ -1,0 +1,6 @@
+[submodule "Alamofire"]
+	path = Alamofire
+	url = https://github.com/Alamofire/Alamofire.git
+[submodule "SQLite.swift"]
+	path = SQLite.swift
+	url = https://github.com/stephencelis/SQLite.swift.git

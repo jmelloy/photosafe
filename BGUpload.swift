@@ -11,6 +11,7 @@ import Photos
 import BackgroundTasks
 import SQLite3
 import UIKit
+import Alamofire
 
 class BGUpload: NSObject, PHPhotoLibraryChangeObserver {
     var fetchResult: PHFetchResult<PHAsset>!
@@ -37,8 +38,12 @@ class BGUpload: NSObject, PHPhotoLibraryChangeObserver {
 
         for index in 0..<fetchResult.count {
             let asset = fetchResult.object(at: index)
+            
             print(asset)
             let options = PHImageRequestOptions()
+            options.version = .original
+            options.deliveryMode = .highQualityFormat
+            options.isNetworkAccessAllowed = true
             
             imageManager.requestImage(for: asset,
                                       targetSize: PHImageManagerMaximumSize,
@@ -48,24 +53,25 @@ class BGUpload: NSObject, PHPhotoLibraryChangeObserver {
                                                image, info in
                                                 print(image)
                                                 print(info)
-                                        if let new_image = image {
-                                            self.uploadPhoto(photo: new_image)
-                                        }
-                                                
+                                        
+                                                if let new_image = image {
+                                                    self.uploadPhoto(photo: new_image)
+                                                }
                                       })
         }
         
     }
     
     func uploadPhoto(photo: UIImage) {
+        
         let server = "http://localhost:8080"
         let session = URLSession(configuration: .default)
         
-        if let url = URL(string: server) {
+        if let url = URL.init(string: server) {
+            
             
             var request = URLRequest(url: url)
-            request.httpMethod = "POST"
-
+            
             let boundary = UUID().uuidString
             
             request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
