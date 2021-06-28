@@ -1,11 +1,13 @@
 import osxphotos
 
 import concurrent.futures
-from tools import *
+import boto3
+import botocore.exceptions
 import requests
 import json
 from collections import defaultdict
 import os
+from tools import DateTimeEncoder
 
 photos_db = osxphotos.PhotosDB()
 base_path = photos_db.library_path
@@ -17,6 +19,7 @@ base_url = os.environ.get("BASE_URL", "http://localhost:3000")
 
 r = requests.post(f"{base_url}/auth-token/", json={"username": "jmelloy", "password": "invasion"})
 token = r.json()['token']
+
 
 def build_album_list():
     album_keys = ['uuid', 'creation_date', 'end_date', 'folder_list', 'folder_names', 'start_date', 'title', ]
@@ -39,7 +42,10 @@ def build_album_list():
 
     return albums
 
+
 blocks = defaultdict(list)
+
+
 def populate_blocks():
     global blocks
     if not blocks:
@@ -59,16 +65,18 @@ def determine_blocks(year, month=None, day=None):
                     ret.extend(blocks[b])
     return ret
 
+
 def count_blocks(level='year'):
     if not blocks:
         populate_blocks()
 
     counter = defaultdict(int)
-    for b,v in blocks.items():
+    for b, v in blocks.items():
         counter[(str(b.year),
-                 b.strftime('%m') if level in('month', 'day') else '01',
+                 b.strftime('%m') if level in ('month', 'day') else '01',
                  b.strftime('%d') if level in ('day') else '01')] += len(v)
-    return sorted([["-".join(k), v] for k,v in counter.items()])
+    return sorted([["-".join(k), v] for k, v in counter.items()])
+
 
 def sync_photo(photo):
     p = photo.asdict()
@@ -91,25 +99,47 @@ def sync_photo(photo):
     if r.status_code == 400:
         print(r.json(), p)
 
-    if photo.path:
-        if r.status_code in (200, 201) and r.json()['s3_key_path'] is None:
-            key = f"originals/{p['uuid'][0:1]}/{p['uuid']}"
+    if r.status_code not in (200, 201):
+        return
 
-            try:
-                s3.copy_object(Bucket=bucket, CopySource=f"jmelloy-photo-backup/{p['path']}",
-                                    Key=key)
-                s3.delete_object(Bucket=bucket, key=p['path'])
-            except botocore.exceptions.ClientError as e:
-                if "NoSuchKey" in str(e):
-                    print(f"Uploading {photo.path} to {key}")
-                    s3.upload_file(photo.path, bucket, key)
-                else:
-                    raise
-            r = requests.patch(f'{base_url}/api/photos/{p["uuid"]}/',
-                                 {'s3_key_path': key},
-                                 headers={"Authorization": f"Token {token}"})
-            r.raise_for_status()
-            return key
+    if photo.path and r.json()['s3_key_path'] is None:
+        key = f"originals/{p['uuid'][0:1]}/{p['uuid']}"
+
+        try:
+            s3.copy_object(Bucket=bucket, CopySource=f"jmelloy-photo-backup/{p['path']}",
+                           Key=key)
+            s3.delete_object(Bucket=bucket, key=p['path'])
+        except botocore.exceptions.ClientError as e:
+            if "NoSuchKey" in str(e):
+                print(f"Uploading {photo.path} to {key}")
+                s3.upload_file(photo.path, bucket, key)
+            else:
+                raise
+        r = requests.patch(f'{base_url}/api/photos/{p["uuid"]}/',
+                           {'s3_key_path': key},
+                           headers={"Authorization": f"Token {token}"})
+        r.raise_for_status()
+
+    if photo.path_edited and r.json()['s3_edited_path'] is None:
+        key = f"edited/{p['uuid'][0:1]}/{p['uuid']}"
+        s3.upload_file(photo.path_edited, bucket, key)
+
+        r = requests.patch(f'{base_url}/api/photos/{p["uuid"]}/',
+                           {'s3_edited_path': key},
+                           headers={"Authorization": f"Token {token}"})
+        r.raise_for_status()
+
+    if photo.path_derivatives and r.json()['s3_thumbnail_path'] is None:
+        key = f"thumbnail/{p['uuid'][0:1]}/{p['uuid']}"
+        s3.upload_file(photo.path_derivatives[-1], bucket, key)
+
+        r = requests.patch(f'{base_url}/api/photos/{p["uuid"]}/',
+                           {'s3_thumbnail_path': key},
+                           headers={"Authorization": f"Token {token}"})
+        r.raise_for_status()
+
+    return key
+
 
 def upload_albums():
     for album_info in photos_db.album_info:
@@ -120,8 +150,8 @@ def upload_albums():
             "end_date": album_info.end_date,
             "start_date": album_info.start_date,
         }
-        album['photos'] =  list(map(lambda photo: photo._info['cloudAssetGUID'] or photo.uuid,
-                               album_info.photos,))
+        album['photos'] = list(map(lambda photo: photo._info['cloudAssetGUID'] or photo.uuid,
+                                   album_info.photos,))
 
         r = requests.put(f"{base_url}/api/albums/{album_info.uuid}/", data=json.dumps(album, cls=DateTimeEncoder),
                          headers={'Content-Type': 'application/json', "Authorization": f"Token {token}"})
@@ -133,6 +163,7 @@ def upload_albums():
         if r.status_code >= 400:
             print(r.json(), album)
             r.raise_for_status()
+
 
 if __name__ == "__main__":
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
