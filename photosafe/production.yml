@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 
 volumes:
   production_postgres_data: {}
@@ -30,37 +30,37 @@ services:
     env_file:
       - ./.envs/.production/.postgres
 
-  traefik:
-    build:
-      context: .
-      dockerfile: ./compose/production/traefik/Dockerfile
-    image: photosafe_production_traefik
-    depends_on:
-      - django
-    volumes:
-      - production_traefik:/etc/traefik/acme:z
-    ports:
-      - "0.0.0.0:80:80"
-      - "0.0.0.0:443:443"
-      - "0.0.0.0:5555:5555"
+  # traefik:
+  #   build:
+  #     context: .
+  #     dockerfile: ./compose/production/traefik/Dockerfile
+  #   image: photosafe_production_traefik
+  #   depends_on:
+  #     - django
+  #   volumes:
+  #     - production_traefik:/etc/traefik/acme:z
+  #   ports:
+  #     - "0.0.0.0:80:80"
+  #     - "0.0.0.0:443:443"
+  #     - "0.0.0.0:5555:5555"
 
   redis:
     image: redis:5.0
 
-  celeryworker:
-    <<: *django
-    image: photosafe_production_celeryworker
-    command: /start-celeryworker
+  # celeryworker:
+  #   <<: *django
+  #   image: photosafe_production_celeryworker
+  #   command: /start-celeryworker
 
-  celerybeat:
-    <<: *django
-    image: photosafe_production_celerybeat
-    command: /start-celerybeat
+  # celerybeat:
+  #   <<: *django
+  #   image: photosafe_production_celerybeat
+  #   command: /start-celerybeat
 
-  flower:
-    <<: *django
-    image: photosafe_production_flower
-    command: /start-flower
+  # flower:
+  #   <<: *django
+  #   image: photosafe_production_flower
+  #   command: /start-flower
 
   awscli:
     build:

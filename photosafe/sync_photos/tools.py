@@ -19,9 +19,9 @@ def calc_etag(data, partsize=8388608):
         return f'"{md5(data).hexdigest()}"'
     md5_digests = []
     for i in range(0, len(data), partsize):
-        chunk = data[i:i + partsize]
+        chunk = data[i : i + partsize]
         md5_digests.append(md5(chunk).digest())
-    return md5(b''.join(md5_digests)).hexdigest() + '-' + str(len(md5_digests))
+    return md5(b"".join(md5_digests)).hexdigest() + "-" + str(len(md5_digests))
 
 
 def list_bucket(bucket, prefix=""):
@@ -40,6 +40,7 @@ def list_bucket(bucket, prefix=""):
             total += len(rs.get("Contents", []))
     print("%d rows returned for s3://%s/%s" % (total, bucket, prefix))
 
+
 def sum_bucket(bucket, print_every=1000):
     d = {}
     for i, (key, size, etag) in enumerate(list_bucket(bucket)):
@@ -57,7 +58,8 @@ def sum_bucket(bucket, print_every=1000):
 
     return d
 
-def head(key, bucket='jmelloy-photo-backup'):
+
+def head(key, bucket="jmelloy-photo-backup"):
     try:
         return s3.head_object(Key=key, Bucket=bucket)
     except botocore.exceptions.ClientError as ce:
