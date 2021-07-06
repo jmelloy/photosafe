@@ -6,7 +6,7 @@ from django.contrib.postgres.fields import ArrayField
 
 class Photo(models.Model):
     uuid = models.UUIDField(primary_key=True)
-    masterFingerprint = models.TextField(unique=True)
+    masterFingerprint = models.TextField()
 
     filename = models.TextField()
     original_filename = models.TextField()

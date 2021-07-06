@@ -134,7 +134,7 @@ def sync_photo(photo):
             },
         )
 
-    #if r.status_code == 400:
+    # if r.status_code == 400:
     #    print(r.json(), p)
 
     if r.status_code not in (200, 201):
@@ -146,7 +146,7 @@ def sync_photo(photo):
         base, ext = os.path.splitext(photo.path)
         key = f"{username}/originals/{p['uuid'][0:1]}/{p['uuid']}{ext}"
         try:
-            source_key=p['path'].strip("/")
+            source_key = p["path"].strip("/")
             s3.copy_object(
                 Bucket=bucket,
                 CopySource=f"jmelloy-photo-backup/{source_key}",
@@ -168,12 +168,27 @@ def sync_photo(photo):
         r.raise_for_status()
 
     if photo.path_edited and r.json()["s3_edited_path"] is None:
+        base, ext = os.path.splitext(photo.path_edited)
+
         key = f"{username}/edited/{p['uuid'][0:1]}/{p['uuid']}{ext}"
         s3.upload_file(photo.path_edited, bucket, key)
 
         r = requests.patch(
             f'{base_url}/api/photos/{p["uuid"]}/',
             {"s3_edited_path": key},
+            headers={"Authorization": f"Token {token}"},
+        )
+        r.raise_for_status()
+
+    if photo.path_derivatives and r.json()["s3_thumbnail_path"] is None:
+        base, ext = os.path.splitext(photo.path_derivatives[-1])
+
+        key = f"thumbnail/{p['uuid'][0:1]}/{p['uuid']}{ext}"
+        s3.upload_file(photo.path_derivatives[-1], bucket, key)
+
+        r = requests.patch(
+            f'{base_url}/api/photos/{p["uuid"]}/',
+            {"s3_thumbnail_path": key},
             headers={"Authorization": f"Token {token}"},
         )
         r.raise_for_status()
