@@ -134,23 +134,27 @@ def sync_photo(photo):
             },
         )
 
-    if r.status_code == 400:
-        print(r.json(), p)
+    #if r.status_code == 400:
+    #    print(r.json(), p)
 
     if r.status_code not in (200, 201):
         return
 
-    if photo.path and r.json()["s3_key_path"] is None:
-        key = f"{username}/originals/{p['uuid'][0:1]}/{p['uuid']}"
+    key = None
 
+    if photo.path and r.json()["s3_key_path"] is None:
+        base, ext = os.path.splitext(photo.path)
+        key = f"{username}/originals/{p['uuid'][0:1]}/{p['uuid']}{ext}"
         try:
+            source_key=p['path'].strip("/")
             s3.copy_object(
                 Bucket=bucket,
-                CopySource=f"jmelloy-photo-backup/{username}/{p['path']}",
+                CopySource=f"jmelloy-photo-backup/{source_key}",
                 Key=key,
             )
-            s3.delete_object(Bucket=bucket, key=p["path"])
+            # s3.delete_object(Bucket=bucket, key=source_key)
         except botocore.exceptions.ClientError as e:
+            print(e)
             if "NoSuchKey" in str(e):
                 print(f"Uploading {photo.path} to {key}")
                 s3.upload_file(photo.path, bucket, key)
@@ -164,7 +168,7 @@ def sync_photo(photo):
         r.raise_for_status()
 
     if photo.path_edited and r.json()["s3_edited_path"] is None:
-        key = f"{username}/edited/{p['uuid'][0:1]}/{p['uuid']}"
+        key = f"{username}/edited/{p['uuid'][0:1]}/{p['uuid']}{ext}"
         s3.upload_file(photo.path_edited, bucket, key)
 
         r = requests.patch(
@@ -214,7 +218,7 @@ def upload_albums():
 
         if r.status_code >= 400:
             print(r.json(), album)
-            r.raise_for_status()
+            # r.raise_for_status()
 
 
 if __name__ == "__main__":
