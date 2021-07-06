@@ -1,12 +1,13 @@
 from .base import *  # noqa
 from .base import env
+DEBUG=True
 
 # GENERAL
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#secret-key
 SECRET_KEY = env("DJANGO_SECRET_KEY")
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
-ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["photosafe.melloy.life"])
+ALLOWED_HOSTS = ["photosafe.melloy.life"] + env.list("DJANGO_ALLOWED_HOSTS", default=["photosafe.melloy.life"])
 
 # DATABASES
 # ------------------------------------------------------------------------------
@@ -74,6 +75,7 @@ AWS_S3_OBJECT_PARAMETERS = {
 }
 # https://django-storages.readthedocs.io/en/latest/backends/amazon-S3.html#settings
 AWS_S3_REGION_NAME = env("DJANGO_AWS_S3_REGION_NAME", default=None)
+
 # https://django-storages.readthedocs.io/en/latest/backends/amazon-S3.html#cloudfront
 AWS_S3_CUSTOM_DOMAIN = env("DJANGO_AWS_S3_CUSTOM_DOMAIN", default=None)
 aws_s3_domain = AWS_S3_CUSTOM_DOMAIN or f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
@@ -104,7 +106,7 @@ TEMPLATES[-1]["OPTIONS"]["loaders"] = [  # type: ignore[index] # noqa F405
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#default-from-email
 DEFAULT_FROM_EMAIL = env(
-    "DJANGO_DEFAULT_FROM_EMAIL", default="PhotoSafe <noreply@photosafe.melloy.life>"
+    "DJANGO_DEFAULT_FROM_EMAIL", default="PhotoSafe <noreply@melloy.life>"
 )
 # https://docs.djangoproject.com/en/dev/ref/settings/#server-email
 SERVER_EMAIL = env("DJANGO_SERVER_EMAIL", default=DEFAULT_FROM_EMAIL)
@@ -127,7 +129,20 @@ INSTALLED_APPS += ["anymail"]  # noqa F405
 # https://anymail.readthedocs.io/en/stable/installation/#anymail-settings-reference
 # https://anymail.readthedocs.io/en/stable/esps/amazon_ses/
 EMAIL_BACKEND = "anymail.backends.amazon_ses.EmailBackend"
-ANYMAIL = {}
+
+ANYMAIL = {
+            "AMAZON_SES_CLIENT_PARAMS": {
+        # example: override normal Boto credentials specifically for Anymail
+        "aws_access_key_id": env("DJANGO_AWS_ACCESS_KEY_ID"),
+        "aws_secret_access_key": env("DJANGO_AWS_SECRET_ACCESS_KEY"),
+        "region_name": env("DJANGO_AWS_S3_REGION_NAME", default="us-west-2"),
+        # override other default options
+        "config": {
+            "connect_timeout": 30,
+            "read_timeout": 30,
+        }
+    },
+        }
 
 # Collectfast
 # ------------------------------------------------------------------------------

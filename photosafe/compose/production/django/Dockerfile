@@ -11,7 +11,7 @@ RUN npm run build
 ARG PYTHON_VERSION=3.9-slim-buster
 
 # define an alias for the specfic python version used in this file.
-FROM python:${PYTHON_VERSION} as python
+FROM python:3.9-slim-buster  as python
 
 # Python build stage
 FROM python as python-build-stage
