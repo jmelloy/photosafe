@@ -1,12 +1,12 @@
-import osxphotos
-
 import concurrent.futures
+import json
+import os
+from collections import defaultdict
+
 import boto3
 import botocore.exceptions
+import osxphotos
 import requests
-import json
-from collections import defaultdict
-import os
 from tools import DateTimeEncoder
 
 photos_db = osxphotos.PhotosDB()
@@ -212,6 +212,9 @@ def upload_albums():
             )
         )
 
+        if not album["photos"]:
+            continue
+
         r = requests.put(
             f"{base_url}/api/albums/{album_info.uuid}/",
             data=json.dumps(album, cls=DateTimeEncoder),
@@ -233,7 +236,7 @@ def upload_albums():
 
         if r.status_code >= 400:
             print(r.json(), album)
-            # r.raise_for_status()
+        # r.raise_for_status()
 
 
 if __name__ == "__main__":
