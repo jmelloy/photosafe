@@ -1,5 +1,6 @@
-from django.db import models
+from django.contrib.auth import get_user_model
 from django.contrib.postgres.fields import ArrayField
+from django.db import models
 
 # Create your models here.
 
@@ -70,6 +71,8 @@ class Photo(models.Model):
     s3_key_path = models.TextField(null=True, blank=True)
     s3_thumbnail_path = models.TextField(null=True, blank=True)
     s3_edited_path = models.TextField(null=True, blank=True)
+
+    owner = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
 
 
 class Album(models.Model):

@@ -28,6 +28,8 @@ services:
       dockerfile: ./compose/production/postgres/Dockerfile
     image: photosafe_production_postgres
     container_name: postgres
+    ports:
+      - 5432
     volumes:
       - local_postgres_data:/var/lib/postgresql/data:Z
       - local_postgres_data_backups:/backups:z
@@ -88,6 +90,8 @@ services:
       dockerfile: ./compose/local/node/Dockerfile
     image: photosafe_local_node
     container_name: node
+    volumes:
+      - ./frontend/src:/app/src:z
     environment:
       - REACT_APP_SERVER_ADDRESS=http://django:8000
     depends_on:

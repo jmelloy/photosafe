@@ -4,6 +4,8 @@ from photosafe.photos.models import Album, Photo
 
 
 class PhotoSerializer(serializers.ModelSerializer):
+    owner = serializers.ReadOnlyField(source="owner.username")
+
     class Meta:
         model = Photo
         fields = "__all__"
