@@ -1,13 +1,16 @@
 from .base import *  # noqa
 from .base import env
-DEBUG=True
+
+DEBUG = True
 
 # GENERAL
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#secret-key
 SECRET_KEY = env("DJANGO_SECRET_KEY")
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
-ALLOWED_HOSTS = ["photosafe.melloy.life"] + env.list("DJANGO_ALLOWED_HOSTS", default=["photosafe.melloy.life"])
+ALLOWED_HOSTS = ["photosafe.melloy.life"] + env.list(
+    "DJANGO_ALLOWED_HOSTS", default=["photosafe.melloy.life"]
+)
 
 # DATABASES
 # ------------------------------------------------------------------------------
@@ -131,7 +134,7 @@ INSTALLED_APPS += ["anymail"]  # noqa F405
 EMAIL_BACKEND = "anymail.backends.amazon_ses.EmailBackend"
 
 ANYMAIL = {
-            "AMAZON_SES_CLIENT_PARAMS": {
+    "AMAZON_SES_CLIENT_PARAMS": {
         # example: override normal Boto credentials specifically for Anymail
         "aws_access_key_id": env("DJANGO_AWS_ACCESS_KEY_ID"),
         "aws_secret_access_key": env("DJANGO_AWS_SECRET_ACCESS_KEY"),
@@ -140,9 +143,9 @@ ANYMAIL = {
         "config": {
             "connect_timeout": 30,
             "read_timeout": 30,
-        }
+        },
     },
-        }
+}
 
 # Collectfast
 # ------------------------------------------------------------------------------

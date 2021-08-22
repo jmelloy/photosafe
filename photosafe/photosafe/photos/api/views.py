@@ -29,7 +29,7 @@ class PhotoViewSet(
     GenericViewSet,
 ):
     serializer_class = PhotoSerializer
-    queryset = Photo.objects.all()
+    queryset = Photo.objects.all().select_related("owner")
     lookup_field = "uuid"
 
     filter_backends = (filters.DjangoFilterBackend,)

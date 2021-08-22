@@ -1,0 +1,74 @@
+export type Photo = {
+  uuid: string;
+  masterFingerprint: string;
+
+  filename: string;
+  original_filename: string;
+  date: Date;
+  description: string;
+  title: string;
+  keywords: string[];
+  labels: string[];
+  albums: string[];
+  folders: object;
+  persons: string[];
+  faces: object;
+  path: string;
+
+  ismissing: boolean;
+  hasadjustments: boolean;
+  external_edit: boolean;
+  favorite: boolean;
+  hidden: boolean;
+  latitude: number;
+  longitude: number;
+  path_edited: string;
+  shared: boolean;
+  isphoto: boolean;
+  ismovie: boolean;
+  uti: string;
+  uti_original: string;
+  burst: boolean;
+  live_photo: boolean;
+  path_live_photo: string;
+  iscloudasset: boolean;
+  incloud: boolean;
+  date_modified: Date;
+  portrait: boolean;
+  screenshot: boolean;
+  slow_mo: boolean;
+  time_lapse: boolean;
+  hdr: boolean;
+  selfie: boolean;
+  panorama: boolean;
+  has_raw: boolean;
+  israw: boolean;
+  raw_original: boolean;
+  uti_raw: string;
+  path_raw: string;
+  place: object;
+  exif: object;
+  score: object;
+  intrash: boolean;
+  height: number;
+  width: number;
+  orientation: number;
+  original_height: number;
+  original_width: number;
+  original_orientation: number;
+  original_filesize: number;
+  comments: object;
+  likes: object;
+  search_info: object;
+
+  s3_key_path: string;
+  s3_thumbnail_path: string;
+  s3_edited_path: string;
+};
+
+export type PhotoList = {
+  count: number;
+  next: string;
+  previous: string;
+  results: Photo[];
+};

@@ -22,6 +22,7 @@
     "postcss-preset-env": "^6.7.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
+    "react-router-dom": "^5.2.0",
     "react-scripts": "4.0.3",
     "tailwindcss": "^2.2.7",
     "typescript": "^4.3.5"
@@ -32,7 +33,7 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "build:css": "cross-env TAILWIND_MODE=build NODE_ENV=production postcss src/styles/tailwind.css -o src/styles/index.css",
-    "watch:css": "cross-env TAILWIND_MODE=watch NODE_ENV=development postcss src/styles/tailwind.css -o src/styles/index.css",
+    "watch:css": "cross-env TAILWIND_MODE=watch NODE_ENV=development postcss src/styles/tailwind.css -o src/styles/index.css --watch",
     "react-scripts:start": "delay 5 && react-scripts start",
     "react-scripts:build": "react-scripts build"
   },
@@ -50,5 +51,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@types/react-router-dom": "^5.1.8"
   }
 }

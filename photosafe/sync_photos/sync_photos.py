@@ -1,6 +1,7 @@
 import concurrent.futures
 import json
 import os
+import random
 from collections import defaultdict
 
 import boto3
@@ -13,9 +14,8 @@ photos_db = osxphotos.PhotosDB()
 base_path = photos_db.library_path
 s3 = boto3.client("s3", "us-west-2")
 
-
 bucket = os.environ.get("BUCKET", "jmelloy-photo-backup")
-base_url = os.environ.get("BASE_URL", "http://localhost:3000")
+base_url = os.environ.get("BASE_URL", "http://localhost:8000")
 username = os.environ.get("USERNAME", "jmelloy")
 password = os.environ.get("PASSWORD", "invasion")
 
@@ -23,6 +23,7 @@ r = requests.post(
     f"{base_url}/auth-token/", json={"username": username, "password": password}
 )
 token = r.json()["token"]
+r = requests.get(f"{base_url}/users/me/", headers={"Authorization": f"Token {token}"})
 
 
 def build_album_list():
@@ -141,59 +142,52 @@ def sync_photo(photo):
         return
 
     key = None
+    updates = {}
 
     if photo.path and r.json()["s3_key_path"] is None:
         base, ext = os.path.splitext(photo.path)
         key = f"{username}/originals/{p['uuid'][0:1]}/{p['uuid']}{ext}"
-        try:
-            source_key = p["path"].strip("/")
-            s3.copy_object(
-                Bucket=bucket,
-                CopySource=f"jmelloy-photo-backup/{source_key}",
-                Key=key,
-            )
-            # s3.delete_object(Bucket=bucket, key=source_key)
-        except botocore.exceptions.ClientError as e:
-            print(e)
-            if "NoSuchKey" in str(e):
-                print(f"Uploading {photo.path} to {key}")
-                s3.upload_file(photo.path, bucket, key)
-            else:
-                raise
-        r = requests.patch(
-            f'{base_url}/api/photos/{p["uuid"]}/',
-            {"s3_key_path": key},
-            headers={"Authorization": f"Token {token}"},
-        )
-        r.raise_for_status()
+        # try:
+        #     source_key = p["path"].strip("/")
+        #     s3.copy_object(
+        #         Bucket=bucket,
+        #         CopySource=f"jmelloy-photo-backup/{source_key}",
+        #         Key=key,
+        #     )
+        #     # s3.delete_object(Bucket=bucket, key=source_key)
+        # except botocore.exceptions.ClientError as e:
+        #     print(e)
+        #     if "NoSuchKey" in str(e):
+        #         print(f"Uploading {photo.path} to {key}")
+        #         s3.upload_file(photo.path, bucket, key)
+        #     else:
+        #         raise
+        updates["s3_key_path"] = key
 
     if photo.path_edited and r.json()["s3_edited_path"] is None:
         base, ext = os.path.splitext(photo.path_edited)
 
         key = f"{username}/edited/{p['uuid'][0:1]}/{p['uuid']}{ext}"
-        s3.upload_file(photo.path_edited, bucket, key)
-
-        r = requests.patch(
-            f'{base_url}/api/photos/{p["uuid"]}/',
-            {"s3_edited_path": key},
-            headers={"Authorization": f"Token {token}"},
-        )
-        r.raise_for_status()
+        # s3.upload_file(photo.path_edited, bucket, key)
+        updates["s3_edited_path"] = key
 
     if photo.path_derivatives and r.json()["s3_thumbnail_path"] is None:
         base, ext = os.path.splitext(photo.path_derivatives[-1])
 
         key = f"thumbnail/{p['uuid'][0:1]}/{p['uuid']}{ext}"
-        s3.upload_file(photo.path_derivatives[-1], bucket, key)
+        # s3.upload_file(photo.path_derivatives[-1], bucket, key)
 
+        updates["s3_thumbnail_path"] = key
+
+    if updates:
         r = requests.patch(
             f'{base_url}/api/photos/{p["uuid"]}/',
-            {"s3_thumbnail_path": key},
+            updates,
             headers={"Authorization": f"Token {token}"},
         )
         r.raise_for_status()
 
-    return key
+    return updates
 
 
 def upload_albums():

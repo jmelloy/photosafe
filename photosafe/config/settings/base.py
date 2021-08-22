@@ -257,8 +257,8 @@ LOGGING = {
     "loggers": {
         "django": {
             "handlers": ["console"],
-            "level": "INFO",
-            "propagate": True,
+            "level": "DEBUG",
+            "propagate": False,
         },
     },
     "root": {"level": "INFO", "handlers": ["console"]},
@@ -311,9 +311,15 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
+    "PAGE_SIZE": 100,
 }
 
 # django-cors-headers - https://github.com/adamchainz/django-cors-headers#setup
-CORS_URLS_REGEX = r"^/api/.*$"
+# CORS_URLS_REGEX = r"^/api/.*$"
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+]
+
 # Your stuff...
 # ------------------------------------------------------------------------------
