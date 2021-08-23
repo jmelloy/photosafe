@@ -4,7 +4,7 @@ export const Routes = {
     logout: "/logout",
   },
   photos: {
-    gallery: "/gallery",
-    photo: "/photo/:photoId",
+    photos: "/photos",
+    photo: "/photos/:photoId",
   },
 };

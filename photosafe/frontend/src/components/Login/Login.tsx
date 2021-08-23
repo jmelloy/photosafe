@@ -10,7 +10,7 @@ export default function Login() {
   const auth = useAuth();
   const history = useHistory();
   const location = useLocation<{ redirectPath: string | null | undefined }>();
-  const redirectPath = location.state?.redirectPath || "/gallery";
+  const redirectPath = location.state?.redirectPath || "/photos";
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

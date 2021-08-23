@@ -5,11 +5,12 @@ from rest_framework.mixins import (
     RetrieveModelMixin,
     UpdateModelMixin,
 )
+from rest_framework.serializers import LIST_SERIALIZER_KWARGS
 from rest_framework.viewsets import GenericViewSet
 
 from photosafe.photos.models import *
 
-from .serializers import AlbumSerializer, PhotoSerializer
+from .serializers import AlbumSerializer, PhotoSerializer, SmallPhotoSerializer
 
 
 class PhotoFilter(filters.FilterSet):
@@ -22,14 +23,18 @@ class PhotoFilter(filters.FilterSet):
 
 
 class PhotoViewSet(
-    RetrieveModelMixin,
     ListModelMixin,
     CreateModelMixin,
+    RetrieveModelMixin,
     UpdateModelMixin,
     GenericViewSet,
 ):
-    serializer_class = PhotoSerializer
-    queryset = Photo.objects.all().select_related("owner")
+    def get_serializer_class(self):
+        if self.action == "list":
+            return SmallPhotoSerializer
+        return PhotoSerializer
+
+    queryset = Photo.objects.all().select_related("owner").order_by("date")
     lookup_field = "uuid"
 
     filter_backends = (filters.DjangoFilterBackend,)

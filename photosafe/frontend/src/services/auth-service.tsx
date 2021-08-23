@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, FunctionComponent, useContext, useState } from "react";
 import makeRequest from "./make-request";
 import { User, TokenResponse } from "../types/User";
 import config from "../config";
@@ -20,9 +20,9 @@ const defaults: AuthContext = {
   handleLogout: () => {},
 };
 
-const AuthContext = createContext(defaults);
+const AuthServiceContext = createContext(defaults);
 
-export const AuthProvider = ({ children }: { children: any }) => {
+export const AuthProvider: FunctionComponent = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
 
@@ -47,13 +47,13 @@ export const AuthProvider = ({ children }: { children: any }) => {
     const token = tokenResponse.token;
     setToken(token);
 
-    const user = await makeRequest<User>(`${baseUrl}/users/me`, {
-      headers: {
-        authorization: `Token ${token}`,
-      },
-    });
+    // const user = await makeRequest<User>(`${baseUrl}/users/me`, {
+    //   headers: {
+    //     authorization: `Token ${token}`,
+    //   },
+    // });
 
-    setUser(user);
+    // setUser(user);
   };
 
   const handleLogout = (): void => {
@@ -69,9 +69,13 @@ export const AuthProvider = ({ children }: { children: any }) => {
     handleLogout,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthServiceContext.Provider value={value}>
+      {children}
+    </AuthServiceContext.Provider>
+  );
 };
 
 export const useAuth = () => {
-  return useContext(AuthContext);
+  return useContext(AuthServiceContext);
 };

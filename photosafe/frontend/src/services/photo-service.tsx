@@ -1,11 +1,11 @@
-import { createContext, useContext } from "react";
+import { createContext, useContext, FunctionComponent } from "react";
 import makeRequest from "./make-request";
 import { PhotoList } from "../types/Photo";
 import config from "../config";
 import { useAuth } from "./auth-service";
 
 type PhotoContext = {
-  getPhotoList: () => Promise<PhotoList>;
+  getPhotoList: (offset: number, limit: number) => Promise<PhotoList>;
 };
 
 const defaults: PhotoContext = {
@@ -13,26 +13,38 @@ const defaults: PhotoContext = {
     Promise.resolve({ count: 0, next: "", previous: "", results: [] }),
 };
 
-const PhotoContext = createContext(defaults);
+const PhotoServiceContext = createContext(defaults);
 
-export const GalleryProvider = ({ children }: { children: any }) => {
+export const PhotoListProvider: FunctionComponent = ({ children }) => {
   const auth = useAuth();
   const token = auth.getToken();
 
-  const getPhotoList = () =>
-    makeRequest<PhotoList>(`${config.baseUrl}/api/photos`, {
-      headers: { authorization: `Token ${token}` },
-    });
+  const getPhotoList = async (offset: number = 0, limit: number = 100) => {
+    console.log(
+      "url",
+      `${config.baseUrl}/api/photos?offset=${offset}&limit=${limit}`
+    );
+    console.log("token", token);
+    return makeRequest<PhotoList>(
+      `${config.baseUrl}/api/photos?offset=${offset}&limit=${limit}`,
+      {
+        method: "GET",
+        headers: { authorization: `Token ${token}` },
+      }
+    );
+  };
 
   const value = {
     getPhotoList,
   };
 
   return (
-    <PhotoContext.Provider value={value}>{children}</PhotoContext.Provider>
+    <PhotoServiceContext.Provider value={value}>
+      {children}
+    </PhotoServiceContext.Provider>
   );
 };
 
-export const useGallery = () => {
-  return useContext(PhotoContext);
+export const usePhotoService = () => {
+  return useContext(PhotoServiceContext);
 };
