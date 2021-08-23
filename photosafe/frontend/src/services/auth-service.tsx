@@ -47,13 +47,13 @@ export const AuthProvider: FunctionComponent = ({ children }) => {
     const token = tokenResponse.token;
     setToken(token);
 
-    // const user = await makeRequest<User>(`${baseUrl}/users/me`, {
-    //   headers: {
-    //     authorization: `Token ${token}`,
-    //   },
-    // });
+    const user = await makeRequest<User>(`${baseUrl}/users/me`, {
+      headers: {
+        authorization: `Token ${token}`,
+      },
+    });
 
-    // setUser(user);
+    setUser(user);
   };
 
   const handleLogout = (): void => {

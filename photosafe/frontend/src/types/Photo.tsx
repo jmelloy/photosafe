@@ -59,7 +59,7 @@ export type Photo = {
   original_filesize: number;
   comments: object;
   likes: object;
-  search_info: object;
+  search_info: SearchInfo;
 
   s3_key_path: string;
   s3_thumbnail_path: string;
@@ -71,4 +71,25 @@ export type PhotoList = {
   next: string;
   previous: string;
   results: Photo[];
+};
+
+export type SearchInfo = {
+  city?: string;
+  year?: string;
+  month?: string;
+  state?: string;
+  labels?: string[];
+  season?: string;
+  venues?: [];
+  country?: string;
+  streets?: string[];
+  holidays?: [];
+  activities?: string[];
+  media_types?: string[];
+  place_names?: string[];
+  venue_types?: string[];
+  neighborhoods?: string[];
+  locality_names?: string[];
+  bodies_of_water?: string[];
+  state_abbreviation?: string;
 };

@@ -1,6 +1,6 @@
 import React, { FunctionComponent, useState, useEffect } from "react";
 import { Photo } from "../../types/Photo";
-import PhotoComponent from "../Photo/Photo";
+import PhotoThumbnailComponent from "../PhotoThumbnail/PhotoThumbnail";
 import LoadingSpinner from "../LoadingSpinner/LoadingSpinner";
 
 import { usePhotoService } from "../../services/photo-service";
@@ -11,7 +11,6 @@ const PhotoListComponent: FunctionComponent = () => {
   const [offset, setOffset] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
   const photoService = usePhotoService();
 
   const getPhotos = async (limit: number) => {
@@ -49,18 +48,55 @@ const PhotoListComponent: FunctionComponent = () => {
       </div>
     );
   }
+
+  let dates = photos
+    .filter(
+      (value, index, array) =>
+        index === 0 ||
+        new Date(value.date).toDateString() !==
+          new Date(array[index - 1].date).toDateString()
+    )
+    .map((photo) => new Date(photo.date).toDateString());
+  console.log(dates);
   return (
     <div>
       {errorText}
+
       <button onClick={(e) => getPhotos(56)}>Search</button>
       <br />
-      {photos.map((photo) => (
-        <PhotoComponent
-          photo={photo}
-          width={null}
-          height={192}
-        ></PhotoComponent>
-      ))}
+      <br />
+      {dates.map((date: string) => {
+        let firstPhoto = photos.find(
+          (x) => new Date(x.date).toDateString() === date
+        );
+        let place = [
+          firstPhoto?.search_info?.city,
+          firstPhoto?.search_info?.state,
+          firstPhoto?.search_info?.country,
+        ]
+          .filter(Boolean)
+          .join(", ");
+        return (
+          <div className="clear-left">
+            <h3>
+              {date} - {place}
+            </h3>
+            <div className="row-span-full">
+              {photos
+                .filter((x) => new Date(x.date).toDateString() === date)
+                .map((photo) => (
+                  <PhotoThumbnailComponent
+                    key={photo.uuid}
+                    photo={photo}
+                    width={null}
+                    height={192}
+                  ></PhotoThumbnailComponent>
+                ))}
+            </div>
+            <br />
+          </div>
+        );
+      })}
 
       {loadingSpinner}
     </div>

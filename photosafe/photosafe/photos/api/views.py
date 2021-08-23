@@ -34,7 +34,7 @@ class PhotoViewSet(
             return SmallPhotoSerializer
         return PhotoSerializer
 
-    queryset = Photo.objects.all().select_related("owner").order_by("date")
+    queryset = Photo.objects.all().select_related("owner").order_by("-date")
     lookup_field = "uuid"
 
     filter_backends = (filters.DjangoFilterBackend,)
