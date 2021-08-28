@@ -13,6 +13,7 @@ import {
 
 import Login from "./components/Login/Login";
 import PhotoList from "./components/PhotoList/PhotoList";
+import PhotoDetail from "./components/PhotoDetail/PhotoDetail";
 import { PhotoListProvider } from "./services/photo-service";
 
 const navigation = ["Photos"];
@@ -227,6 +228,13 @@ export default function App() {
                     path={Routes.photos.photos}
                     render={() => <PhotoList />}
                   />
+
+                  <Route
+                    exact
+                    path={Routes.photos.photo}
+                    render={() => <PhotoDetail />}
+                  />
+
                   <Route
                     path={"*"}
                     render={() => <Redirect to={Routes.auth.login} />}

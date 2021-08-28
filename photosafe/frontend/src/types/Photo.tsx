@@ -46,9 +46,9 @@ export type Photo = {
   raw_original: boolean;
   uti_raw: string;
   path_raw: string;
-  place: object;
-  exif: object;
-  score: object;
+  place?: Place;
+  exif: Exif;
+  score: Score;
   intrash: boolean;
   height: number;
   width: number;
@@ -57,8 +57,8 @@ export type Photo = {
   original_width: number;
   original_orientation: number;
   original_filesize: number;
-  comments: object;
-  likes: object;
+  comments: {};
+  likes: {};
   search_info: SearchInfo;
 
   s3_key_path: string;
@@ -92,4 +92,94 @@ export type SearchInfo = {
   locality_names?: string[];
   bodies_of_water?: string[];
   state_abbreviation?: string;
+};
+
+export type Place = {
+  name?: string;
+  names?: {
+    city?: string[];
+    ocean?: string[];
+    field0?: string[];
+    field5?: string[];
+    region?: string[];
+    country?: string[];
+    field10?: string[];
+    field13?: string[];
+    field15?: string[];
+    field16?: string[];
+    postal_code?: string[];
+    inland_water?: string[];
+    body_of_water?: string[];
+    state_province?: string[];
+    street_address?: string[];
+    sub_throughfare?: string[];
+    area_of_interest?: string[];
+    additional_city_info?: string[];
+    sub_administrative_area?: string[];
+  };
+  ishome?: boolean;
+  address?: {
+    city?: string;
+    street?: string;
+    country?: string;
+    postal_code?: string;
+    sub_locality?: string;
+    state_province?: string;
+    iso_country_code?: string;
+    sub_administrative_area?: string;
+  };
+  address_str?: string;
+  country_code?: string;
+};
+
+export type Exif = {
+  fps?: string;
+  iso?: number;
+  codec?: string;
+  aperture?: number;
+  bit_rate?: string;
+  duration?: string;
+  latitude?: string;
+  longitude?: string;
+  lens_model?: string;
+  camera_make?: string;
+  flash_fired?: boolean;
+  sample_rate?: string;
+  camera_model?: string;
+  focal_length?: number;
+  track_format?: string;
+  exposure_bias?: number;
+  metering_mode?: number;
+  shutter_speed?: number;
+  white_balance?: number;
+};
+
+export type Score = {
+  noise?: number;
+  failure?: number;
+  overall?: number;
+  curation?: number;
+  low_light?: number;
+  promotion?: number;
+  behavioral?: number;
+  interaction?: number;
+  lively_color?: number;
+  immersiveness?: number;
+  well_timed_shot?: number;
+  harmonious_color?: number;
+  pleasant_pattern?: number;
+  pleasant_lighting?: number;
+  pleasant_symmetry?: number;
+  tastefully_blurred?: number;
+  interesting_subject?: number;
+  pleasant_reflection?: number;
+  well_chosen_subject?: number;
+  well_framed_subject?: number;
+  highlight_visibility?: number;
+  pleasant_camera_tilt?: number;
+  pleasant_composition?: number;
+  pleasant_perspective?: number;
+  sharply_focused_subject?: number;
+  pleasant_post_processing?: number;
+  intrusive_object_presence?: number;
 };

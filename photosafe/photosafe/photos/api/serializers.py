@@ -17,6 +17,7 @@ class SmallPhotoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Photo
         fields = [
+            "uuid",
             "masterFingerprint",
             "filename",
             "original_filename",

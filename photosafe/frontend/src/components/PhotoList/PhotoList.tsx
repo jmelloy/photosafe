@@ -4,31 +4,46 @@ import PhotoThumbnailComponent from "../PhotoThumbnail/PhotoThumbnail";
 import LoadingSpinner from "../LoadingSpinner/LoadingSpinner";
 
 import { usePhotoService } from "../../services/photo-service";
+import { Link, useParams } from "react-router-dom";
+
+type Params = {
+  page: string;
+};
 
 const PhotoListComponent: FunctionComponent = () => {
   const [count, setCount] = useState<number>(0);
   const [photos, setPhotos] = useState<Photo[]>([]);
-  const [offset, setOffset] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const photoService = usePhotoService();
 
-  const getPhotos = async (limit: number) => {
-    setError(null);
-    setLoading(true);
+  const params: Params = useParams();
+  const page = parseInt(params.page, 10) || 1;
 
-    try {
-      setPhotos([]);
-      const photoList = await photoService.getPhotoList(offset, limit);
-      setPhotos(photoList.results);
-      setCount(photoList.count);
-      setOffset(offset + limit);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    const getPhotos = async () => {
+      setError(null);
+      setLoading(true);
+      let limit = 56;
+
+      try {
+        setPhotos([]);
+        const photoList = await photoService.getPhotoList(
+          (page - 1) * limit,
+          limit
+        );
+        setPhotos(photoList.results);
+        setCount(photoList.count);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    getPhotos();
+  }, [photoService, page]);
+
+  const getPhotos = async (page: number) => {};
 
   let errorText;
   if (error) {
@@ -61,7 +76,12 @@ const PhotoListComponent: FunctionComponent = () => {
   return (
     <div>
       {errorText}
-
+      <div className="float-right">
+        {count}
+        <div>
+          <Link to={`/photos?page=${page + 1}`}>{page + 1}</Link>
+        </div>
+      </div>
       <button onClick={(e) => getPhotos(56)}>Search</button>
       <br />
       <br />
@@ -69,13 +89,8 @@ const PhotoListComponent: FunctionComponent = () => {
         let firstPhoto = photos.find(
           (x) => new Date(x.date).toDateString() === date
         );
-        let place = [
-          firstPhoto?.search_info?.city,
-          firstPhoto?.search_info?.state,
-          firstPhoto?.search_info?.country,
-        ]
-          .filter(Boolean)
-          .join(", ");
+        let place = firstPhoto?.place?.name;
+
         return (
           <div className="clear-left">
             <h3>
@@ -85,12 +100,14 @@ const PhotoListComponent: FunctionComponent = () => {
               {photos
                 .filter((x) => new Date(x.date).toDateString() === date)
                 .map((photo) => (
-                  <PhotoThumbnailComponent
-                    key={photo.uuid}
-                    photo={photo}
-                    width={null}
-                    height={192}
-                  ></PhotoThumbnailComponent>
+                  <Link to={`/photos/${photo.uuid}`}>
+                    <PhotoThumbnailComponent
+                      key={photo.uuid}
+                      photo={photo}
+                      width={null}
+                      height={192}
+                    ></PhotoThumbnailComponent>
+                  </Link>
                 ))}
             </div>
             <br />
