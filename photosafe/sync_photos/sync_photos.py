@@ -9,6 +9,7 @@ import osxphotos
 import requests
 from dateutil import parser
 from tools import DateTimeEncoder
+from dateutil import parser
 
 photos_db = osxphotos.PhotosDB()
 base_path = photos_db.library_path
@@ -167,14 +168,19 @@ def sync_photo(photo):
     data = r.json()
     updates = {}
 
+    base, ext = os.path.splitext(photo.path)
+    key = f"{username}/originals/{p['uuid'][0:1]}/{p['uuid']}{ext}"
     if photo.path and data["s3_key_path"] is None:
-        base, ext = os.path.splitext(photo.path)
-        key = f"{username}/originals/{p['uuid'][0:1]}/{p['uuid']}{ext}"
         print(f"Uploading {key} to {bucket}")
         s3.upload_file(photo.path, bucket, key)
         updates["s3_key_path"] = key
 
-    if photo.path_edited and data["s3_edited_path"] is None:
+    is_modified = False
+    if data["date_modified"]:
+        modified_date = parser.parse(data["date_modified"])
+        is_modified = (modified_date and modified_date > photo.date_modified)
+
+    if photo.path_edited and (data["s3_edited_path"] is None or is_modified):
         base, ext = os.path.splitext(photo.path_edited)
 
         key = f"{username}/edited/{p['uuid'][0:1]}/{p['uuid']}{ext}"
@@ -186,13 +192,10 @@ def sync_photo(photo):
 
     if photo.path_derivatives:
         base, ext = os.path.splitext(photo.path_derivatives[-1])
-        thumbnail_key = f"{username}/thumbnail/{p['uuid'][0:1]}/{p['uuid']}{ext}"
+        thumbnail_key = f"{username}/thumbnails/{p['uuid'][0:1]}/{p['uuid']}{ext}"
         print(f"Uploading {thumbnail_key} to {bucket}")
 
-        if (
-            data["s3_thumbnail_path"] is None
-            or data["s3_thumbnail_path"] != thumbnail_key
-        ):
+        if data["s3_thumbnail_path"] is None or data["s3_thumbnail_path"] != thumbnail_key or is_modified:
             s3.upload_file(photo.path_derivatives[-1], bucket, thumbnail_key)
             updates["s3_thumbnail_path"] = thumbnail_key
 
