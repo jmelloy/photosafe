@@ -33,9 +33,8 @@ const PhotoComponent: FunctionComponent = () => {
           aria-labelledby="primary-heading"
           className="min-w-0 flex-1 h-full flex flex-col overflow-hidden lg:order-last"
         >
-          <h1 id="primary-heading" className="sr-only">
-            {photo.title || photo.original_filename}
-          </h1>
+          <h1 id="primary-heading">{photo.title || photo.original_filename}</h1>
+          <h2>{photo.place?.name}</h2>
           <img
             src={`https://photos.melloy.life/images/${
               photo.s3_edited_path || photo.s3_key_path

@@ -6,5 +6,6 @@ export const Routes = {
   photos: {
     photos: "/photos",
     photo: "/photos/:photoId",
+    photoPage: "/photos/page/:page",
   },
 };

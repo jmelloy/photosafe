@@ -1,10 +1,17 @@
-import React, { FunctionComponent, useState, useEffect } from "react";
+import React, {
+  FunctionComponent,
+  useState,
+  useEffect,
+  FormEventHandler,
+  FormEvent,
+} from "react";
 import { Photo } from "../../types/Photo";
 import PhotoThumbnailComponent from "../PhotoThumbnail/PhotoThumbnail";
 import LoadingSpinner from "../LoadingSpinner/LoadingSpinner";
 
 import { usePhotoService } from "../../services/photo-service";
 import { Link, useParams } from "react-router-dom";
+import Pagination from "../Pagination";
 
 type Params = {
   page: string;
@@ -27,7 +34,7 @@ const PhotoListComponent: FunctionComponent = () => {
       let limit = 56;
 
       try {
-        setPhotos([]);
+        // setPhotos([]);
         const photoList = await photoService.getPhotoList(
           (page - 1) * limit,
           limit
@@ -42,8 +49,6 @@ const PhotoListComponent: FunctionComponent = () => {
     };
     getPhotos();
   }, [photoService, page]);
-
-  const getPhotos = async (page: number) => {};
 
   let errorText;
   if (error) {
@@ -72,29 +77,22 @@ const PhotoListComponent: FunctionComponent = () => {
           new Date(array[index - 1].date).toDateString()
     )
     .map((photo) => new Date(photo.date).toDateString());
-  console.log(dates);
+
   return (
     <div>
+      <Pagination total={count} page={page} perPage={56}></Pagination>
+
       {errorText}
-      <div className="float-right">
-        {count}
-        <div>
-          <Link to={`/photos?page=${page + 1}`}>{page + 1}</Link>
-        </div>
-      </div>
-      <button onClick={(e) => getPhotos(56)}>Search</button>
-      <br />
-      <br />
+      {loadingSpinner}
       {dates.map((date: string) => {
         let firstPhoto = photos.find(
           (x) => new Date(x.date).toDateString() === date
         );
-        let place = firstPhoto?.place?.name;
 
         return (
           <div className="clear-left">
             <h3>
-              {date} - {place}
+              {date} - {firstPhoto?.place?.name}
             </h3>
             <div className="row-span-full">
               {photos
@@ -115,7 +113,9 @@ const PhotoListComponent: FunctionComponent = () => {
         );
       })}
 
-      {loadingSpinner}
+      <div className="clear-left">
+        <Pagination total={count} page={page} perPage={56}></Pagination>
+      </div>
     </div>
   );
 };

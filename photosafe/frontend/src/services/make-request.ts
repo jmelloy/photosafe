@@ -3,7 +3,7 @@ const makeRequest = async <T extends unknown>(
   init?: RequestInit
 ): Promise<T> => {
   const response = await fetch(input, init);
-  console.log(response);
+  // console.log(response);
   if (!response.ok) {
     throw new RequestError(response);
   }

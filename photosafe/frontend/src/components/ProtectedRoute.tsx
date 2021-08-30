@@ -9,6 +9,7 @@ const ProtectedRoute: FunctionComponent<RouteProps> = ({
   const auth = useAuth();
   const isAuthenticated = !!auth.isAuthenticated();
 
+  console.log(auth.isAuthenticated(), isAuthenticated, auth.getToken());
   return (
     <Route {...rest}>
       {isAuthenticated ? (
