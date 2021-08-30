@@ -321,6 +321,7 @@ REST_FRAMEWORK = {
 # CORS_URLS_REGEX = r"^/api/.*$"
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
+    "https://photosafe.melloy.life",
 ]
 
 # Your stuff...
