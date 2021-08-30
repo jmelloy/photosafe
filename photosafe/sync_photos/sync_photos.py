@@ -309,6 +309,29 @@ def cleanup(username):
 
 
 if __name__ == "__main__":
+
+    populate_blocks()
+    photos_to_process = []
+    for year, months in blocks.items():
+        for month, days in months.items():
+            for day, photos in days.items():
+                count = len(photos)
+                date = max([x.date_modified or x.date for x in photos])
+                vals = (
+                    server_blocks.get(str(year), {})
+                    .get(str(month), {})
+                    .get(str(day), {})
+                )
+
+                if (
+                    not vals
+                    or vals["count"] != count
+                    or abs(parser.parse(vals["max_date"]) - date) > timedelta(seconds=3)
+                ):
+                    print(f"discrepancy {year}/{month}/{day}, {vals} vs {count}/{date}")
+                    photos_to_process.extend(blocks[year][month][day])
+
+    print("total", total, "to process:", len(photos_to_process))
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         futures = executor.map(sync_photo, photos_db.photos())
 
