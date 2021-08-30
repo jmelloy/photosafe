@@ -274,7 +274,6 @@ def list_bucket(bucket, prefix=""):
 
 
 def cleanup(username):
-    rs = list_bucket(bucket=bucket, prefix=username)
 
     photos = {}
     for photo in photos_db.photos():
@@ -283,32 +282,38 @@ def cleanup(username):
 
         if photo.path:
             base, ext = os.path.splitext(photo.path)
-            key = f"{username}/originals/{p['uuid'][0:1]}/{p['uuid']}{ext}"
+            key = f"{username}/originals/{uuid[0:1]}/{uuid}{ext}"
             photos[key] = (uuid, "s3_key_path")
 
         if photo.path_edited:
             base, ext = os.path.splitext(photo.path_edited)
-            key = f"{username}/edited/{p['uuid'][0:1]}/{p['uuid']}{ext}"
+            key = f"{username}/edited/{uuid[0:1]}/{uuid}{ext}"
             photos[key] = (uuid, "s3_edited_path")
 
         if photo.path_derivatives:
             base, ext = os.path.splitext(photo.path_derivatives[-1])
-            thumbnail_key = f"{username}/thumbnail/{p['uuid'][0:1]}/{p['uuid']}{ext}"
+            thumbnail_key = f"{username}/thumbnails/{uuid[0:1]}/{uuid}{ext}"
             photos[thumbnail_key] = (uuid, "s3_thumbnail_path")
 
-    for (key, size, mod) in rs:
-        if not size:
-            delete_uuid, k = photos.get(key)
+    rs = list_bucket(bucket=bucket, prefix=username)
 
-            print(f"Deleting {key} for {delete_uuid}")
+    for i, (key, size, mod) in enumerate(rs):
+        if i % 1000 == 0:
+            print(i, key, size, mod)
+
+        if not size:
+            print(f"Deleting {key} for {photos.get(key)}")
+            delete_uuid, k = photos.get(key, (None, None))
+
             s3.delete_object(Bucket=bucket, Key=key)
 
-            r = requests.patch(
-                f"{base_url}/api/photos/{uuid}/",
-                {k: None},
-                headers={"Authorization": f"Token {token}"},
-            )
-            r.raise_for_status()
+            if delete_uuid:
+                r = requests.patch(
+                    f"{base_url}/api/photos/{uuid}/",
+                    {k: None},
+                    headers={"Authorization": f"Token {token}"},
+                )
+                r.raise_for_status()
 
 
 if __name__ == "__main__":

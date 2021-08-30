@@ -98,7 +98,7 @@ const PhotoListComponent: FunctionComponent = () => {
               {photos
                 .filter((x) => new Date(x.date).toDateString() === date)
                 .map((photo) => (
-                  <Link to={`/photos/${photo.uuid}`}>
+                  <Link to={`/photos/${photo.uuid}`} title={photo.original_filename}>
                     <PhotoThumbnailComponent
                       key={photo.uuid}
                       photo={photo}
