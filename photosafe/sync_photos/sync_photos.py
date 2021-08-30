@@ -1,13 +1,13 @@
 import concurrent.futures
 import json
 import os
-import random
 from collections import defaultdict
+from datetime import datetime, timedelta
 
 import boto3
-import botocore.exceptions
 import osxphotos
 import requests
+from dateutil import parser
 from tools import DateTimeEncoder
 
 photos_db = osxphotos.PhotosDB()
@@ -24,10 +24,18 @@ r = requests.post(
 )
 r.raise_for_status()
 token = r.json()["token"]
-r = requests.get(f"{base_url}/users/me", headers={"Authorization": f"Token {token}"})
 
-with open("keep.json") as KEEP:
-    keep = json.load(KEEP)
+r = requests.get(f"{base_url}/users/me", headers={"Authorization": f"Token {token}"})
+r.raise_for_status()
+user = r.json()
+
+r = requests.get(
+    f"{base_url}/photos/blocks", headers={"Authorization": f"Token {token}"}
+)
+r.raise_for_status()
+server_blocks = r.json()
+# print(server_blocks)
+
 
 def build_album_list():
     album_keys = [
@@ -72,14 +80,27 @@ def build_album_list():
     return albums
 
 
-blocks = defaultdict(list)
+blocks = {}
+total = 0
 
 
 def populate_blocks():
     global blocks
+    global total
     if not blocks:
-        for checked, photo in enumerate(photos_db.photos()):
-            blocks[photo.date.date()].append(photo)
+        for total, photo in enumerate(photos_db.photos()):
+            dt = photo.date
+
+            if dt.year not in blocks:
+                blocks[dt.year] = {}
+
+            if dt.month not in blocks[dt.year]:
+                blocks[dt.year][dt.month] = {}
+
+            if dt.day not in blocks[dt.year][dt.month]:
+                blocks[dt.year][dt.month][dt.day] = []
+
+            blocks[dt.year][dt.month][dt.day].append(photo)
 
 
 def determine_blocks(year, month=None, day=None):
@@ -151,22 +172,6 @@ def sync_photo(photo):
         key = f"{username}/originals/{p['uuid'][0:1]}/{p['uuid']}{ext}"
         print(f"Uploading {key} to {bucket}")
         s3.upload_file(photo.path, bucket, key)
-
-        try:
-            source_key = p["path"].strip("/")
-            if source_key not in keep:
-                s3.delete_object(Bucket=bucket, key=source_key)
-            else:
-                with open(keep[source_key]) as F:
-                    contents = F.read()
-                with open(keep[source_key], "w") as F:
-                    F.write(contents.replace(source_key, key))
-        except botocore.exceptions.ClientError as e:
-            if "NoSuchKey" in str(e):
-                pass
-            else:
-                print(e)
-
         updates["s3_key_path"] = key
 
     if photo.path_edited and data["s3_edited_path"] is None:
@@ -184,7 +189,10 @@ def sync_photo(photo):
         thumbnail_key = f"{username}/thumbnail/{p['uuid'][0:1]}/{p['uuid']}{ext}"
         print(f"Uploading {thumbnail_key} to {bucket}")
 
-        if data["s3_thumbnail_path"] is None or data["s3_thumbnail_path"] != thumbnail_key:
+        if (
+            data["s3_thumbnail_path"] is None
+            or data["s3_thumbnail_path"] != thumbnail_key
+        ):
             s3.upload_file(photo.path_derivatives[-1], bucket, thumbnail_key)
             updates["s3_thumbnail_path"] = thumbnail_key
 
@@ -240,6 +248,64 @@ def upload_albums():
         if r.status_code >= 400:
             print(r.json(), album)
         # r.raise_for_status()
+
+
+def list_bucket(bucket, prefix=""):
+
+    key = ""
+    rs = {"IsTruncated": True}
+    i = 0
+    while rs["IsTruncated"]:
+        rs = s3.list_objects(Bucket=bucket, Prefix=prefix, Marker=key)
+        if not rs.get("Contents"):
+            return
+        for row in rs.get("Contents", []):
+            key = row["Key"]
+            i += 1
+            yield (
+                row["Key"],
+                row.get("Size", 0),
+                row["LastModified"],
+            )
+    print("%d rows returned for %s" % (i, prefix))
+
+
+def cleanup(username):
+    rs = list_bucket(bucket=bucket, prefix=username)
+
+    photos = {}
+    for photo in photos_db.photos():
+        p = photo.asdict()
+        uuid = photo._info["cloudAssetGUID"] or photo.uuid
+
+        if photo.path:
+            base, ext = os.path.splitext(photo.path)
+            key = f"{username}/originals/{p['uuid'][0:1]}/{p['uuid']}{ext}"
+            photos[key] = (uuid, "s3_key_path")
+
+        if photo.path_edited:
+            base, ext = os.path.splitext(photo.path_edited)
+            key = f"{username}/edited/{p['uuid'][0:1]}/{p['uuid']}{ext}"
+            photos[key] = (uuid, "s3_edited_path")
+
+        if photo.path_derivatives:
+            base, ext = os.path.splitext(photo.path_derivatives[-1])
+            thumbnail_key = f"{username}/thumbnail/{p['uuid'][0:1]}/{p['uuid']}{ext}"
+            photos[thumbnail_key] = (uuid, "s3_thumbnail_path")
+
+    for (key, size, mod) in rs:
+        if not size:
+            delete_uuid, k = photos.get(key)
+
+            print(f"Deleting {key} for {delete_uuid}")
+            s3.delete_object(Bucket=bucket, Key=key)
+
+            r = requests.patch(
+                f"{base_url}/api/photos/{uuid}/",
+                {k: None},
+                headers={"Authorization": f"Token {token}"},
+            )
+            r.raise_for_status()
 
 
 if __name__ == "__main__":
