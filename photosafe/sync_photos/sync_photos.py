@@ -22,9 +22,12 @@ password = os.environ.get("PASSWORD", "invasion")
 r = requests.post(
     f"{base_url}/auth-token/", json={"username": username, "password": password}
 )
+r.raise_for_status()
 token = r.json()["token"]
-r = requests.get(f"{base_url}/users/me/", headers={"Authorization": f"Token {token}"})
+r = requests.get(f"{base_url}/users/me", headers={"Authorization": f"Token {token}"})
 
+with open("keep.json") as KEEP:
+    keep = json.load(KEEP)
 
 def build_album_list():
     album_keys = [
@@ -140,44 +143,50 @@ def sync_photo(photo):
 
     if r.status_code not in (200, 201):
         return
-
-    key = None
+    data = r.json()
     updates = {}
 
-    if photo.path and r.json()["s3_key_path"] is None:
+    if photo.path and data["s3_key_path"] is None:
         base, ext = os.path.splitext(photo.path)
         key = f"{username}/originals/{p['uuid'][0:1]}/{p['uuid']}{ext}"
-        # try:
-        #     source_key = p["path"].strip("/")
-        #     s3.copy_object(
-        #         Bucket=bucket,
-        #         CopySource=f"jmelloy-photo-backup/{source_key}",
-        #         Key=key,
-        #     )
-        #     # s3.delete_object(Bucket=bucket, key=source_key)
-        # except botocore.exceptions.ClientError as e:
-        #     print(e)
-        #     if "NoSuchKey" in str(e):
-        #         print(f"Uploading {photo.path} to {key}")
-        #         s3.upload_file(photo.path, bucket, key)
-        #     else:
-        #         raise
+        print(f"Uploading {key} to {bucket}")
+        s3.upload_file(photo.path, bucket, key)
+
+        try:
+            source_key = p["path"].strip("/")
+            if source_key not in keep:
+                s3.delete_object(Bucket=bucket, key=source_key)
+            else:
+                with open(keep[source_key]) as F:
+                    contents = F.read()
+                with open(keep[source_key], "w") as F:
+                    F.write(contents.replace(source_key, key))
+        except botocore.exceptions.ClientError as e:
+            if "NoSuchKey" in str(e):
+                pass
+            else:
+                print(e)
+
         updates["s3_key_path"] = key
 
-    if photo.path_edited and r.json()["s3_edited_path"] is None:
+    if photo.path_edited and data["s3_edited_path"] is None:
         base, ext = os.path.splitext(photo.path_edited)
 
         key = f"{username}/edited/{p['uuid'][0:1]}/{p['uuid']}{ext}"
-        # s3.upload_file(photo.path_edited, bucket, key)
+        print(f"Uploading {key} to {bucket}")
+
+        s3.upload_file(photo.path_edited, bucket, key)
+
         updates["s3_edited_path"] = key
 
-    if photo.path_derivatives and r.json()["s3_thumbnail_path"] is None:
+    if photo.path_derivatives:
         base, ext = os.path.splitext(photo.path_derivatives[-1])
+        thumbnail_key = f"{username}/thumbnail/{p['uuid'][0:1]}/{p['uuid']}{ext}"
+        print(f"Uploading {thumbnail_key} to {bucket}")
 
-        key = f"thumbnail/{p['uuid'][0:1]}/{p['uuid']}{ext}"
-        # s3.upload_file(photo.path_derivatives[-1], bucket, key)
-
-        updates["s3_thumbnail_path"] = key
+        if data["s3_thumbnail_path"] is None or data["s3_thumbnail_path"] != thumbnail_key:
+            s3.upload_file(photo.path_derivatives[-1], bucket, thumbnail_key)
+            updates["s3_thumbnail_path"] = thumbnail_key
 
     if updates:
         r = requests.patch(
