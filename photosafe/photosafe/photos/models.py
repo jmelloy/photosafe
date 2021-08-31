@@ -7,7 +7,7 @@ from django.db import models
 
 class Photo(models.Model):
     uuid = models.UUIDField(primary_key=True)
-    masterFingerprint = models.TextField()
+    masterFingerprint = models.TextField(null=True)
 
     filename = models.TextField()
     original_filename = models.TextField()

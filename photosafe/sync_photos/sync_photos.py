@@ -90,10 +90,12 @@ def populate_blocks():
     global total
 
     blocks = {}
-    for total, photo in enumerate(photos_db.photos()):
+    for photo in photos_db.photos():
         if not photo.path:
             # print(photo.uuid, photo.original_filename, photo.path, photo.path_edited, photo.path_live_photo, photo.path_raw, photo.path_derivatives)
             continue
+
+        total = total + 1
 
         dt = photo.date.astimezone(timezone.utc)
 
@@ -135,8 +137,6 @@ def find_discrepancies(blocks, server_blocks):
 def sync_photo(photo):
     p = photo.asdict()
     p["masterFingerprint"] = photo._info["masterFingerprint"]
-    if not photo._info["masterFingerprint"]:
-        return
 
     p["uuid"] = photo._info["cloudAssetGUID"] or photo.uuid
     for k, v in p.items():
@@ -158,7 +158,7 @@ def sync_photo(photo):
                 "Authorization": f"Token {token}",
             },
         )
-
+    r.raise_for_status()
     # if r.status_code == 400:
     #    print(r.json(), p)
 
@@ -192,9 +192,9 @@ def sync_photo(photo):
     if photo.path_derivatives:
         base, ext = os.path.splitext(photo.path_derivatives[-1])
         thumbnail_key = f"{username}/thumbnails/{p['uuid'][0:1]}/{p['uuid']}{ext}"
-        print(f"Uploading {thumbnail_key} to {bucket}")
 
         if data["s3_thumbnail_path"] is None or data["s3_thumbnail_path"] != thumbnail_key or is_modified:
+            print(f"Uploading {thumbnail_key} to {bucket}")
             s3.upload_file(photo.path_derivatives[-1], bucket, thumbnail_key)
             updates["s3_thumbnail_path"] = thumbnail_key
 
