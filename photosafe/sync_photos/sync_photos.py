@@ -1,13 +1,11 @@
 import concurrent.futures
 import json
 import os
-from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import boto3
 import osxphotos
 import requests
-from dateutil import parser
 from tools import DateTimeEncoder
 from dateutil import parser
 
@@ -30,11 +28,7 @@ r = requests.get(f"{base_url}/users/me", headers={"Authorization": f"Token {toke
 r.raise_for_status()
 user = r.json()
 
-r = requests.get(
-    f"{base_url}/photos/blocks", headers={"Authorization": f"Token {token}"}
-)
-r.raise_for_status()
-server_blocks = r.json()
+
 # print(server_blocks)
 
 
@@ -81,56 +75,61 @@ def build_album_list():
     return albums
 
 
-blocks = {}
+def get_server_blocks():
+    r = requests.get(
+        f"{base_url}/photos/blocks", headers={"Authorization": f"Token {token}"}
+    )
+    r.raise_for_status()
+    return r.json()
+
+
 total = 0
 
 
 def populate_blocks():
-    global blocks
     global total
-    if not blocks:
-        for total, photo in enumerate(photos_db.photos()):
-            dt = photo.date
 
-            if dt.year not in blocks:
-                blocks[dt.year] = {}
+    blocks = {}
+    for total, photo in enumerate(photos_db.photos()):
+        if not photo.path:
+            # print(photo.uuid, photo.original_filename, photo.path, photo.path_edited, photo.path_live_photo, photo.path_raw, photo.path_derivatives)
+            continue
 
-            if dt.month not in blocks[dt.year]:
-                blocks[dt.year][dt.month] = {}
+        dt = photo.date.astimezone(timezone.utc)
 
-            if dt.day not in blocks[dt.year][dt.month]:
-                blocks[dt.year][dt.month][dt.day] = []
+        if dt.year not in blocks:
+            blocks[dt.year] = {}
 
-            blocks[dt.year][dt.month][dt.day].append(photo)
+        if dt.month not in blocks[dt.year]:
+            blocks[dt.year][dt.month] = {}
 
+        if dt.day not in blocks[dt.year][dt.month]:
+            blocks[dt.year][dt.month][dt.day] = []
 
-def determine_blocks(year, month=None, day=None):
-    if not blocks:
-        populate_blocks()
+        blocks[dt.year][dt.month][dt.day].append(photo)
 
-    ret = []
-    for b in blocks:
-        if b.year == year:
-            if not month or b.month == month:
-                if not day or b.day == day:
-                    ret.extend(blocks[b])
-    return ret
+    return blocks
 
 
-def count_blocks(level="year"):
-    if not blocks:
-        populate_blocks()
+def find_discrepancies(blocks, server_blocks):
+    photos_to_process = []
+    for year, months in sorted(blocks.items()):
+        for month, days in sorted(months.items()):
+            for day, photos in sorted(days.items()):
+                count = len(photos)
+                date = max([x.date_modified or x.date for x in photos])
+                vals = (
+                    server_blocks.get(str(year), {}).get(str(month), {}).get(str(day), {})
+                )
+                if (
+                    not vals
+                    or vals["count"] != count
+                    or abs(parser.parse(vals["max_date"]) - date) > timedelta(seconds=3)
+                ):
+                    print(f"discrepancy {year}/{month}/{day}, {vals} vs {count}/{date}")
+                    photos_to_process.extend(blocks[year][month][day])
 
-    counter = defaultdict(int)
-    for b, v in blocks.items():
-        counter[
-            (
-                str(b.year),
-                b.strftime("%m") if level in ("month", "day") else "01",
-                b.strftime("%d") if level in ("day") else "01",
-            )
-        ] += len(v)
-    return sorted([["-".join(k), v] for k, v in counter.items()])
+    return photos_to_process
 
 
 def sync_photo(photo):
@@ -254,7 +253,6 @@ def upload_albums():
 
 
 def list_bucket(bucket, prefix=""):
-
     key = ""
     rs = {"IsTruncated": True}
     i = 0
@@ -274,7 +272,6 @@ def list_bucket(bucket, prefix=""):
 
 
 def cleanup(username):
-
     photos = {}
     for photo in photos_db.photos():
         p = photo.asdict()
@@ -317,31 +314,13 @@ def cleanup(username):
 
 
 if __name__ == "__main__":
+    blocks = populate_blocks()
+    server_blocks = get_server_blocks()
+    photos = find_discrepancies(blocks, server_blocks)
 
-    populate_blocks()
-    photos_to_process = []
-    for year, months in blocks.items():
-        for month, days in months.items():
-            for day, photos in days.items():
-                count = len(photos)
-                date = max([x.date_modified or x.date for x in photos])
-                vals = (
-                    server_blocks.get(str(year), {})
-                    .get(str(month), {})
-                    .get(str(day), {})
-                )
-
-                if (
-                    not vals
-                    or vals["count"] != count
-                    or abs(parser.parse(vals["max_date"]) - date) > timedelta(seconds=3)
-                ):
-                    print(f"discrepancy {year}/{month}/{day}, {vals} vs {count}/{date}")
-                    photos_to_process.extend(blocks[year][month][day])
-
-    print("total", total, "to process:", len(photos_to_process))
+    print("total", total, "to process:", len(photos))
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        futures = executor.map(sync_photo, photos_db.photos())
+        futures = executor.map(sync_photo, photos)
 
         results = list(futures)
 

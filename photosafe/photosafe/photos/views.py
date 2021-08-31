@@ -15,7 +15,7 @@ class PhotoDayView(View):
             year=ExtractYear("date"),
             month=ExtractMonth("date"),
             day=ExtractDay("date"),
-        ).annotate(count=Count("*"), max_date=Max(Coalesce("date", "date_modified")))
+        ).annotate(count=Count("*"), max_date=Max(Coalesce("date_modified", "date")))
 
         r = {}
         for row in rs:
