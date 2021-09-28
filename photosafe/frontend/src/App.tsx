@@ -13,9 +13,9 @@ import {
 } from "react-router-dom";
 
 import Login from "./components/Login/Login";
-import PhotoList from "./components/PhotoList/PhotoList";
-import PhotoDetail from "./components/PhotoDetail/PhotoDetail";
-import { PhotoListProvider } from "./services/photo-service";
+import Photos from "./components/Photos/Photos";
+import PhotoDetail from "./components/Photos/PhotoDetail/PhotoDetail";
+import { PhotoServiceProvider } from "./services/photo-service";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const navigation = ["Photos"];
@@ -29,7 +29,7 @@ export default function App() {
   return (
     <div>
       <AuthProvider>
-        <PhotoListProvider>
+        <PhotoServiceProvider>
           <Router>
             <Disclosure as="nav" className="bg-gray-800">
               {({ open }) => (
@@ -234,11 +234,11 @@ export default function App() {
                   </ProtectedRoute>
 
                   <ProtectedRoute exact path={Routes.photos.photos}>
-                    <PhotoList />
+                    <Photos />
                   </ProtectedRoute>
 
                   <ProtectedRoute exact path={Routes.photos.photoPage}>
-                    <PhotoList />
+                    <Photos />
                   </ProtectedRoute>
 
                   <Route
@@ -249,7 +249,7 @@ export default function App() {
               </div>
             </main>
           </Router>
-        </PhotoListProvider>
+        </PhotoServiceProvider>
       </AuthProvider>
     </div>
   );

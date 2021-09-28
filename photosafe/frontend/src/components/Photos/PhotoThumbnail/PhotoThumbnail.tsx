@@ -1,5 +1,5 @@
 import React, { FunctionComponent } from "react";
-import { Photo } from "../../types/Photo";
+import { Photo } from "../../../types/Photo";
 import "./PhotoThumbnail.css";
 type PhotoComponentProps = {
   photo: Photo | null;
@@ -33,7 +33,7 @@ const PhotoComponent: FunctionComponent<PhotoComponentProps> = ({
             }?height=${height}`}
             alt={photo.title}
             height={height}
-            width={Math.floor((photo.width / photo.height) * height)}
+            width={width || Math.floor((photo.width / photo.height) * height)}
           />
         )}
       </div>

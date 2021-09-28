@@ -29,12 +29,28 @@ r = requests.get(f"{base_url}/users/me", headers={"Authorization": f"Token {toke
 r.raise_for_status()
 user = r.json()
 
-r = requests.get(
+blocks = requests.get(
     f"{base_url}/photos/blocks", headers={"Authorization": f"Token {token}"}
 )
-r.raise_for_status()
-server_blocks = r.json()
-# print(server_blocks)
+blocks.raise_for_status()
+
+server_blocks = {}
+for row in blocks.json():
+    year = int(row["year"])
+    month = int(row["month"])
+    day = int(row["day"])
+
+    if year not in r:
+        server_blocks[year] = {}
+
+    if month not in r[year]:
+        server_blocks[year][month] = {}
+
+    if day not in r[year][month]:
+        server_blocks[year][month][day] = {
+            "count": int(row["count"]),
+            "max_date": row["max_date"],
+        }
 
 
 def build_album_list():

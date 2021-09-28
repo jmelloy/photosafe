@@ -17,22 +17,4 @@ class PhotoDayView(View):
             day=ExtractDay("date"),
         ).annotate(count=Count("*"), max_date=Max(Coalesce("date", "date_modified")))
 
-        r = {}
-        for row in rs:
-            year = int(row["year"])
-            month = int(row["month"])
-            day = int(row["day"])
-
-            if year not in r:
-                r[year] = {}
-
-            if month not in r[year]:
-                r[year][month] = {}
-
-            if day not in r[year][month]:
-                r[year][month][day] = {
-                    "count": int(row["count"]),
-                    "max_date": row["max_date"],
-                }
-
-        return JsonResponse(r)
+        return JsonResponse([dict(r) for r in rs], safe=False)

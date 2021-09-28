@@ -74,6 +74,9 @@ class Photo(models.Model):
 
     owner = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
 
+    class Meta:
+        index_together = [("date", "owner")]
+
 
 class Album(models.Model):
     uuid = models.UUIDField(primary_key=True)

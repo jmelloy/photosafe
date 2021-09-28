@@ -40,6 +40,7 @@ class SmallPhotoSerializer(serializers.ModelSerializer):
             "s3_thumbnail_path",
             "s3_edited_path",
             "owner",
+            "place",
         ]
 
 

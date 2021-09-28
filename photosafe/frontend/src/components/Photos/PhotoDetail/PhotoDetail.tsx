@@ -1,7 +1,7 @@
 import React, { FunctionComponent, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { usePhotoService } from "../../services/photo-service";
-import { Photo } from "../../types/Photo";
+import { usePhotoService } from "../../../services/photo-service";
+import { Photo } from "../../../types/Photo";
 import "./PhotoDetail.css";
 
 type Params = {

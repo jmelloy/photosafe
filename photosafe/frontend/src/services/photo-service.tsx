@@ -1,6 +1,6 @@
 import { createContext, useContext, FunctionComponent } from "react";
 import makeRequest from "./make-request";
-import { PhotoList, Photo } from "../types/Photo";
+import { PhotoList, Photo, PhotoCount } from "../types/Photo";
 import config from "../config";
 import { useAuth } from "./auth-service";
 
@@ -75,17 +75,19 @@ const defaultPhoto = {
 type PhotoContext = {
   getPhotoList: (offset: number, limit: number) => Promise<PhotoList>;
   getPhotoDetail: (photoId: string) => Promise<Photo>;
+  getPhotoDayView: () => Promise<PhotoCount[]>;
 };
 
 const defaults: PhotoContext = {
   getPhotoList: () =>
     Promise.resolve({ count: 0, next: "", previous: "", results: [] }),
   getPhotoDetail: () => Promise.resolve(defaultPhoto),
+  getPhotoDayView: () => Promise.resolve([]),
 };
 
 const PhotoServiceContext = createContext(defaults);
 
-export const PhotoListProvider: FunctionComponent = ({ children }) => {
+export const PhotoServiceProvider: FunctionComponent = ({ children }) => {
   const auth = useAuth();
   const token = auth.getToken();
 
@@ -102,9 +104,15 @@ export const PhotoListProvider: FunctionComponent = ({ children }) => {
       headers: { authorization: `Token ${token}` },
     });
 
+  const getPhotoDayView = () =>
+    makeRequest<PhotoCount[]>(`${config.baseUrl}/photos/blocks`, {
+      headers: { authorization: `Token ${token}` },
+    });
+
   const value = {
     getPhotoList,
     getPhotoDetail,
+    getPhotoDayView,
   };
 
   return (

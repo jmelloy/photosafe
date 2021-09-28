@@ -183,3 +183,11 @@ export type Score = {
   pleasant_post_processing?: number;
   intrusive_object_presence?: number;
 };
+
+export type PhotoCount = {
+  year: number;
+  month: number;
+  day: number;
+  count: number;
+  max_date: Date;
+};
