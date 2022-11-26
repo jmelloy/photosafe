@@ -42,6 +42,7 @@ type_mapping = {
 
 username = input("Username: ")
 password = input("Password: ")
+api = PyiCloudService(username, password)
 
 if api.requires_2fa:
     print("Two-factor authentication required.")
