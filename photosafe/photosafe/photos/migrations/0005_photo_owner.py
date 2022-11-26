@@ -9,14 +9,16 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('photos', '0004_auto_20210706_1639'),
+        ("photos", "0004_auto_20210706_1639"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='photo',
-            name='owner',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to='users.user'),
+            model_name="photo",
+            name="owner",
+            field=models.ForeignKey(
+                default=1, on_delete=django.db.models.deletion.CASCADE, to="users.user"
+            ),
             preserve_default=False,
         ),
     ]

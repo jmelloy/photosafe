@@ -37,7 +37,7 @@ const PhotoComponent: FunctionComponent = () => {
           <h2>{photo.place?.name}</h2>
           <img
             src={`https://photos.melloy.life/images/${
-              photo.s3_edited_path || photo.s3_key_path
+              photo.s3_key_path
             }`}
             alt={photo.title}
           />

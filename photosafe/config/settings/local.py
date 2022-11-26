@@ -18,6 +18,7 @@ ALLOWED_HOSTS = [
     "127.0.0.1",
     "Universe-Macbook-Pro.local",
     "Personal-MacBook-Pro.local",
+    "Jeffreys-MBP",
 ]
 
 # CACHES

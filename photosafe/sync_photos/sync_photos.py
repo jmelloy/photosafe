@@ -91,13 +91,12 @@ def populate_blocks():
 
     blocks = {}
     for photo in photos_db.photos():
-        if not photo.path:
+        dt = photo.date.astimezone(timezone.utc)
+        if not photo.path or not dt.year == 2022 or not dt.month == 11:
             # print(photo.uuid, photo.original_filename, photo.path, photo.path_edited, photo.path_live_photo, photo.path_raw, photo.path_derivatives)
             continue
 
         total = total + 1
-
-        dt = photo.date.astimezone(timezone.utc)
 
         if dt.year not in blocks:
             blocks[dt.year] = {}
@@ -121,7 +120,9 @@ def find_discrepancies(blocks, server_blocks):
                 count = len(photos)
                 date = max([x.date_modified or x.date for x in photos])
                 vals = (
-                    server_blocks.get(str(year), {}).get(str(month), {}).get(str(day), {})
+                    server_blocks.get(str(year), {})
+                    .get(str(month), {})
+                    .get(str(day), {})
                 )
                 if (
                     not vals
@@ -137,76 +138,84 @@ def find_discrepancies(blocks, server_blocks):
 def sync_photo(photo):
     p = photo.asdict()
     p["masterFingerprint"] = photo._info["masterFingerprint"]
+    if not photo._info["cloudAssetGUID"]:
+        return
 
-    p["uuid"] = photo._info["cloudAssetGUID"] or photo.uuid
+    p["uuid"] = photo._info["cloudAssetGUID"]
     for k, v in p.items():
         if v and type(v) is str and base_path in v:
             p[k] = v.replace(base_path, "")
 
-    r = requests.put(
+    r = requests.patch(
         f"{base_url}/api/photos/{p['uuid']}/",
         data=json.dumps(p, cls=DateTimeEncoder),
         headers={"Content-Type": "application/json", "Authorization": f"Token {token}"},
     )
 
-    if r.status_code == 404:
-        r = requests.post(
-            f"{base_url}/api/photos/",
-            data=json.dumps(p, cls=DateTimeEncoder),
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Token {token}",
-            },
-        )
+    # if r.status_code == 404:
+    #     p["id"] = hash_id
+    #     r = requests.post(
+    #         f"{base_url}/api/photos/",
+    #         data=json.dumps(p, cls=DateTimeEncoder),
+    #         headers={
+    #             "Content-Type": "application/json",
+    #             "Authorization": f"Token {token}",
+    #         },
+    #     )
+    # print(r.text)
     r.raise_for_status()
     # if r.status_code == 400:
     #    print(r.json(), p)
 
-    if r.status_code not in (200, 201):
-        return
-    data = r.json()
-    updates = {}
+    # if r.status_code not in (200, 201):
+    #     return
+    # data = r.json()
+    # updates = {}
 
-    base, ext = os.path.splitext(photo.path)
-    key = f"{username}/originals/{p['uuid'][0:1]}/{p['uuid']}{ext}"
-    if photo.path and data["s3_key_path"] is None:
-        print(f"Uploading {key} to {bucket}")
-        s3.upload_file(photo.path, bucket, key)
-        updates["s3_key_path"] = key
+    # base, ext = os.path.splitext(photo.path)
+    # key = f"{username}/originals/{p['uuid'][0:1]}/{p['uuid']}{ext}"
+    # if photo.path and data["s3_key_path"] is None:
+    #     print(f"Uploading {key} to {bucket}")
+    #     s3.upload_file(photo.path, bucket, key)
+    #     updates["s3_key_path"] = key
 
-    is_modified = False
-    if data["date_modified"]:
-        modified_date = parser.parse(data["date_modified"])
-        is_modified = (modified_date and modified_date > photo.date_modified)
+    # is_modified = False
+    # if data["date_modified"]:
+    #     modified_date = parser.parse(data["date_modified"])
+    #     is_modified = modified_date and modified_date > photo.date_modified
 
-    if photo.path_edited and (data["s3_edited_path"] is None or is_modified):
-        base, ext = os.path.splitext(photo.path_edited)
+    # if photo.path_edited and (data["s3_edited_path"] is None or is_modified):
+    #     base, ext = os.path.splitext(photo.path_edited)
 
-        key = f"{username}/edited/{p['uuid'][0:1]}/{p['uuid']}{ext}"
-        print(f"Uploading {key} to {bucket}")
+    #     key = f"{username}/edited/{p['uuid'][0:1]}/{p['uuid']}{ext}"
+    #     print(f"Uploading {key} to {bucket}")
 
-        s3.upload_file(photo.path_edited, bucket, key)
+    #     s3.upload_file(photo.path_edited, bucket, key)
 
-        updates["s3_edited_path"] = key
+    #     updates["s3_edited_path"] = key
 
-    if photo.path_derivatives:
-        base, ext = os.path.splitext(photo.path_derivatives[-1])
-        thumbnail_key = f"{username}/thumbnails/{p['uuid'][0:1]}/{p['uuid']}{ext}"
+    # if photo.path_derivatives:
+    #     base, ext = os.path.splitext(photo.path_derivatives[-1])
+    #     thumbnail_key = f"{username}/thumbnails/{p['uuid'][0:1]}/{p['uuid']}{ext}"
 
-        if data["s3_thumbnail_path"] is None or data["s3_thumbnail_path"] != thumbnail_key or is_modified:
-            print(f"Uploading {thumbnail_key} to {bucket}")
-            s3.upload_file(photo.path_derivatives[-1], bucket, thumbnail_key)
-            updates["s3_thumbnail_path"] = thumbnail_key
+    #     if (
+    #         data["s3_thumbnail_path"] is None
+    #         or data["s3_thumbnail_path"] != thumbnail_key
+    #         or is_modified
+    #     ):
+    #         print(f"Uploading {thumbnail_key} to {bucket}")
+    #         s3.upload_file(photo.path_derivatives[-1], bucket, thumbnail_key)
+    #         updates["s3_thumbnail_path"] = thumbnail_key
 
-    if updates:
-        r = requests.patch(
-            f'{base_url}/api/photos/{p["uuid"]}/',
-            updates,
-            headers={"Authorization": f"Token {token}"},
-        )
-        r.raise_for_status()
+    # if updates:
+    #     r = requests.patch(
+    #         f'{base_url}/api/photos/{p["uuid"]}/',
+    #         updates,
+    #         headers={"Authorization": f"Token {token}"},
+    #     )
+    #     r.raise_for_status()
 
-    return updates
+    # return updates
 
 
 def upload_albums():
