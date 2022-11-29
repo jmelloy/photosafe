@@ -10,7 +10,12 @@ from rest_framework.viewsets import GenericViewSet
 
 from photosafe.photos.models import *
 
-from .serializers import AlbumSerializer, PhotoSerializer, SmallPhotoSerializer
+from .serializers import (
+    AlbumSerializer,
+    PhotoSerializer,
+    SmallPhotoSerializer,
+    VersionSerializer,
+)
 
 
 class PhotoFilter(filters.FilterSet):

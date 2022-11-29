@@ -3,6 +3,9 @@ from django.db.models.functions import Coalesce
 from django.db.models.functions.datetime import ExtractDay, ExtractMonth, ExtractYear
 from django.http.response import JsonResponse
 from django.views import View
+from django.views.generic import DetailView, RedirectView, UpdateView, ListView
+from django.contrib.auth.mixins import LoginRequiredMixin
+
 
 from photosafe.photos.models import Photo
 
@@ -36,3 +39,29 @@ class PhotoDayView(View):
                 }
 
         return JsonResponse(r)
+
+
+class PhotoListView(LoginRequiredMixin, ListView):
+    paginate_by = 56
+    model = Photo
+
+    def get_queryset(self):
+        user = self.request.user
+
+        return (
+            Photo.objects.filter(owner=user).select_related("owner")
+            # .select_related("versions")
+            .order_by("-date")
+        )
+
+
+class PhotoDetailView(LoginRequiredMixin, DetailView):
+    model = Photo
+
+    def get_queryset(self):
+        user = self.request.user
+
+        return (
+            Photo.objects.filter(owner=user).select_related("owner")
+            # .select_related("versions")
+        )
