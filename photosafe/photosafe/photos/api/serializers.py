@@ -25,6 +25,7 @@ class PhotoSerializer(serializers.ModelSerializer):
 
         for version in versions:
             Version.objects.create(photo=photo, **version)
+
         return photo
 
     def update(self, instance, validated_data):

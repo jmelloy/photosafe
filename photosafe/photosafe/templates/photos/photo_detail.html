@@ -5,18 +5,19 @@
 <div>
   <div class="photo">
     {% if photo.isphoto %}
+
     <img
-      src="https://photos.melloy.life/images/{% firstof photo.s3_key_path  photo.s3_original_path %}"
+      src="https://photos.melloy.life/{% for version in photo.versions.all %}{% if version.version == "medium" %}{{ version.s3_path }}{% endif %}{% endfor %}"
       alt="{{ photo.title }}"
     />
     {% elif photo.ismovie %}
     <video controls>
-      <source src="https://photos.melloy.life/images/{{ photo.s3_key_path }}" />
+      <source src="https://photos.melloy.life/{{ photo.s3_key_path }}" />
     </video>
     {% endif %}
   </div>
 
-  <h3>{{ photo.original_filename }}</h3> 
+  <h3>{{ photo.original_filename }} {% for version in photo.versions.all %} {% if version.version == "original" %} <a href="https:////photos.melloy.life/{{ version.s3_path }}">Download</a>{% endif %}{% endfor %}</h3>  
 
   <div><span style="font-weight: bold">Date: </span><span>{{ photo.date }}</span>
   <span style="font-weight: bold">Dimensions: </span><span>{{ photo.width }}x{{ photo.height }}</span>

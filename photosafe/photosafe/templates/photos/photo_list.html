@@ -3,28 +3,30 @@
 {% block content %} 
 
 <div>
-{% for photo in page_obj %}
-{% ifchanged photo.date.month %}</div><h3>{{ photo.date|date:"F, Y" }}</h3><div>{% endifchanged %}
+{% for version in page_obj %}
 
-<div class="photoholder">
-    <a href="{% url 'photos:detail' pk=photo.uuid %}">
-  {% if photo.isphoto %}
-    <img
-        src="https://photos.melloy.life/images/{{ photo.s3_thumbnail_path }}"
-        ?height="196"
-        alt="{{ photo.title }}"
-        height="196"
-    />
-    </a>
-  {% elif photo.ismovie %}
-  <video height="196">
-    <source src="https://photos.melloy.life/images/{{ photo.s3_thumbnail_path }}" />
-  </video>
-  {% endif %}  
-</div>
+  {% ifchanged version.photo.date.month %}</div><h3 style="clear: both">{{ version.photo.date|date:"F, Y" }}</h3><div class="row" >{% endifchanged %}
 
-{% if forloop.counter|divisibleby:5 %}
-    </div><div style="clear: both">
+  <div class="col-3">
+    <center>
+      <a href="{% url 'photos:detail' pk=version.photo_id %}">
+    {% if version.photo.isphoto %}
+      <img
+          src="https://photos.melloy.life/{{ version.s3_path }}"
+          alt="{{ version.photo.title }}"
+          height="196"
+      />
+      </a>
+    {% elif version.photo.ismovie %}
+    <video height="196">
+      <source src="https://photos.melloy.life/{{ version.s3_path }}" />
+    </video>
+    {% endif %}  
+  </center>
+  </div>
+
+  {% if forloop.counter|divisibleby:4 %}
+      </div><div class="row">
   {% endif %}
 {% endfor %}
 

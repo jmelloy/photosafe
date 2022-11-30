@@ -24,7 +24,7 @@ def calc_etag(data, partsize=8388608):
     return md5(b"".join(md5_digests)).hexdigest() + "-" + str(len(md5_digests))
 
 
-def list_bucket(bucket, prefix=""):
+def list_bucket(s3, bucket, prefix=""):
     key = ""
     rs = {"IsTruncated": True}
     total = 0
