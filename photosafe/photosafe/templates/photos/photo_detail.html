@@ -1,0 +1,42 @@
+{% extends "base.html" %} 
+{% load static %} 
+{% block content %} 
+
+<div>
+  <div class="photo">
+    {% if photo.isphoto %}
+
+    <img
+      src="https://photos.melloy.life/{% for version in photo.versions.all %}{% if version.version == "medium" %}{{ version.s3_path }}{% endif %}{% endfor %}"
+      alt="{{ photo.title }}"
+    />
+    {% elif photo.ismovie %}
+    <video controls>
+      <source src="https://photos.melloy.life/{{ photo.s3_key_path }}" />
+    </video>
+    {% endif %}
+  </div>
+
+  <h3>{{ photo.original_filename }} {% for version in photo.versions.all %} {% if version.version == "original" %} <a href="https:////photos.melloy.life/{{ version.s3_path }}">Download</a>{% endif %}{% endfor %}</h3>  
+
+  <div><span style="font-weight: bold">Date: </span><span>{{ photo.date }}</span>
+  <span style="font-weight: bold">Dimensions: </span><span>{{ photo.width }}x{{ photo.height }}</span>
+  <span style="font-weight: bold">Size: </span><span>{{ photo.size|filesizeformat }}</span></div>
+  
+  <div><span style="font-weight: bold">Description: </span><span>{{ photo.description }}</span></div>
+  <div><span style="font-weight: bold">Title: </span><span>{{ photo.title }}</span></div>
+  
+  <div><span style="font-weight: bold">Geo: </span><span>({{ photo.latitude }}, {{ photo.longitude }})</span></div>
+  
+  <div><span style="font-weight: bold">UTI: </span><span>{{ photo.uti }}</span></div>
+  
+  <div><span style="font-weight: bold">EXIF: </span><br/>
+  {% for key, val in photo.exif.items %}
+    {% if val %}
+    <span style="font-weight: bold">{{key }}: </span><span>{{ val }}</span>
+    {% endif%}
+  {% endfor %}
+  </div>
+</div>
+
+{% endblock content %}

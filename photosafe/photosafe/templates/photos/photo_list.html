@@ -1,0 +1,54 @@
+{% extends "base.html" %} 
+{% load static %} 
+{% block content %} 
+
+<div>
+{% for version in page_obj %}
+
+  {% ifchanged version.photo.date.month %}</div><h3 style="clear: both">{{ version.photo.date|date:"F, Y" }}</h3><div class="row" >{% endifchanged %}
+
+  <div class="col-3">
+    <center>
+      <a href="{% url 'photos:detail' pk=version.photo_id %}">
+    {% if version.photo.isphoto %}
+      <img
+          src="https://photos.melloy.life/{{ version.s3_path }}"
+          alt="{{ version.photo.title }}"
+          height="196"
+      />
+      </a>
+    {% elif version.photo.ismovie %}
+    <video height="196">
+      <source src="https://photos.melloy.life/{{ version.s3_path }}" />
+    </video>
+    {% endif %}  
+  </center>
+  </div>
+
+  {% if forloop.counter|divisibleby:4 %}
+      </div><div class="row">
+  {% endif %}
+{% endfor %}
+
+</div>
+</div>
+
+<div class="pagination">
+  <span class="step-links">
+    {% if page_obj.has_previous %}
+    <a href="?page=1">&laquo; first</a>
+    <a href="?page={{ page_obj.previous_page_number }}">previous</a>
+    {% endif %}
+
+    <span class="current">
+      Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+    </span>
+
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}">next</a>
+    <a href="?page={{ page_obj.paginator.num_pages }}">last &raquo;</a>
+    {% endif %}
+  </span>
+</div>
+
+{% endblock content %}

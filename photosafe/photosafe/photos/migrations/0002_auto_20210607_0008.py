@@ -6,24 +6,24 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('photos', '0001_initial'),
+        ("photos", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='photo',
-            name='uuid',
+            model_name="photo",
+            name="uuid",
             field=models.UUIDField(primary_key=True, serialize=False),
         ),
         migrations.CreateModel(
-            name='Album',
+            name="Album",
             fields=[
-                ('uuid', models.UUIDField(primary_key=True, serialize=False)),
-                ('title', models.TextField(blank=True)),
-                ('creation_date', models.DateTimeField(null=True)),
-                ('start_date', models.DateTimeField(null=True)),
-                ('end_date', models.DateTimeField(null=True)),
-                ('photos', models.ManyToManyField(to='photos.Photo')),
+                ("uuid", models.UUIDField(primary_key=True, serialize=False)),
+                ("title", models.TextField(blank=True)),
+                ("creation_date", models.DateTimeField(null=True)),
+                ("start_date", models.DateTimeField(null=True)),
+                ("end_date", models.DateTimeField(null=True)),
+                ("photos", models.ManyToManyField(to="photos.Photo")),
             ],
         ),
     ]

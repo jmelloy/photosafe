@@ -10,7 +10,12 @@ from rest_framework.viewsets import GenericViewSet
 
 from photosafe.photos.models import *
 
-from .serializers import AlbumSerializer, PhotoSerializer, SmallPhotoSerializer
+from .serializers import (
+    AlbumSerializer,
+    PhotoSerializer,
+    SmallPhotoSerializer,
+    VersionSerializer,
+)
 
 
 class PhotoFilter(filters.FilterSet):
@@ -39,6 +44,16 @@ class PhotoViewSet(
 
     filter_backends = (filters.DjangoFilterBackend,)
     filterset_class = PhotoFilter
+
+    def get_queryset(self):
+        """
+        This view should return a list of all the purchases
+        for the currently authenticated user.
+        """
+        user = self.request.user
+        return (
+            Photo.objects.filter(owner=user).select_related("owner").order_by("-date")
+        )
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)

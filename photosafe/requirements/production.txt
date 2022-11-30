@@ -3,12 +3,11 @@
 -r base.txt
 -r local.txt 
 
-gunicorn==20.1.0  # https://github.com/benoitc/gunicorn
-psycopg2-binary==2.8.6  # https://github.com/psycopg/psycopg2
-Collectfast==2.2.0  # https://github.com/antonagestam/collectfast
+gunicorn  # https://github.com/benoitc/gunicorn
+Collectfast  # https://github.com/antonagestam/collectfast
 
 # Django
 # ------------------------------------------------------------------------------
-django-storages[boto3]==1.11.1  # https://github.com/jschneier/django-storages
-django-anymail[amazon_ses]==8.2  # https://github.com/anymail/django-anymail
+django-storages[boto3]  # https://github.com/jschneier/django-storages
+django-anymail[amazon_ses]  # https://github.com/anymail/django-anymail
 

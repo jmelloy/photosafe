@@ -16,7 +16,7 @@ urlpatterns = [
     # User management
     path("users/", include("photosafe.users.urls", namespace="users")),
     path("photos/", include("photosafe.photos.urls", namespace="photos")),
-    path("accounts/", include("allauth.urls")),
+    path("accounts/", include("allauth.urls"), name="accounts"),
     # Your stuff: custom urls includes go here
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

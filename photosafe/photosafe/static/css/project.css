@@ -7,3 +7,20 @@
   background-color: #f2dede;
   border-color: #eed3d7;
   color: #b94a48; }
+
+.photoholder {
+    float: left;
+    padding: 5px;
+  }
+  
+  .photo {
+    padding: 5px;
+  }
+  
+  .photo img {
+    max-width: 100%;
+  }
+  
+  .photo video {
+    max-width: 100%;
+  }
