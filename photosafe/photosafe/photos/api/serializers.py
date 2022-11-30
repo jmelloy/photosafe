@@ -20,7 +20,7 @@ class PhotoSerializer(serializers.ModelSerializer):
 
     # https://www.django-rest-framework.org/api-guide/relations/
     def create(self, validated_data):
-        versions = validated_data.pop("versions")
+        versions = validated_data.get("versions", [])
         photo = Photo.objects.create(**validated_data)
 
         for version in versions:
@@ -31,7 +31,7 @@ class PhotoSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         print(validated_data)
 
-        versions = validated_data.pop("versions")
+        versions = validated_data.get("versions", [])
 
         instance = super(PhotoSerializer, self).update(instance, validated_data)
 

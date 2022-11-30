@@ -152,7 +152,8 @@ def sync_photo(photo):
         headers={"Content-Type": "application/json", "Authorization": f"Token {token}"},
     )
 
-    # if r.status_code == 404:
+    if r.status_code == 404:
+        return
     #     p["id"] = hash_id
     #     r = requests.post(
     #         f"{base_url}/api/photos/",
@@ -324,8 +325,8 @@ def cleanup(username):
 
 if __name__ == "__main__":
     blocks = populate_blocks()
-    server_blocks = get_server_blocks()
-    photos = find_discrepancies(blocks, server_blocks)
+    # server_blocks = get_server_blocks()
+    photos = find_discrepancies(blocks, {})
 
     print("total", total, "to process:", len(photos))
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
@@ -335,4 +336,4 @@ if __name__ == "__main__":
 
         print(len(results), "checked", len(list(filter(None, results))), "uploaded")
 
-    upload_albums()
+    # upload_albums()

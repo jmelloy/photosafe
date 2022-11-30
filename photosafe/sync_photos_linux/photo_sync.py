@@ -3,6 +3,10 @@ import os
 import shutil
 import sys
 from collections import defaultdict
+import pytz
+import datetime
+import mimetypes
+from tqdm import tqdm
 
 import boto3
 import requests
@@ -83,8 +87,31 @@ def upload_photo(photo, version, path):
     with open(path, "wb") as FILE:
         r = photo.download(version)
         FILE.write(r.raw.read())
-    print(f"Uploading {path} to {bucket}")
-    s3.upload_file(path, bucket, path)
+    size = photo.versions[version]["size"]
+
+    # print(f"Uploading {path} to {bucket} ({size} b")
+
+    suffix = os.path.splitext(path)[-1].lower()
+    content_type = mimetypes.types_map.get(suffix)
+    if not content_type:
+        content_type = mimetypes.guess_type(path)
+
+    with tqdm(
+        total=size,
+        desc=f"{path}",
+        bar_format="{percentage:.1f}%|{bar:25} | {rate_fmt} | {desc}",
+        unit="B",
+        unit_scale=True,
+        unit_divisor=1024,
+    ) as pbar:
+
+        s3.upload_file(
+            path,
+            bucket,
+            path,
+            ExtraArgs=dict(ContentType=content_type),
+            Callback=pbar.update,
+        )
     os.remove(path)
 
 
@@ -151,7 +178,7 @@ if __name__ == "__main__":
 
     for i, photo in enumerate(api.photos.all):
         print(photo, photo.created)
-        dt = (photo.asset_date or photo.created).strftime("%Y/%m/%D")
+        dt = (photo.asset_date or photo.created).strftime("%Y/%m/%d")
 
         objects = s3_keys.get(dt)
         if not objects:
@@ -256,7 +283,8 @@ if __name__ == "__main__":
             print(r.status_code, r.text)
             r.raise_for_status()
 
-        if i > 100:
+        if photo.asset_date < datetime.datetime(2022, 11, 1, tzinfo=pytz.utc):
             break
+
     shutil.rmtree(username)
     # upload_albums()

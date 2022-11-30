@@ -23,20 +23,20 @@ services:
       - "8000:8000"
     command: /start
 
-  node:
-    build:
-      context: .
-      dockerfile: ./compose/local/node/Dockerfile
-    image: photosafe_local_node
-    container_name: node
-    volumes:
-      - ./frontend/src:/app/src:z
-    environment:
-      - REACT_APP_SERVER_ADDRESS=http://localhost:8000
-    depends_on:
-      - django
-    ports:
-      - "3000:3000"
+  # node:
+  #   build:
+  #     context: .
+  #     dockerfile: ./compose/local/node/Dockerfile
+  #   image: photosafe_local_node
+  #   container_name: node
+  #   volumes:
+  #     - ./frontend/src:/app/src:z
+  #   environment:
+  #     - REACT_APP_SERVER_ADDRESS=http://localhost:8000
+  #   depends_on:
+  #     - django
+  #   ports:
+  #     - "3000:3000"
 
   postgres:
     build:

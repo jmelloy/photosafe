@@ -29,11 +29,13 @@
   <div><span style="font-weight: bold">Geo: </span><span>({{ photo.latitude }}, {{ photo.longitude }})</span></div>
   
   <div><span style="font-weight: bold">UTI: </span><span>{{ photo.uti }}</span></div>
+  <div><span style="font-weight: bold">Place: </span><span>{{ photo.place.name }}</span></div>
+  <div><span style="font-weight: bold">Labels: </span><span>{{ photo.labels }}</span></div>
   
   <div><span style="font-weight: bold">EXIF: </span><br/>
   {% for key, val in photo.exif.items %}
     {% if val %}
-    <span style="font-weight: bold">{{key }}: </span><span>{{ val }}</span>
+    <span style="font-weight: bold">{{key|title }}: </span><span>{{ val }}</span>
     {% endif%}
   {% endfor %}
   </div>
