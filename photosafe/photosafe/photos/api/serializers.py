@@ -34,7 +34,9 @@ class PhotoSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         print(validated_data)
 
-        versions = validated_data.get("versions", [])
+        versions = []
+        if "versions" in validated_data:
+            versions = validated_data.pop("versions")
 
         instance = super(PhotoSerializer, self).update(instance, validated_data)
 

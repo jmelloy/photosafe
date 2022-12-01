@@ -8,6 +8,7 @@ Collectfast  # https://github.com/antonagestam/collectfast
 
 # Django
 # ------------------------------------------------------------------------------
-django-storages[boto3]  # https://github.com/jschneier/django-storages
+# django-storages[boto3]  # https://github.com/jschneier/django-storages
+git+https://github.com/jmelloy/django-storages.git@master
 django-anymail[amazon_ses]  # https://github.com/anymail/django-anymail
 
