@@ -16,14 +16,12 @@ from tools import DateTimeEncoder, list_bucket
 s3 = boto3.client(
     "s3",
     "us-west-2",
-    aws_access_key_id="",
-    aws_secret_access_key="",
 )
 
 bucket = os.environ.get("BUCKET", "jmelloy-photo-backup")
-base_url = os.environ.get("BASE_URL", "http://localhost:8000")
+base_url = os.environ.get("BASE_URL", "https://api.photosafe.melloy.life")
 username = os.environ.get("USERNAME", "jmelloy")
-password = os.environ.get("PASSWORD", "invasion")
+password = os.environ.get("PASSWORD", "INVasion87")
 
 r = requests.post(
     f"{base_url}/auth-token/", json={"username": username, "password": password}
@@ -93,8 +91,10 @@ def upload_photo(photo, version, path):
 
     suffix = os.path.splitext(path)[-1].lower()
     content_type = mimetypes.types_map.get(suffix)
+    if suffix == ".heic":
+        content_type = "image/heic"
     if not content_type:
-        content_type = mimetypes.guess_type(path)
+        content_type = "application/octet-stream"
 
     with tqdm(
         total=size,
@@ -282,9 +282,6 @@ if __name__ == "__main__":
         elif r.status_code > 399:
             print(r.status_code, r.text)
             r.raise_for_status()
-
-        if photo.asset_date < datetime.datetime(2022, 11, 1, tzinfo=pytz.utc):
-            break
 
     shutil.rmtree(username)
     # upload_albums()
