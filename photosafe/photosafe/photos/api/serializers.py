@@ -32,8 +32,6 @@ class PhotoSerializer(serializers.ModelSerializer):
         return photo
 
     def update(self, instance, validated_data):
-        print(validated_data)
-
         versions = []
         if "versions" in validated_data:
             versions = validated_data.pop("versions")

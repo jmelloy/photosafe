@@ -190,6 +190,11 @@ if __name__ == "__main__":
             }
             s3_keys[dt] = objects
 
+        exif = None
+        meatadata = photo.mediaMetaData
+        if meatadata:
+            exif = meatadata.get("{Exif}")
+
         data = {
             "uuid": photo._asset_record["recordName"],  # cloudAssetGUID
             "masterFingerprint": photo.id,
@@ -206,7 +211,7 @@ if __name__ == "__main__":
             "description": photo.description,
             "latitude": photo.latitude,
             "longitude": photo.longitude,
-            "exif": photo.mediaMetaData.get("{Exif}"),
+            "exif": exif,
             "live_photo": "live" in photo.versions,
             "isphoto": photo.item_type == "image",
             "ismovie": photo.item_type == "movie",
