@@ -20,7 +20,10 @@ class PhotoSerializer(serializers.ModelSerializer):
 
     # https://www.django-rest-framework.org/api-guide/relations/
     def create(self, validated_data):
-        versions = validated_data.get("versions", [])
+        versions = []
+        if "versions" in validated_data:
+            versions = validated_data.pop("versions")
+
         photo = Photo.objects.create(**validated_data)
 
         for version in versions:
