@@ -13,6 +13,8 @@ import requests
 from pyicloud import PyiCloudService
 from tools import DateTimeEncoder, list_bucket
 
+import argparse
+
 s3 = boto3.client(
     "s3",
     "us-west-2",
@@ -20,8 +22,8 @@ s3 = boto3.client(
 
 bucket = os.environ.get("BUCKET", "jmelloy-photo-backup")
 base_url = os.environ.get("BASE_URL", "https://api.photosafe.melloy.life")
-username = os.environ.get("USERNAME", "jmelloy")
-password = os.environ.get("PASSWORD", "INVasion87")
+username = os.environ.get("USERNAME")
+password = os.environ.get("PASSWORD")
 
 r = requests.post(
     f"{base_url}/auth-token/", json={"username": username, "password": password}
@@ -175,6 +177,12 @@ def upload_albums():
 
 if __name__ == "__main__":
     s3_keys = {}
+    existing = 0
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--stop-after", type=int, default=3)
+
+    opts = parser.parse_args()
 
     for i, photo in enumerate(api.photos.all):
         print(photo, photo.created)
@@ -275,6 +283,9 @@ if __name__ == "__main__":
         )
 
         if r.status_code == 400 and "this uuid already exists" in r.text:
+            existing += 1
+            if existing > opts.stop_after:
+                break
             r = requests.patch(
                 f"{base_url}/api/photos/{data['uuid']}/",
                 data=json.dumps(data, cls=DateTimeEncoder),
@@ -289,4 +300,5 @@ if __name__ == "__main__":
             r.raise_for_status()
 
     shutil.rmtree(username)
+    print(i + 1, " photos", existing, " existing")
     # upload_albums()
