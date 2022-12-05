@@ -84,10 +84,12 @@ elif api.requires_2sa:
 
 def upload_photo(photo, version, path):
     os.makedirs(os.path.split(path)[0], exist_ok=True)
-    with open(path, "wb") as FILE:
-        r = photo.download(version)
-        FILE.write(r.raw.read())
+    r = photo.download(version)
+    r.raise_for_status()
     size = photo.versions[version]["size"]
+
+    with open(path, "wb") as FILE:
+        shutil.copyfileobj(r.raw, FILE)
 
     # print(f"Uploading {path} to {bucket} ({size} b")
 
@@ -197,6 +199,10 @@ if __name__ == "__main__":
                 )
             }
             s3_keys[dt] = objects
+            for key in s3_keys:
+                if key[0:7] > dt[0:7]:
+                    del s3_keys[key]
+            print(sys.getsizeof(), "bytes")
 
         exif = None
         meatadata = photo.mediaMetaData
