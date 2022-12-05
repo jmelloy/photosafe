@@ -199,7 +199,7 @@ if __name__ == "__main__":
                 )
             }
             s3_keys[dt] = objects
-            for key in s3_keys:
+            for key in list(s3_keys):
                 if key[0:7] > dt[0:7]:
                     del s3_keys[key]
             # print(sys.getsizeof(), "bytes")
