@@ -202,7 +202,7 @@ if __name__ == "__main__":
             for key in s3_keys:
                 if key[0:7] > dt[0:7]:
                     del s3_keys[key]
-            print(sys.getsizeof(), "bytes")
+            # print(sys.getsizeof(), "bytes")
 
         exif = None
         meatadata = photo.mediaMetaData
