@@ -1,4 +1,4 @@
-from django.db.models import Count, Max
+from django.db.models import Count, Max, Q
 from django.db.models.functions import Coalesce
 from django.db.models.functions.datetime import ExtractDay, ExtractMonth, ExtractYear
 from django.http.response import JsonResponse
@@ -15,7 +15,7 @@ from photosafe.photos.models import Photo, Version
 class PhotoDayView(View):
     def get(self, request):
         rs = (
-            Photo.objects.filter(keywords__isnull=True)
+            Photo.objects.filter(Q(labels__isnull=True) | Q(labels__len=0))
             .values(
                 year=ExtractYear("date"),
                 month=ExtractMonth("date"),
