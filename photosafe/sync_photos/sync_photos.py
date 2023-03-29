@@ -92,7 +92,7 @@ def populate_blocks():
     blocks = {}
     for photo in photos_db.photos():
         dt = photo.date.astimezone(timezone.utc)
-        if not photo.path or not dt.year == 2022 or not dt.month == 11:
+        if not photo._info["cloudAssetGUID"]:
             # print(photo.uuid, photo.original_filename, photo.path, photo.path_edited, photo.path_live_photo, photo.path_raw, photo.path_derivatives)
             continue
 
@@ -325,8 +325,8 @@ def cleanup(username):
 
 if __name__ == "__main__":
     blocks = populate_blocks()
-    # server_blocks = get_server_blocks()
-    photos = find_discrepancies(blocks, {})
+    server_blocks = get_server_blocks()
+    photos = find_discrepancies(blocks, server_blocks=server_blocks)
 
     print("total", total, "to process:", len(photos))
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
