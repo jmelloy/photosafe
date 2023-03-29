@@ -6,6 +6,7 @@
   <div class="photo">
     {% if photo.isphoto %}
 
+    {photo.versions.all.filter()}
     <img
       src="https://photos.melloy.life/{% for version in photo.versions.all %}{% if version.version == "medium" %}{{ version.s3_path }}{% endif %}{% endfor %}"
       alt="{{ photo.title }}"
