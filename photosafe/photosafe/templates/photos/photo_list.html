@@ -21,13 +21,14 @@
   </span>
 </div>
 
-<div>
+<div class="image_container">
 {% for version in page_obj %}
+{% ifchanged version.photo.date.month %}
+  </div>
+  <h3>{{ version.photo.date|date:"F, Y" }}</h3>
+  <div class="image_container">{% endifchanged %}
 
-  {% ifchanged version.photo.date.month %}</div><h3 style="clear: both">{{ version.photo.date|date:"F, Y" }}</h3><div class="row" >{% endifchanged %}
-
-  <div class="col-3">
-    <center>
+  <div class="item">
       <a href="{% url 'photos:detail' pk=version.photo_id %}">
     {% if version.photo.isphoto %}
       <img
@@ -41,12 +42,8 @@
       <source src="https://photos.melloy.life/{{ version.s3_path }}" />
     </video>
     {% endif %}  
-  </center>
   </div>
 
-  {% if forloop.counter|divisibleby:4 %}
-      </div><div class="row">
-  {% endif %}
 {% endfor %}
 
 </div>

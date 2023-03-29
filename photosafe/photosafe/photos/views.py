@@ -14,11 +14,15 @@ from photosafe.photos.models import Photo, Version
 
 class PhotoDayView(View):
     def get(self, request):
-        rs = Photo.objects.values(
-            year=ExtractYear("date"),
-            month=ExtractMonth("date"),
-            day=ExtractDay("date"),
-        ).annotate(count=Count("*"), max_date=Max(Coalesce("date_modified", "date")))
+        rs = (
+            Photo.objects.filter(keywords__isnull=True)
+            .values(
+                year=ExtractYear("date"),
+                month=ExtractMonth("date"),
+                day=ExtractDay("date"),
+            )
+            .annotate(count=Count("*"), max_date=Max(Coalesce("date_modified", "date")))
+        )
 
         r = {}
         for row in rs:
