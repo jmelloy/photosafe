@@ -124,11 +124,7 @@ def find_discrepancies(blocks, server_blocks):
                     .get(str(month), {})
                     .get(str(day), {})
                 )
-                if (
-                    not vals
-                    or vals["count"] != count
-                    or abs(parser.parse(vals["max_date"]) - date) > timedelta(seconds=3)
-                ):
+                if vals and (vals["count"] != count or abs(parser.parse(vals["max_date"]) - date) > timedelta(seconds=3)):
                     print(f"discrepancy {year}/{month}/{day}, {vals} vs {count}/{date}")
                     photos_to_process.extend(blocks[year][month][day])
 
