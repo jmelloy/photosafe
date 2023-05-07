@@ -1,13 +1,3 @@
-FROM node:10-stretch-slim as client-builder
-
-ARG APP_HOME=/app
-WORKDIR ${APP_HOME}
-
-#COPY ./package.json ${APP_HOME}
-#RUN npm install && npm cache clean --force
-#RUN npm run build
-
-COPY . ${APP_HOME}
 ARG PYTHON_VERSION=3.9-slim-buster
 
 # define an alias for the specfic python version used in this file.
@@ -27,12 +17,10 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   git
 
 # Requirements are installed here to ensure they will be cached.
-COPY ./requirements .
+COPY ./requirements.txt .
 
 # Create Python Dependency and Sub-Dependency Wheels.
-RUN pip wheel --wheel-dir /usr/src/app/wheels  \
-  -r ${BUILD_ENVIRONMENT}.txt
-
+RUN pip wheel --wheel-dir /usr/src/app/wheels -r requirements.txt
 
 # Python 'run' stage
 FROM python as python-run-stage

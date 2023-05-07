@@ -15,8 +15,8 @@ s3 = boto3.client("s3", "us-west-2")
 
 bucket = os.environ.get("BUCKET", "jmelloy-photo-backup")
 base_url = os.environ.get("BASE_URL", "http://localhost:8000")
-username = os.environ.get("USERNAME", "jmelloy")
-password = os.environ.get("PASSWORD", "invasion")
+username = os.environ.get("USERNAME")
+password = os.environ.get("PASSWORD")
 
 r = requests.post(
     f"{base_url}/auth-token/", json={"username": username, "password": password}
