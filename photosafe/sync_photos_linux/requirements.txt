@@ -1,4 +1,4 @@
-git+https://github.com/jmelloy/pyicloud.git@master
+git+https://github.com/jmelloy/pyicloud.git
 boto3
 requests
 pytz

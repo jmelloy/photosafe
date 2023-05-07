@@ -1,5 +1,8 @@
 {
-  "python.formatting.provider": "black",
+  "python.formatting.provider": "none",
   "python.pythonPath": "/Users/jmelloy/.virtualenvs/photosafe/bin/python",
-  "python.defaultInterpreterPath": "/Users/jmelloy/.virtualenvs/photosafe/bin/python"
+  "python.defaultInterpreterPath": "/Users/jmelloy/.virtualenvs/photosafe/bin/python",
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter"
+  }
 }
