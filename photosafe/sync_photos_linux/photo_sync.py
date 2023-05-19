@@ -312,6 +312,6 @@ if __name__ == "__main__":
                 print(r.status_code, r.text)
                 r.raise_for_status()
 
-        shutil.rmtree(username)
-        print(i + 1, " photos", existing, " existing")
-        upload_albums()
+    shutil.rmtree(username)
+    print(i + 1, " photos", existing, " existing")
+    upload_albums()
