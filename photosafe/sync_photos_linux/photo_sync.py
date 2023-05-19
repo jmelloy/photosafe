@@ -135,7 +135,7 @@ def album_contains(album_name, photo):
 def upload_albums():
     for name, album in api.photos.albums.items():
         print(f"Processing album {name}")
-        if album.name == "All Photos":
+        if album.name == "All Photos" or not album.id:
             continue
 
         album_info = {
@@ -179,14 +179,15 @@ def upload_albums():
 
 if __name__ == "__main__":
     s3_keys = {}
-    existing = 0
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--stop-after", type=int, default=100)
 
     args = parser.parse_args()
+    os.makedirs(username, exist_ok=True)
     for library_name, album in api.photos.libraries.items():
         print(f"Library: {library_name}")
+        existing = 0
 
         for i, photo in enumerate(album.all):
             print(photo, photo.created)
@@ -233,12 +234,12 @@ if __name__ == "__main__":
                 "live_photo": "live" in photo.versions,
                 "isphoto": photo.item_type == "image",
                 "ismovie": photo.item_type == "movie",
-                # "screenshot": album_contains("Screenshots", photo),
-                # "slow_mo": album_contains("Slo-mo", photo),
-                # "time_lapse": album_contains("Time-lapse", photo),
-                # "panorama": album_contains("Panoramas", photo),
-                # "burst": album_contains("Bursts", photo),
-                # "portrait": album_contains("Portrait", photo),
+                "screenshot": album_contains("Screenshots", photo),
+                "slow_mo": album_contains("Slo-mo", photo),
+                "time_lapse": album_contains("Time-lapse", photo),
+                "panorama": album_contains("Panoramas", photo),
+                "burst": album_contains("Bursts", photo),
+                "portrait": album_contains("Portrait", photo),
             }
 
             keys = {
