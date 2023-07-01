@@ -1,3 +1,14 @@
+FROM node:18-bullseye-slim as client-builder
+
+ARG APP_HOME=/app
+WORKDIR ${APP_HOME}
+
+#COPY ./package.json ${APP_HOME}
+#RUN npm install && npm cache clean --force
+#RUN npm run build
+
+COPY . ${APP_HOME}
+
 ARG PYTHON_VERSION=3.9-slim-buster
 
 # define an alias for the specfic python version used in this file.
