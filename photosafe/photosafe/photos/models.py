@@ -76,6 +76,8 @@ class Photo(models.Model):
 
     owner = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
 
+    library = models.TextField(null=True, blank=True)
+
 
 class Version(models.Model):
     photo = models.ForeignKey(

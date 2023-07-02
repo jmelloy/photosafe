@@ -240,6 +240,7 @@ if __name__ == "__main__":
                 "panorama": album_contains("Panoramas", photo),
                 "burst": album_contains("Bursts", photo),
                 "portrait": album_contains("Portrait", photo),
+                "library": library_name,
             }
 
             keys = {
