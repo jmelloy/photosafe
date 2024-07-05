@@ -6,14 +6,28 @@ volumes:
   production_traefik: {}
 
 services:
-  django: &django
+  django-migrate:
     build:
       context: .
       dockerfile: ./compose/production/django/Dockerfile
     image: photosafe_production_django
     depends_on:
       - postgres
+    env_file:
+      - ./.envs/.production/.django
+      - ./.envs/.production/.postgres
+    command: python /app/manage.py migrate
+
+  django: &django
+    build:
+      context: .
+      dockerfile: ./compose/production/django/Dockerfile
+    restart: always
+    image: photosafe_production_django
+    depends_on:
+      - postgres
       - redis
+      - django-migrate
     env_file:
       - ./.envs/.production/.django
       - ./.envs/.production/.postgres
