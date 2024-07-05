@@ -93,6 +93,7 @@ class Version(models.Model):
     width = models.IntegerField(null=True)
     height = models.IntegerField(null=True)
     size = models.IntegerField(null=True)
+    type = models.TextField(null=True, blank=True)
 
 
 class Album(models.Model):

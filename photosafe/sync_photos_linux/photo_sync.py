@@ -210,9 +210,9 @@ if __name__ == "__main__":
                 # print(sys.getsizeof(), "bytes")
 
             exif = None
-            meatadata = photo.mediaMetaData
-            if meatadata:
-                exif = meatadata.get("{Exif}")
+            metadata = photo.mediaMetaData
+            if metadata:
+                exif = metadata.get("{Exif}")
 
             data = {
                 "uuid": photo._asset_record["recordName"],  # cloudAssetGUID
@@ -267,6 +267,7 @@ if __name__ == "__main__":
                         width=details["width"],
                         height=details["height"],
                         size=details["size"],
+                        type=path.split(".")[-1].lower(),
                     )
                 )
 
