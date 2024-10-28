@@ -1,20 +1,17 @@
+import argparse
+import datetime
+import io
 import json
+import logging
 import os
 from copy import copy
-
-from collections import defaultdict
-import datetime
-from tqdm import tqdm
+from urllib.parse import urlparse
 
 import boto3
 import requests
+from PIL import Image
 from tools import DateTimeEncoder, list_bucket
-
-import argparse
-
-import logging
-from urllib.parse import urlparse
-
+from tqdm import tqdm
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)6s %(message)s",
@@ -113,7 +110,7 @@ user_details = {
 
 
 def wrap(session, url, data={}, method="POST"):
-    logger.info(f"Calling {url}")
+    logger.info(f"Calling {method} {url}")
     start = datetime.datetime.now()
 
     if method.upper() == "GET":
@@ -179,9 +176,33 @@ def iteration_generations():
         offset += limit
 
 
-def upload_to_s3(url, bucket_name, object_key):
+def upload_to_s3(url, bucket_name, object_key, objects={}):
     response = requests.get(url)
-    s3.put_object(Body=response.content, Bucket=bucket_name, Key=object_key)
+    image_data = response.content
+    image = Image.open(io.BytesIO(image_data))
+
+    if not object_key in objects:
+        s3.put_object(Body=image_data, Bucket=bucket_name, Key=object_key)
+
+    return image, len(image_data)
+
+
+def upload_and_resize(url, bucket_name, object_key, objects={}):
+    response = requests.get(url)
+    image_data = response.content
+
+    image = Image.open(io.BytesIO(image_data))
+    image.thumbnail((480, 480))
+
+    output = io.BytesIO()
+    image.save(output, format="JPEG")
+    output.seek(0)
+    size = len(output.getvalue())
+    output.seek(0)
+    if not object_key in objects:
+        s3.upload_fileobj(output, bucket_name, object_key)
+
+    return image, size
 
 
 if __name__ == "__main__":
@@ -219,9 +240,9 @@ if __name__ == "__main__":
             print(image.id, generation.created_at)
             dt = generation.created_at.strftime("%Y/%m/%d")
 
-            objects = s3_keys.get(dt)
-            if not objects:
-                objects = {
+            existing_s3_objects = s3_keys.get(dt)
+            if not existing_s3_objects:
+                existing_s3_objects = {
                     x[0]: x[1]
                     for x in list_bucket(
                         s3,
@@ -229,16 +250,22 @@ if __name__ == "__main__":
                         prefix=os.path.join(os.path.join(username, dt)),
                     )
                 }
-                s3_keys[dt] = objects
+                s3_keys[dt] = existing_s3_objects
                 for key in list(s3_keys):
                     if key[0:7] > dt[0:7]:
                         del s3_keys[key]
                 # print(sys.getsizeof(), "bytes")
 
             exif = metadata
-            if generation.model_id not in models:
+            if generation.model_id and generation.model_id not in models:
                 model = get_model(generation.model_id)
                 models[generation.model_id] = model
+
+            exif["model"] = (
+                models.get(generation.model_id, {})
+                .get("custom_models_by_pk", {})
+                .get("name", "Unknown")
+            )
 
             data = {
                 "uuid": image.id,
@@ -251,16 +278,17 @@ if __name__ == "__main__":
                 "title": generation.prompt,
                 "exif": exif,
                 "library": "leonardo",
+                "isphoto": True,
             }
 
             if image.generated_image_variation_generics:
                 print(image.generated_image_variation_generics)
 
-            version = "full"
+            version = "medium"
             path = os.path.join(
                 username, dt, data["uuid"], version, data["original_filename"]
             )
-            upload_to_s3(image.url, bucket, path)
+            _, size = upload_to_s3(image.url, bucket, path, {})
             data["versions"].append(
                 dict(
                     version=version,
@@ -268,6 +296,22 @@ if __name__ == "__main__":
                     filename=data["original_filename"],
                     width=data["width"],
                     height=data["height"],
+                    size=size,
+                    type=path.split(".")[-1].lower(),
+                )
+            )
+
+            thumb_key = path.replace(f"/{version}/", "/thumb/")
+            uploaded_image, size = upload_and_resize(image.url, bucket, thumb_key, {})
+            data["versions"].append(
+                dict(
+                    version="thumb",
+                    s3_path=thumb_key,
+                    filename=data["original_filename"],
+                    width=uploaded_image.width,
+                    height=uploaded_image.height,
+                    size=size,
+                    type=thumb_key.split(".")[-1].lower(),
                 )
             )
 
