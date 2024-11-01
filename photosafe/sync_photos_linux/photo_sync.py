@@ -1,19 +1,15 @@
+import argparse
 import json
+import mimetypes
 import os
 import shutil
 import sys
-from collections import defaultdict
-import pytz
-import datetime
-import mimetypes
-from tqdm import tqdm
 
 import boto3
 import requests
 from pyicloud import PyiCloudService
 from tools import DateTimeEncoder, list_bucket
-
-import argparse
+from tqdm import tqdm
 
 s3 = boto3.client(
     "s3",
@@ -22,11 +18,11 @@ s3 = boto3.client(
 
 bucket = os.environ.get("BUCKET", "jmelloy-photo-backup")
 base_url = os.environ.get("BASE_URL", "https://api.photosafe.melloy.life")
-username = os.environ.get("USERNAME")
-password = os.environ.get("PASSWORD")
+api_username = os.environ.get("USERNAME")
+api_password = os.environ.get("PASSWORD")
 
 r = requests.post(
-    f"{base_url}/auth-token/", json={"username": username, "password": password}
+    f"{base_url}/auth-token/", json={"username": api_username, "password": api_password}
 )
 r.raise_for_status()
 token = r.json()["token"]
@@ -35,9 +31,9 @@ r = requests.get(f"{base_url}/users/me", headers={"Authorization": f"Token {toke
 r.raise_for_status()
 user = r.json()
 
-icloudUsername = os.environ.get("ICLOUD_USERNAME") or input("Username: ")
-icloudPassword = os.environ.get("ICLOUD_PASSWORD") or input("Password: ")
-api = PyiCloudService(icloudUsername, icloudPassword)
+icloud_username = os.environ.get("ICLOUD_USERNAME") or input("Username: ")
+icloud_password = os.environ.get("ICLOUD_PASSWORD") or input("Password: ")
+api = PyiCloudService(icloud_username, icloud_password)
 
 if api.requires_2fa:
     print("Two-factor authentication required.")
@@ -184,7 +180,7 @@ if __name__ == "__main__":
     parser.add_argument("--stop-after", type=int, default=100)
 
     args = parser.parse_args()
-    os.makedirs(username, exist_ok=True)
+    os.makedirs(api_username, exist_ok=True)
     for library_name, album in api.photos.libraries.items():
         print(f"Library: {library_name}")
         existing = 0
@@ -200,7 +196,7 @@ if __name__ == "__main__":
                     for x in list_bucket(
                         s3,
                         bucket=bucket,
-                        prefix=os.path.join(os.path.join(username, dt)),
+                        prefix=os.path.join(os.path.join(api_username, dt)),
                     )
                 }
                 s3_keys[dt] = objects
@@ -252,7 +248,7 @@ if __name__ == "__main__":
 
             for version, details in photo.versions.items():
                 path = os.path.join(
-                    username, dt, data["uuid"], version, details["filename"]
+                    api_username, dt, data["uuid"], version, details["filename"]
                 )
                 if path not in objects or objects[path] != details["size"]:
                     upload_photo(photo, version, path)
@@ -314,6 +310,6 @@ if __name__ == "__main__":
                 print(r.status_code, r.text)
                 r.raise_for_status()
 
-    shutil.rmtree(username)
+    shutil.rmtree(api_username)
     print(i + 1, " photos", existing, " existing")
     upload_albums()
