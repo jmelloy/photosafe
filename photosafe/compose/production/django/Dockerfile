@@ -24,7 +24,6 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   # dependencies for building Python packages
   build-essential \
   # psycopg2 dependencies
-  postgresql-client \
   libpq-dev \
   git
 
@@ -54,6 +53,7 @@ RUN addgroup --system django \
 RUN apt-get update && apt-get install --no-install-recommends -y \
   # psycopg2 dependencies
   libpq-dev \
+  postgresql-client \
   # Translations dependencies
   gettext \
   # cleaning up unused files
