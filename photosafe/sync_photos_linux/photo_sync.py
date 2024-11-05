@@ -182,11 +182,11 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     os.makedirs(api_username, exist_ok=True)
-    for library_name, album in api.photos.libraries.items():
+    for library_name, library in api.photos.libraries.items():
         print(f"Library: {library_name}")
         existing = 0
 
-        for i, photo in enumerate(album.fetch_records(args.offset)):
+        for i, photo in enumerate(library.all.fetch_records(args.offset)):
             print(photo, photo.created)
             dt = (photo.asset_date or photo.created).strftime("%Y/%m/%d")
 
