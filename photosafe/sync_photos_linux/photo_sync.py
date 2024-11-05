@@ -177,7 +177,8 @@ if __name__ == "__main__":
     s3_keys = {}
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--stop-after", type=int, default=100)
+    parser.add_argument("--stop-after", type=int, default=1000)
+    parser.add_argument("--offset", type=int, default=0)
 
     args = parser.parse_args()
     os.makedirs(api_username, exist_ok=True)
@@ -185,7 +186,7 @@ if __name__ == "__main__":
         print(f"Library: {library_name}")
         existing = 0
 
-        for i, photo in enumerate(album.all):
+        for i, photo in enumerate(album.fetch_records(args.offset)):
             print(photo, photo.created)
             dt = (photo.asset_date or photo.created).strftime("%Y/%m/%d")
 
