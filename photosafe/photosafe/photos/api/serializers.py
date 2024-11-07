@@ -6,7 +6,7 @@ from photosafe.photos.models import Album, Photo, Version
 class VersionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Version
-        fields = ["version", "s3_path", "filename", "width", "height", "size"]
+        fields = "__all__"
 
 
 class PhotoSerializer(serializers.ModelSerializer):

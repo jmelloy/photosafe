@@ -4,8 +4,8 @@ Pillow  # https://github.com/python-pillow/Pillow
 argon2-cffi==20.1.0  # https://github.com/hynek/argon2_cffi
 redis<4  # https://github.com/andymccurdy/redis-py
 hiredis  # https://github.com/redis/hiredis-py
-celery==4.4.6  # pyup: < 5.0,!=4.4.7  # https://github.com/celery/celery
-django-celery-beat==2.2.0  # https://github.com/celery/django-celery-beat
+celery  # pyup: < 5.0,!=4.4.7  # https://github.com/celery/celery
+django-celery-beat  # https://github.com/celery/django-celery-beat
 flower  # https://github.com/mher/flower
 
 # Django
@@ -66,7 +66,6 @@ Collectfast  # https://github.com/antonagestam/collectfast
 
 # Django
 # ------------------------------------------------------------------------------
-# django-storages[boto3]  # https://github.com/jschneier/django-storages
-git+https://github.com/jmelloy/django-storages.git@master
+django-storages[boto3]  # https://github.com/jschneier/django-storages
 django-anymail[amazon_ses]  # https://github.com/anymail/django-anymail
 

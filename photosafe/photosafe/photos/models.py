@@ -74,6 +74,8 @@ class Photo(models.Model):
     s3_original_path = models.TextField(null=True, blank=True)
     s3_live_path = models.TextField(null=True, blank=True)
 
+    fields = models.JSONField(null=True)
+
     owner = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
 
     library = models.TextField(null=True, blank=True)

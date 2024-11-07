@@ -217,10 +217,10 @@ if __name__ == "__main__":
                 "original_filename": photo.filename,
                 "date": photo.asset_date or photo.created,
                 "versions": [],
-                "size": photo.versions["original"]["size"],
+                "size": photo.size,
                 "uti": photo.versions["original"]["type"],
-                "width": photo.versions["original"]["width"],
-                "height": photo.versions["original"]["height"],
+                "width": photo.dimensions[0],
+                "height": photo.dimensions[1],
                 "hidden": photo.isHidden,
                 "favorite": photo.isFavorite,
                 "title": photo.caption,
@@ -238,6 +238,7 @@ if __name__ == "__main__":
                 "burst": album_contains("Bursts", photo),
                 "portrait": album_contains("Portrait", photo),
                 "library": library_name,
+                "fields": photo.fields,
             }
 
             keys = {
@@ -267,21 +268,6 @@ if __name__ == "__main__":
                         type=path.split(".")[-1].lower(),
                     )
                 )
-
-            # data.update(
-            #     {
-            #         k: v["value"]
-            #         for (k, v) in photo._asset_record["fields"].items()
-            #         if type(v["value"]) != dict
-            #     }
-            # )
-            # data.update(
-            #     {
-            #         k: v["value"]
-            #         for (k, v) in photo._master_record["fields"].items()
-            #         if type(v["value"]) != dict
-            #     }
-            # )
 
             r = requests.post(
                 f"{base_url}/api/photos/",
