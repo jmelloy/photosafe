@@ -24,8 +24,8 @@ django-filter
 git+https://github.com/jmelloy/pyicloud.git@master
 boto3
 
-# Werkzeug # https://github.com/pallets/werkzeug
-# ipdb  # https://github.com/gotcha/ipdb
+Werkzeug # https://github.com/pallets/werkzeug
+ipdb  # https://github.com/gotcha/ipdb
 psycopg2-binary  # https://github.com/psycopg/psycopg2
 watchgod  # https://github.com/samuelcolvin/watchgod
 
