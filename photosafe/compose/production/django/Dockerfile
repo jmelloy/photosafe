@@ -43,7 +43,7 @@ RUN addgroup --system django \
 RUN apt-get update && apt-get install --no-install-recommends -y \
   # psycopg2 dependencies
   libpq-dev \
-  postgresql-client-16 \
+  postgresql-client \
   # Translations dependencies
   gettext \
   # cleaning up unused files
@@ -80,11 +80,6 @@ RUN chmod +x /start-celerybeat
 COPY ./compose/production/django/celery/flower/start /start-flower
 RUN sed -i 's/\r$//g' /start-flower
 RUN chmod +x /start-flower
-
-
-# copy application code to WORKDIR
-COPY --from=client-builder --chown=django:django ${APP_HOME} ${APP_HOME}
-
 
 # make django owner of the WORKDIR directory as well.
 RUN chown django:django ${APP_HOME}
