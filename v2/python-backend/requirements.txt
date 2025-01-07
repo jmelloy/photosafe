@@ -1,0 +1,11 @@
+Flask
+Pillow
+
+torch
+transformers
+accelerate
+
+numpy
+pyexiftool
+
+# osxphotos
