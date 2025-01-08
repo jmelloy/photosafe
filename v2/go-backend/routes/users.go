@@ -59,14 +59,16 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Serialize the document to JSON for indexing
-	userBytes, _ := json.Marshal(user)
-
 	if user.Token == "" {
 		user.Token = utils.GenerateUUIDv7("tok")
 	}
 
 	user.CreatedAt = time.Now().Format(time.RFC3339)
+
+	log.Print(user)
+
+	// Serialize the document to JSON for indexing
+	userBytes, _ := json.Marshal(user)
 
 	res, err := esClient.Index(
 		"users", // Index name
@@ -76,7 +78,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Print(err)
-		http.Error(w, "Failed to fetch user", http.StatusInternalServerError)
+		http.Error(w, "Failed to create user", http.StatusInternalServerError)
 		return
 	}
 	defer res.Body.Close()
@@ -88,7 +90,8 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(`{"message": "User created successfully"}`))
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(user)
 }
 
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
