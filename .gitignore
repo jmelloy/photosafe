@@ -454,3 +454,4 @@ dist
 .yarn/install-state.gz
 .pnp.*
 dump/dump.json
+v2/go-backend/tmp/main

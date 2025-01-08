@@ -46,7 +46,7 @@ func CreateAsset(w http.ResponseWriter, r *http.Request) {
 		ID:               r.FormValue("id"),
 		UserID:           user.ID,
 		OriginalFilename: handler.Filename,
-		CreatedAt:        time.Now().Format(time.RFC3339),
+		CreatedAt:        r.FormValue("created_at"),
 	}
 
 	docBytes, _ := json.Marshal(asset)
