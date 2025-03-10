@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -27,6 +28,8 @@ func CreateAsset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
+
 	if err := r.ParseMultipartForm(10 << 20); err != nil { // 10 MB max memory
 		http.Error(w, fmt.Sprintf("Error parsing form: %s", err), http.StatusBadRequest)
 		return
@@ -41,41 +44,39 @@ func CreateAsset(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	date := time.Now()
-
+	filename := handler.Filename
 	asset := models.Asset{
 		ID:               r.FormValue("id"),
 		UserID:           user.ID,
 		OriginalFilename: handler.Filename,
 		CreatedAt:        r.FormValue("created_at"),
 	}
-
-	docBytes, _ := json.Marshal(asset)
-
-	res, err := esClient.Index(
-		"assets-"+user.ID, // Index name
-		bytes.NewReader(docBytes),
-		esClient.Index.WithDocumentID(asset.ID),
-	)
-
-	filename := r.URL.Query().Get("filename")
-	if filename == "" {
-		http.Error(w, "Filename is required", http.StatusBadRequest)
-		return
-	}
-
 	docPath := filepath.Join(assetDirectory, user.ID, date.Format("2006/01/02"), asset.ID)
 	if err := os.MkdirAll(docPath, os.ModePerm); err != nil {
 		log.Fatalf("Error creating asset directory: %s", err)
 	}
 	filepath := filepath.Join(docPath, filename)
+
+	outFile, err := os.Create(filepath)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Unable to create file: %v", err), http.StatusInternalServerError)
+		return
+	}
+	defer outFile.Close()
+
+	_, err = io.Copy(outFile, file)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Unable to save file: %v", err), http.StatusInternalServerError)
+		return
+	}
+
 	asset.ImagePath = filepath
 
 	assetBytes, _ := json.Marshal(asset)
-	esClient.Index("assets-"+user.ID, bytes.NewReader(assetBytes), esClient.Index.WithDocumentID(asset.ID))
+	res, err := esClient.Index("assets-"+user.ID, bytes.NewReader(assetBytes), esClient.Index.WithDocumentID(asset.ID))
 
 	if err != nil {
 		log.Print(err)
-
 		http.Error(w, "Failed to create document", http.StatusInternalServerError)
 		return
 	}
@@ -89,7 +90,7 @@ func CreateAsset(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(`{"message": "Document created successfully"}`))
+	json.NewEncoder(w).Encode(asset)
 }
 
 func GetAsset(w http.ResponseWriter, r *http.Request) {
@@ -115,14 +116,30 @@ func GetAsset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var doc map[string]interface{}
-	if err := json.NewDecoder(res.Body).Decode(&doc); err != nil {
+	var result map[string]interface{}
+	if err := json.NewDecoder(res.Body).Decode(&result); err != nil {
 		http.Error(w, "Error parsing response", http.StatusInternalServerError)
 		return
 	}
 
+	// Extract and format the documents
+	hits := result["hits"].(map[string]interface{})["hits"].([]interface{})
+	var documents []models.Asset
+	for _, hit := range hits {
+		doc := hit.(map[string]interface{})["_source"]
+		jsonDoc, _ := json.Marshal(doc)
+		var document models.Asset
+		json.Unmarshal(jsonDoc, &document)
+		documents = append(documents, document)
+	}
+
+	if len(documents) == 0 {
+		http.Error(w, "Asset not found", http.StatusNotFound)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(doc)
+	json.NewEncoder(w).Encode(documents[0])
 }
 
 func UpdateAsset(w http.ResponseWriter, r *http.Request) {
@@ -142,18 +159,18 @@ func UpdateAsset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Serialize the document to JSON for updating
+	// Serialize the Asset to JSON for updating
 	docBytes, _ := json.Marshal(doc)
 
 	res, err := esClient.Update("assets-"+user.ID, id, bytes.NewReader([]byte(`{"doc": `+string(docBytes)+`}`)))
 	if err != nil {
-		http.Error(w, "Failed to update document", http.StatusInternalServerError)
+		http.Error(w, "Failed to update Asset", http.StatusInternalServerError)
 		return
 	}
 	defer res.Body.Close()
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"message": "Document updated successfully"}`))
+	w.Write([]byte(`{"message": "Asset updated successfully"}`))
 }
 
 func DeleteAsset(w http.ResponseWriter, r *http.Request) {
@@ -162,20 +179,20 @@ func DeleteAsset(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-	res, err := esClient.Delete("documents", id)
+	res, err := esClient.Delete("Assets", id)
 	if err != nil {
-		http.Error(w, "Failed to delete document", http.StatusInternalServerError)
+		http.Error(w, "Failed to delete Asset", http.StatusInternalServerError)
 		return
 	}
 	defer res.Body.Close()
 
 	if res.IsError() {
-		http.Error(w, "Document not found", http.StatusNotFound)
+		http.Error(w, "Asset not found", http.StatusNotFound)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"message": "Document deleted successfully"}`))
+	w.Write([]byte(`{"message": "Asset deleted successfully"}`))
 }
 
 func ListAssets(w http.ResponseWriter, r *http.Request) {

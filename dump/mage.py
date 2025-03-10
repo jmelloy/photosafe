@@ -122,7 +122,10 @@ def yield_images():
 
 
 def main():
+    seen = set()
     for image in yield_images():
+        if image["id"] in seen:
+            raise Exception("Duplicate image")
         print(
             image["created_at"],
             image["url"].split("/")[-1],
@@ -146,6 +149,8 @@ def main():
 
         with open(os.path.join(os.path.dirname(filename), "meta.json"), "w") as f:
             f.write(json.dumps(image, indent=2))
+
+        seen.add(image["id"])
 
 
 if __name__ == "__main__":

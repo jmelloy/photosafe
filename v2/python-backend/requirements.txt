@@ -9,3 +9,6 @@ numpy
 pyexiftool
 
 # osxphotos
+pika
+requests
+piexif

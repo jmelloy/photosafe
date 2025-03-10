@@ -18,7 +18,68 @@ services:
       dockerfile: Dockerfile
     container_name: python-backend
     ports:
-      - "6000:8080"
+      - "5000:8080"
+
+  thumbnail_processor:
+    build: .
+    environment:
+      # - API_STATUS_ENDPOINT=http://go-backend:8080
+      - API_TOKEN=${API_TOKEN}
+      - QUEUE_NAME=image_processing
+      - RABBIT_HOST=rabbitmq
+      - IMAGE_FORMAT=JPEG
+      - IMAGE_QUALITY=85
+      - IMAGE_UPLOAD_ENDPOINT=${IMAGE_UPLOAD_ENDPOINT}
+      - THUMBNAIL_HEIGHT=200
+      - THUMBNAIL_WIDTH=200
+    command: ["python", "processors/humbnail.py"]
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      replicas: 2
+
+  caption_processor:
+    build: .
+    environment:
+      # - API_STATUS_ENDPOINT=http://go-backend:8080/tasks
+      - API_TOKEN=${API_TOKEN}
+      - QUEUE_NAME=caption_processor
+      - RABBIT_HOST=rabbitmq
+    command: ["python", "processors/caption.py"]
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      replicas: 2
+
+  exif_processor:
+    build: .
+    environment:
+      # - API_STATUS_ENDPOINT=http://go-backend:8080/tasks
+      - API_TOKEN=${API_TOKEN}
+      - RABBIT_HOST=rabbitmq
+      - QUEUE_NAME=exif_processor
+      - INCLUDE_GPS=true
+      - PROCESS_XMP=true
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672" # AMQP protocol port
+      - "15672:15672" # Management UI port
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
 
   next-frontend:
     build:

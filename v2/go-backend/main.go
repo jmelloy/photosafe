@@ -55,6 +55,7 @@ func main() {
 
 	router.HandleFunc("/assets", routes.CreateAsset).Methods("POST")
 	router.HandleFunc("/assets/{id}", routes.GetAsset).Methods("GET")
+	router.HandleFunc("/assets/{id}/image", routes.GetAssetImage).Methods("GET")
 	router.HandleFunc("/assets/{id}", routes.UpdateAsset).Methods("PATCH")
 	router.HandleFunc("/assets/{id}", routes.DeleteAsset).Methods("DELETE")
 	router.HandleFunc("/assets", routes.ListAssets).Methods("GET")
