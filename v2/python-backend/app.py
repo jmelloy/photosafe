@@ -1,70 +1,139 @@
-from flask import Flask, request, jsonify
-from PIL import Image
-from PIL.ExifTags import TAGS
-from joycaption import generate_tags, generate_caption
+import pika
 import json
-import base64
+import time
+from typing import List, Dict
+import logging
+from dataclasses import dataclass
+import threading
+from flask import Flask, request, jsonify
+import uuid
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class QueueConfig:
+    name: str
+    routing_key: str
+    handler_function: str
+
+
+class TaskOrchestrator:
+    def __init__(self, rabbit_host: str = "localhost"):
+        self.connection = pika.BlockingConnection(
+            pika.ConnectionParameters(host=rabbit_host)
+        )
+        self.channel = self.connection.channel()
+        self.exchange_name = "task_exchange"
+
+        # Declare exchange
+        self.channel.exchange_declare(
+            exchange=self.exchange_name, exchange_type="direct", durable=True
+        )
+
+        # Define queue configurations
+        self.queues = [
+            QueueConfig("validation_queue", "validation", "validate_id"),
+            QueueConfig("processing_queue", "processing", "process_id"),
+            QueueConfig("notification_queue", "notification", "send_notification"),
+            QueueConfig("analytics_queue", "analytics", "log_analytics"),
+        ]
+
+        # Declare all queues
+        for queue in self.queues:
+            self.channel.queue_declare(queue=queue.name, durable=True)
+            self.channel.queue_bind(
+                exchange=self.exchange_name,
+                queue=queue.name,
+                routing_key=queue.routing_key,
+            )
+
+    def publish_task(self, task_id: str, data: dict) -> Dict:
+        """Publish task_id to all queues and return task details"""
+        publish_time = time.time()
+        queues_published = []
+
+        for queue in self.queues:
+            message = json.dumps(
+                {
+                    "task_id": task_id,
+                    "timestamp": publish_time,
+                    "handler": queue.handler_function,
+                    "data": data,
+                }
+            )
+
+            self.channel.basic_publish(
+                exchange=self.exchange_name,
+                routing_key=queue.routing_key,
+                body=message,
+                properties=pika.BasicProperties(
+                    delivery_mode=2, content_type="application/json"
+                ),
+            )
+            queues_published.append(queue.name)
+            logger.info(f"Published task_id {task_id} to queue {queue.name}")
+
+        return {
+            "task_id": task_id,
+            "timestamp": publish_time,
+            "queues": queues_published,
+            "status": "published",
+        }
+
+    def close(self):
+        self.connection.close()
+
+
+# Flask application
 app = Flask(__name__)
+orchestrator = None
 
 
-def get_exif_data(image):
-    """Extract EXIF data from an image."""
-    exif_data = {
-        "width": image.width,
-        "height": image.height,
-        "filename": image.filename.split("/")[-1],
+@app.before_first_request
+def initialize_orchestrator():
+    global orchestrator
+    rabbit_host = os.environ.get("RABBIT_HOST", "localhost")
+    orchestrator = TaskOrchestrator(rabbit_host)
+
+
+@app.route("/tasks", methods=["POST"])
+def create_task():
+    """
+    Create a new task and distribute it to all queues
+
+    Expected POST body:
+    {
+        "task_id": "optional-custom-id"  # If not provided, a UUID will be generated
     }
+    """
     try:
-        exif = image.getexif()
-        if exif:
-            for tag, value in exif.items():
-                decoded_tag = TAGS.get(tag, tag)
-                exif_data[decoded_tag] = value
+        data = request.get_json() or {}
+        task_id = data.get("task_id", str(uuid.uuid4()))
+
+        if not isinstance(task_id, str):
+            return jsonify({"error": "task_id must be a string"}), 400
+
+        result = orchestrator.publish_task(task_id, data)
+        return jsonify(result), 202
+
     except Exception as e:
-        exif_data["error"] = str(e)
-
-    if "invokeai_metadata" in image.info:
-        exif_data["invokeai_metadata"] = json.loads(image.info["invokeai_metadata"])
-
-    return exif_data
+        logger.error(f"Error processing request: {e}")
+        return jsonify({"error": "Internal server error", "message": str(e)}), 500
 
 
-@app.route("/thumbnail", methods=["POST"])
-def exif():
-    if "image" not in request.files:
-        return jsonify({"error": "No image file found in the request"}), 400
-
-    file = request.files["image"]
-    r = {}
-    try:
-        image = Image.open(file)
-        exif_data = get_exif_data(image)
-        r.update(exif_data)
-    except Exception as e:
-        return jsonify({"error": f"Failed to process the image: {str(e)}"}), 500
-
-    thumbnail = image.copy()
-    thumbnail.thumbnail((128, 128))
-    base64_thumbnail = base64.b64encode(thumbnail.read())
-    r["thumbnail"] = base64_thumbnail.decode("utf-8")
-
-    return jsonify(r)
-
-
-@app.route("/caption", methods=["POST"])
-def caption():
-    if "image" not in request.files:
-        return jsonify({"error": "No image file found in the request"}), 400
-
-    file = request.files["image"]
-    image = Image.open(file)
-
-    caption = generate_caption(image)
-    tags = generate_tags(image)
-
-    return jsonify({"caption": caption, "tags": tags})
+@app.route("/health", methods=["GET"])
+def health_check():
+    """Simple health check endpoint"""
+    return jsonify({"status": "healthy", "timestamp": time.time()})
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    import os
+
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
