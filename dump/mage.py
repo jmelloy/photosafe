@@ -5,7 +5,7 @@ import os
 import datetime
 from json import JSONEncoder
 import re
-
+import gzip
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -30,7 +30,7 @@ def wrap(session, url, data={}, method="POST"):
     elif method.upper() == "POST":
         resp = session.post(
             f"{url}",
-            json=data,
+            data=data,
         )
 
     end = datetime.datetime.now()
@@ -42,8 +42,8 @@ def wrap(session, url, data={}, method="POST"):
     if resp.status_code > 205:
         logger.warning(resp.text)
 
-    resp.raise_for_status()
-    return resp.text, resp
+    return resp.content, resp
+    
 
 
 def extract_braces(html_content):
@@ -64,7 +64,7 @@ def extract_braces(html_content):
 
 
 def yield_images():
-    cookie = "ph_phc_lBVvvz084lS4XFbPqGf38TGEa6HnGhmgVHcf4f0NNuX_posthog=%7B%22distinct_id%22%3A%22dgGk4FOcMSf5KbIBqkQAteJolLB3%22%2C%22%24sesid%22%3A%5B1736184372001%2C%2201943ca6-eb4f-79c2-8306-9110b8f6ae65%22%2C1736184359759%5D%2C%22%24epp%22%3Atrue%7D; __session=eyJhbGciOiJSUzI1NiIsImtpZCI6Ii1XWnBLUSJ9.eyJpc3MiOiJodHRwczovL3Nlc3Npb24uZmlyZWJhc2UuZ29vZ2xlLmNvbS9tYWdlZG90c3BhY2UiLCJuYW1lIjoiSmVmZnJleSBNZWxsb3kiLCJwaWN0dXJlIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jSkV1TjNHamtHRWZucG9zNFlXcVhkdHB6cUxTbi0wb3dZZUpDVmhZSURpbEFcdTAwM2RzOTYtYyIsInN0cmlwZVJvbGUiOiJwcm9fcGx1cyIsImF1ZCI6Im1hZ2Vkb3RzcGFjZSIsImF1dGhfdGltZSI6MTczMjA0NzczMCwidXNlcl9pZCI6ImRnR2s0Rk9jTVNmNUtiSUJxa1FBdGVKb2xMQjMiLCJzdWIiOiJkZ0drNEZPY01TZjVLYklCcWtRQXRlSm9sTEIzIiwiaWF0IjoxNzM2MTg0MzYxLCJleHAiOjE3MzYxOTg3NjEsImVtYWlsIjoiam1lbGxveUBnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZmlyZWJhc2UiOnsiaWRlbnRpdGllcyI6eyJnb29nbGUuY29tIjpbIjEwMzU0MTc1Mjk2MzYyNjY0ODQzMCJdLCJlbWFpbCI6WyJqbWVsbG95QGdtYWlsLmNvbSJdfSwic2lnbl9pbl9wcm92aWRlciI6Imdvb2dsZS5jb20ifX0.PcdwptzAd3YpjyZkbigqJw5fmsF-Nj64NPp1o3l7gxd2DxH3H2cIxx8H5N5TLxVyKwhiqM3NQcaztl3TD0L2mtW7UzMQAEaP2KvQbyQdAtjgWJY6ii8ecCKXcEW1ua9Y1LgALVkmdQMF1SZXqO5aG-qGt1CPudWiNyCAI3LFPVE0xPGQ_qcG1wMhtadYTNVipZwzf1iDoM1r6H50nMnKhXp575l_bA1w3B-oVuhEJSXoyOe7td3iOryu1VYUFtNWFQI4kBmVlOefyH9ebCzMqzVlGxNEC8q59Jrtp8orzD9pQYaJQ0Q_9Zllqwe-1x0z4a3KEvAIIpFVoI5OhYlU6g; cf_clearance=T24QHEIHiC9i.xyEqUtWGCRh4fFZeitxHrqQJhX3wk8-1736184359-1.2.1.1-B3c4P1I7eaEScl5EwMe284SQtJrgtnG_uYN3OmdTzFRdb9wKoGhXn.dVZa_mgr6FFILS3nRDHFz_kaZnGBXxmtmlhjhfImARMhVEBZFacQqf5erNpicJyJ_N__.qViitwATqYQS1vMXULlwW3ZcwWWDybgc9Q_3RnOzKuQ.t3nphnYoeTYNRqO2721wXBC5dQe0g6UDQhDPkzbutrm2iHorzZV1OAVw9emhJauAR7q65YT1_mfnIfTQyNyFeX0hmUJdWrtL2VodkALGgPzZ3ocPLToOMR0Qkk8L43NlMXlhHFt1j8b7Shs9BDuQjd5TeVd4A_5O6ou_4H8kP8_PYk9WKG0fDuh6M6ZjLBHsQ3d9kCXZ8NRwaiCc34drr4C6iLFRof09pPM0PZpCzKxcjOQ; _iidt=9QCA2hSPRidc3dJyPnGV3S2Ift4fKYs5p4Xn0QvDx37OkWZBln/zBbN/sQdAum3N3rW5m4vPv+Y7vc/g7iqGoR77vP/h7VlfqSSJgfM=; _vid_t=VeEDvLVMkTdAuulPQfoV7aydtNMEXai9iJrjCkDp/fG4Rm6n+uuq/XsbHPqO9Ee4k+1HQy2xZSsOHybywR7MYMchddmV2XHLy4Swtps="
+    cookie = "ph_phc_lBVvvz084lS4XFbPqGf38TGEa6HnGhmgVHcf4f0NNuX_posthog=%7B%22distinct_id%22%3A%22dgGk4FOcMSf5KbIBqkQAteJolLB3%22%2C%22%24sesid%22%3A%5B1741642694000%2C%22019581fd-98b7-7fda-a4d0-547ed132a3bb%22%2C1741642635447%5D%2C%22%24epp%22%3Atrue%7D; __session=eyJhbGciOiJSUzI1NiIsImtpZCI6IlFEZ1JhQSJ9.eyJpc3MiOiJodHRwczovL3Nlc3Npb24uZmlyZWJhc2UuZ29vZ2xlLmNvbS9tYWdlZG90c3BhY2UiLCJuYW1lIjoiSmVmZnJleSBNZWxsb3kiLCJwaWN0dXJlIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jSkV1TjNHamtHRWZucG9zNFlXcVhkdHB6cUxTbi0wb3dZZUpDVmhZSURpbEFcdTAwM2RzOTYtYyIsInN0cmlwZVJvbGUiOiJwcm8iLCJhdWQiOiJtYWdlZG90c3BhY2UiLCJhdXRoX3RpbWUiOjE3Mzk4OTk1NDcsInVzZXJfaWQiOiJkZ0drNEZPY01TZjVLYklCcWtRQXRlSm9sTEIzIiwic3ViIjoiZGdHazRGT2NNU2Y1S2JJQnFrUUF0ZUpvbExCMyIsImlhdCI6MTc0MTY0MjYzNywiZXhwIjoxNzQxNjU3MDM3LCJlbWFpbCI6ImptZWxsb3lAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImZpcmViYXNlIjp7ImlkZW50aXRpZXMiOnsiZ29vZ2xlLmNvbSI6WyIxMDM1NDE3NTI5NjM2MjY2NDg0MzAiXSwiZW1haWwiOlsiam1lbGxveUBnbWFpbC5jb20iXX0sInNpZ25faW5fcHJvdmlkZXIiOiJnb29nbGUuY29tIn19.lRS7jSu20jHDEXHgo365tRoZzDV0CUGTNY5Yrez1xQP22FZ_uDUT0HgD-KyBh205_tzE0D4X-fuaUbL7LTxb5mFF_QpzlgTPJexOmJXpW5hx8MWiHzKLgH-HTuqljaG3S3qNsb-rdXzsD8Dh-12fXxk6EOaRME8XEBlyFV2LN2VHqaCqJwCObzdfayr04V3STv83et-mmuEKw6kNmBxM6i2cqzGIZXq8nhgQEYw-8sGu7wyFZ7izp8FeCcj1IJqGsk2rErDxV9ivbkN1UgF8rxhN-4_Rw0z6yN6pSe_A2_GlcYcSx-4HPjsMtfsHtygUT6e_xkOhxeY3emurUhsY7Q; cf_clearance=qWeKPd2SnxXWauD4cPf_aiBQ6Xwk5tRxDvWgqbeVSds-1741642635-1.2.1.1-3xtCur8HosX55gRItNUepZAp4yOWKggtBNgEB7lUiDfaFCyizVeQN2qtmwHdo4dJyNHu2uW7JS9rkYJeFKoT679HsoPDKvrPeZ4fz6mWp8rGc2RIEcxMhCLRl2iRCjPAawUeAGRljDKp_S46WklhZdMq57.aoAPish8htPJ8n1lo4e68Pu7lznQMTgYZ8y2zGMs9aFfd5_feN1jzZY80VAcv0n4GaHBSAk5fPKCfzv7KIjBrQ9WF7.bJcS9DwsvAzbKnEBiI_31RQ_Ehvk9RsyqOVoeJt9hAze_99wmm1BNYE1liBy0kn_RjNJrRhfe.Cv_fk19fMDToTWGRRSSEjXqAFNBxCHsmbbc6Ic3e3R0; _iidt=JU+/c/irOfY2QalLMMMN+4IodD5VfEq4VP+/6KYwgAW/Jy29tHaA5huTpwu15tVXoTQ/C8ZUF+zltg==; _vid_t=RPaHoBvynXjy3c/wnHnRw/W6hHS+lhCl1fgE4rQDVoUP/SAwTPhc5x7kncI3HBXDDe9UHPmgybM+iA=="
 
     request = [
         "dgGk4FOcMSf5KbIBqkQAteJolLB3",
@@ -120,12 +120,23 @@ def yield_images():
 
         offset += 100
 
+def yeild_from_file():
+    file = "mage_raw.txt"
+    with open(file) as F:
+        r = F.read()
+    
+    for row in extract_braces(r):
+        data = json.loads(row)
 
+        for img in data["creations"]:
+            yield img
+            
 def main():
     seen = set()
-    for image in yield_images():
+    for image in yeild_from_file():
         if image["id"] in seen:
-            raise Exception("Duplicate image")
+            raise Exception("Already seen")
+        seen.add(image["id"])
         print(
             image["created_at"],
             image["url"].split("/")[-1],
