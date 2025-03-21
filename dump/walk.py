@@ -1,8 +1,9 @@
 import sys
 import os
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, UnidentifiedImageError
 import tkinter as tk
 import shutil
+import json
 
 
 def get_images(directory):
@@ -10,9 +11,37 @@ def get_images(directory):
     for root, dirs, files in os.walk(directory):
         if dirs:
             print(f"Scanning {root} - {len(dirs)} files")
-        for file in files:
-            if file.lower().endswith(supported_formats):
-                yield os.path.join(root, file)
+            file_response = []
+            for d in dirs:
+                for file in os.listdir(os.path.join(root, d)):
+                    if file.lower().endswith(supported_formats):
+                        if os.path.exists(os.path.join(root, d, "meta.json")):
+                            with open(os.path.join(root, d, "meta.json")) as f:
+                                meta = json.load(f)
+                                created_at = meta.get(
+                                    "createdAt", meta.get("created_at")
+                                )
+                                if not created_at:
+                                    created_at = os.path.getctime(
+                                        os.path.join(root, d, file)
+                                    )
+                                prompt = meta.get("generation", {}).get("prompt")
+                                if not prompt:
+                                    prompt = meta.get("concept_overrides", {}).get(
+                                        "prompt"
+                                    )
+
+                            file_response.append(
+                                (os.path.join(root, d, file), created_at, prompt)
+                            )
+
+            file_response.sort(key=lambda x: x[1])
+            prev_prompt = None
+            for file, dt, prompt in file_response:
+                if prompt != prev_prompt:
+                    print(dt, prompt)
+                yield file
+                prev_prompt = prompt
 
 
 def main(source_dir, dest_dir, log_file):
@@ -41,8 +70,9 @@ def main(source_dir, dest_dir, log_file):
             image = next(image_iter)
             while image in shown_images:
                 image = next(image_iter)
+
             img = Image.open(image)
-            img = img.resize((800, 600))
+            img = img.resize((800, 800))
             root.title(f"Image Viewer - {os.path.basename(image)}")
 
             photo = ImageTk.PhotoImage(img)
@@ -51,7 +81,6 @@ def main(source_dir, dest_dir, log_file):
 
             def on_yes():
                 shutil.copy(image, dest_dir)
-                shown_images.add(image)
                 update_shown_images(image)
                 show_next_image()
 
@@ -61,10 +90,15 @@ def main(source_dir, dest_dir, log_file):
 
             yes_button.config(command=on_yes)
             no_button.config(command=on_no)
+        except UnidentifiedImageError:
+            update_shown_images(image)
+            show_next_image()
         except StopIteration:
             root.quit()
 
-    img = Image.open(next(image_iter))
+    image = next(image_iter)
+    img = Image.open(image)
+    img = img.resize((800, 800))
     photo = ImageTk.PhotoImage(img)
     label = tk.Label(root, image=photo)
     label.pack()
@@ -72,8 +106,20 @@ def main(source_dir, dest_dir, log_file):
     yes_button = tk.Button(root, text="Yes")
     yes_button.pack(side=tk.LEFT, padx=10, pady=10)
 
+    def on_no():
+        update_shown_images(image)
+        show_next_image()
+
     no_button = tk.Button(root, text="No")
     no_button.pack(side=tk.RIGHT, padx=10, pady=10)
+    no_button.config(command=on_no)
+
+    def on_yes():
+        shutil.copy(image, dest_dir)
+        update_shown_images(image)
+        show_next_image()
+
+    yes_button.config(command=on_yes)
 
     root.bind("<Left>", lambda event: no_button.invoke())
     root.bind("<Right>", lambda event: yes_button.invoke())
