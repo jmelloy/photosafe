@@ -69,3 +69,4 @@ Collectfast  # https://github.com/antonagestam/collectfast
 django-storages[boto3]  # https://github.com/jschneier/django-storages
 django-anymail[amazon_ses]  # https://github.com/anymail/django-anymail
 
+setuptools
