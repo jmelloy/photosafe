@@ -81,6 +81,9 @@ COPY ./compose/production/django/celery/flower/start /start-flower
 RUN sed -i 's/\r$//g' /start-flower
 RUN chmod +x /start-flower
 
+# copy application code to WORKDIR
+COPY . ${APP_HOME}
+
 # make django owner of the WORKDIR directory as well.
 RUN chown django:django ${APP_HOME}
 

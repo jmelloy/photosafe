@@ -5,43 +5,59 @@ import tkinter as tk
 import shutil
 import json
 
+def search_metadata(data: dict):
+    r = {}
+    for k, v in data.items():
+        if isinstance(v, dict):
+            r.update(search_metadata(v))
+        else:
+            if k == "prompt":
+                r["prompt"] = v
+            if k.startswith("created"):
+                r["created_at"] = v
+    return r
+
+def get_metadata(file):
+    data = {}
+    if os.path.exists(file + ".json"):
+        with open(file + ".json") as f:
+            data = json.load(f)
+    else:
+        folder = os.path.dirname(file)
+        files = [f for f in os.listdir(folder) if f.endswith(".json")]
+        for f in files:
+            filename = os.path.basename(f)
+            with open(os.path.join(folder, f)) as f:
+                content = f.read()
+                if filename in content:
+                    data = json.loads(content)
+
+    if data:
+        return search_metadata(data)
+
+    return None
 
 def get_images(directory):
     supported_formats = (".png", ".jpg", ".jpeg", ".gif", ".bmp")
+    file_response = []
     for root, dirs, files in os.walk(directory):
-        if dirs:
-            print(f"Scanning {root} - {len(dirs)} files")
-            file_response = []
-            for d in dirs:
-                for file in os.listdir(os.path.join(root, d)):
-                    if file.lower().endswith(supported_formats):
-                        if os.path.exists(os.path.join(root, d, "meta.json")):
-                            with open(os.path.join(root, d, "meta.json")) as f:
-                                meta = json.load(f)
-                                created_at = meta.get(
-                                    "createdAt", meta.get("created_at")
-                                )
-                                if not created_at:
-                                    created_at = os.path.getctime(
-                                        os.path.join(root, d, file)
-                                    )
-                                prompt = meta.get("generation", {}).get("prompt")
-                                if not prompt:
-                                    prompt = meta.get("concept_overrides", {}).get(
-                                        "prompt"
-                                    )
-
-                            file_response.append(
-                                (os.path.join(root, d, file), created_at, prompt)
-                            )
-
-            file_response.sort(key=lambda x: x[1])
-            prev_prompt = None
-            for file, dt, prompt in file_response:
-                if prompt != prev_prompt:
-                    print(dt, prompt)
-                yield file
-                prev_prompt = prompt
+        for file in files:
+            if file.lower().endswith(supported_formats):
+                metadata = get_metadata(os.path.join(root, file))
+                created_at = ''
+                prompt = ''
+                if metadata:
+                    created_at = metadata["created_at"]
+                    prompt = metadata["prompt"]
+                file_response.append((os.path.join(root, file), created_at, prompt))
+                    
+    file_response.sort(key=lambda x: x[1])
+    prev_prompt = None
+    for file, dt, prompt in file_response:
+        if prompt != prev_prompt:
+            print(dt, prompt)
+        yield file
+        prev_prompt = prompt
 
 
 def main(source_dir, dest_dir, log_file):
@@ -71,6 +87,7 @@ def main(source_dir, dest_dir, log_file):
             while image in shown_images:
                 image = next(image_iter)
 
+
             img = Image.open(image)
             img = img.resize((800, 800))
             root.title(f"Image Viewer - {os.path.basename(image)}")
@@ -80,6 +97,7 @@ def main(source_dir, dest_dir, log_file):
             label.image = photo
 
             def on_yes():
+                print(image)
                 shutil.copy(image, dest_dir)
                 update_shown_images(image)
                 show_next_image()
@@ -121,8 +139,8 @@ def main(source_dir, dest_dir, log_file):
 
     yes_button.config(command=on_yes)
 
-    root.bind("<Left>", lambda event: no_button.invoke())
-    root.bind("<Right>", lambda event: yes_button.invoke())
+    root.bind("<Left>", lambda event: yes_button.invoke())
+    root.bind("<Right>", lambda event: no_button.invoke())
 
     show_next_image()
     root.mainloop()

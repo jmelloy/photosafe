@@ -455,3 +455,5 @@ dist
 .pnp.*
 dump/dump.json
 v2/go-backend/tmp/main
+dump/gen_keep/*
+dump/generations/*
