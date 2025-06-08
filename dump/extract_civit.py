@@ -5,7 +5,8 @@ import requests
 from urllib.parse import quote
 import logging
 from datetime import datetime
-import math
+from convert_to_xmp import create_xmp_metadata
+import sys
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -132,8 +133,32 @@ def write_json(data, filepath):
         json.dump(data, f)
 
 
+def update_metadata():
+    for root, dirs, files in os.walk("generations"):
+        if not dirs:
+            continue
+
+        for file in files:
+            if file == "metadata.json":
+                filepath = os.path.join(root, file)
+                with open(filepath, "r") as f:
+                    generation_data = json.load(f)
+                    for step in generation_data['steps']:
+                        step_path = f"{root}/{step['name']}"
+                        for image in step.get('images', []):
+                            image_metadata_path = f"{step_path}/{image['id']}.json"
+                            with open(image_metadata_path, "r") as F:
+                                image_data = json.load(F)
+                            image_data.update(step.get("params"))
+                            sidecar = create_xmp_metadata(image_data)
+                            with open(f"{step_path}/{image['id']}.xmp", "w") as f:
+                                f.write(sidecar)
+
 
 if __name__ == "__main__":
+    update_metadata()
+    sys.exit(0)
+
     civitai_token = os.getenv("CIVITAI_API_TOKEN") or input("Enter your Civitai API token: ")
     
     # Fetch generations
@@ -150,15 +175,19 @@ if __name__ == "__main__":
 
         for step in generation['steps']:
             step_path = f"{base_path}/{step['name']}"
+            
             write_json(step, f"{step_path}/metadata.json")
             logger.info(f"Prompt: {step['params']['prompt'][:100]}")
             
             for image in step.get('images', []):
                 url = image['url']
+                image.update(step.get("params", {}))
+
                 if not os.path.exists(f"{step_path}/{image['id']}"): 
                     logger.info(f"Fetching image {image['id']}")
                     filepath = f"{step_path}/{image['id']}"
                     fetch_file(url, filepath, civitai_token)
 
                 write_json(image, f"{step_path}/{image['id']}.json")
-                
+                sidecar = create_xmp_metadata(image)
+                write_json(sidecar, f"{step_path}/{image['id']}.xmp")
