@@ -1,0 +1,14 @@
+Flask
+Pillow
+
+torch
+transformers
+accelerate
+
+numpy
+pyexiftool
+
+# osxphotos
+pika
+requests
+piexif

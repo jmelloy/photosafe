@@ -9,3 +9,5 @@
 .travis.yml
 **/node_modules
 **/node_modules/*
+**/env/**
+**/venv/**

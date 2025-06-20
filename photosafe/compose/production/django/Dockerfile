@@ -1,18 +1,8 @@
-FROM node:18-bullseye-slim as client-builder
 
-ARG APP_HOME=/app
-WORKDIR ${APP_HOME}
-
-#COPY ./package.json ${APP_HOME}
-#RUN npm install && npm cache clean --force
-#RUN npm run build
-
-COPY . ${APP_HOME}
-
-ARG PYTHON_VERSION=3.9-slim-buster
+ARG PYTHON_VERSION=3.12-slim-bookworm
 
 # define an alias for the specfic python version used in this file.
-FROM python:3.9-slim-buster  as python
+FROM python:3.12-slim-bookworm  as python
 
 # Python build stage
 FROM python as python-build-stage
@@ -90,11 +80,6 @@ RUN chmod +x /start-celerybeat
 COPY ./compose/production/django/celery/flower/start /start-flower
 RUN sed -i 's/\r$//g' /start-flower
 RUN chmod +x /start-flower
-
-
-# copy application code to WORKDIR
-COPY --from=client-builder --chown=django:django ${APP_HOME} ${APP_HOME}
-
 
 # make django owner of the WORKDIR directory as well.
 RUN chown django:django ${APP_HOME}
