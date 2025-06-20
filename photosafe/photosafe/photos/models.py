@@ -87,6 +87,8 @@ class Version(models.Model):
         related_name="versions",
         on_delete=models.CASCADE,
         db_column="photo_uuid",
+        blank=True,
+        null=True,
     )
 
     version = models.TextField()

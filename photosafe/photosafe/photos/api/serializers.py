@@ -8,7 +8,6 @@ class VersionSerializer(serializers.ModelSerializer):
         model = Version
         fields = "__all__"
 
-
 class PhotoSerializer(serializers.ModelSerializer):
     owner = serializers.ReadOnlyField(source="owner.username")
 
@@ -25,7 +24,7 @@ class PhotoSerializer(serializers.ModelSerializer):
             versions = validated_data.pop("versions")
 
         photo = Photo.objects.create(**validated_data)
-
+        
         for version in versions:
             Version.objects.create(photo=photo, **version)
 

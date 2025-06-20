@@ -18,7 +18,7 @@ s3 = boto3.client(
 
 bucket = os.environ.get("BUCKET", "jmelloy-photo-backup")
 base_url = os.environ.get("BASE_URL", "https://api.photosafe.melloy.life")
-api_username = os.environ.get("USERNAME")
+api_username = "jmelloy"  # os.environ.get("USERNAME")
 api_password = os.environ.get("PASSWORD")
 
 r = requests.post(
@@ -31,8 +31,8 @@ r = requests.get(f"{base_url}/users/me", headers={"Authorization": f"Token {toke
 r.raise_for_status()
 user = r.json()
 
-icloud_username = os.environ.get("ICLOUD_USERNAME") or input("Username: ")
-icloud_password = os.environ.get("ICLOUD_PASSWORD") or input("Password: ")
+icloud_username = os.environ.get("ICLOUD_USERNAME") or input("iCloud Username: ")
+icloud_password = os.environ.get("ICLOUD_PASSWORD") or input("iCloud Password: ")
 api = PyiCloudService(icloud_username, icloud_password)
 
 if api.requires_2fa:
@@ -271,7 +271,7 @@ if __name__ == "__main__":
 
             r = requests.post(
                 f"{base_url}/api/photos/",
-                data=json.dumps(data, cls=DateTimeEncoder),
+                data=json.dumps(data, cls=DateTimeEncoder).replace("\u0000", ""),
                 headers={
                     "Content-Type": "application/json",
                     "Authorization": f"Token {token}",
