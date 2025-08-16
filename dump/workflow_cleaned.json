@@ -1,0 +1,350 @@
+{
+  "seed": 277251746703202,
+  "prompts": {
+    "prompt_45": "Highly realistic portrait of a Nordic woman with blonde hair and blue eyes, very few freckles on her face, gaze sharp and intellectual. The lighting should reflect the unique coolness of Northern Europe. Outfit is minimalist and modern, background is blurred in cool tones. Needs to perfectly capture the characteristics of a Scandinavian woman. solo, Centered composition"
+  },
+  "nodes": [
+    {
+      "id": 9,
+      "type": "SaveImage",
+      "name": "save_image_9",
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 9
+        }
+      ],
+      "outputs": [],
+      "pos": [
+        380,
+        110
+      ],
+      "size": [
+        640,
+        660
+      ]
+    },
+    {
+      "id": 40,
+      "type": "DualCLIPLoader",
+      "name": "dual_cliploader_40",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            64
+          ]
+        }
+      ],
+      "pos": [
+        -320,
+        290
+      ],
+      "size": [
+        270,
+        130
+      ]
+    },
+    {
+      "id": 39,
+      "type": "VAELoader",
+      "name": "vaeloader_39",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            58
+          ]
+        }
+      ],
+      "pos": [
+        -320,
+        470
+      ],
+      "size": [
+        270,
+        58
+      ]
+    },
+    {
+      "id": 42,
+      "type": "ConditioningZeroOut",
+      "name": "conditioning_zero_out_42",
+      "inputs": [
+        {
+          "name": "conditioning",
+          "type": "CONDITIONING",
+          "link": 66
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            63
+          ]
+        }
+      ],
+      "pos": [
+        -10,
+        460
+      ],
+      "size": [
+        200,
+        30
+      ]
+    },
+    {
+      "id": 8,
+      "type": "VAEDecode",
+      "name": "vaedecode_8",
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 52
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 58
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            9
+          ]
+        }
+      ],
+      "pos": [
+        230,
+        470
+      ],
+      "size": [
+        210,
+        46
+      ]
+    },
+    {
+      "id": 27,
+      "type": "EmptySD3LatentImage",
+      "name": "empty_sd3latent_image_27",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            51
+          ]
+        }
+      ],
+      "pos": [
+        -320,
+        630
+      ],
+      "size": [
+        270,
+        120
+      ]
+    },
+    {
+      "id": 45,
+      "type": "CLIPTextEncode",
+      "name": "cliptext_encode_45",
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 64
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            65,
+            66
+          ]
+        }
+      ],
+      "pos": [
+        10,
+        170
+      ],
+      "size": [
+        330,
+        210
+      ]
+    },
+    {
+      "id": 31,
+      "type": "KSampler",
+      "name": "ksampler_31",
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 61
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 65
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 63
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 51
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            52
+          ]
+        }
+      ],
+      "pos": [
+        10,
+        550
+      ],
+      "size": [
+        315,
+        262
+      ]
+    },
+    {
+      "id": 43,
+      "type": "MarkdownNote",
+      "name": "markdown_note_43",
+      "inputs": [],
+      "outputs": [],
+      "pos": [
+        -870,
+        110
+      ],
+      "size": [
+        520,
+        390
+      ]
+    },
+    {
+      "id": 38,
+      "type": "UNETLoader",
+      "name": "unetloader_38",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            61
+          ]
+        }
+      ],
+      "pos": [
+        -320,
+        150
+      ],
+      "size": [
+        270,
+        82
+      ]
+    }
+  ],
+  "links": [
+    {
+      "id": 9,
+      "from_node": 8,
+      "from_slot": 0,
+      "to_node": 9,
+      "to_slot": 0,
+      "type": "IMAGE"
+    },
+    {
+      "id": 51,
+      "from_node": 27,
+      "from_slot": 0,
+      "to_node": 31,
+      "to_slot": 3,
+      "type": "LATENT"
+    },
+    {
+      "id": 52,
+      "from_node": 31,
+      "from_slot": 0,
+      "to_node": 8,
+      "to_slot": 0,
+      "type": "LATENT"
+    },
+    {
+      "id": 58,
+      "from_node": 39,
+      "from_slot": 0,
+      "to_node": 8,
+      "to_slot": 1,
+      "type": "VAE"
+    },
+    {
+      "id": 61,
+      "from_node": 38,
+      "from_slot": 0,
+      "to_node": 31,
+      "to_slot": 0,
+      "type": "MODEL"
+    },
+    {
+      "id": 63,
+      "from_node": 42,
+      "from_slot": 0,
+      "to_node": 31,
+      "to_slot": 2,
+      "type": "CONDITIONING"
+    },
+    {
+      "id": 64,
+      "from_node": 40,
+      "from_slot": 0,
+      "to_node": 45,
+      "to_slot": 0,
+      "type": "CLIP"
+    },
+    {
+      "id": 65,
+      "from_node": 45,
+      "from_slot": 0,
+      "to_node": 31,
+      "to_slot": 1,
+      "type": "CONDITIONING"
+    },
+    {
+      "id": 66,
+      "from_node": 45,
+      "from_slot": 0,
+      "to_node": 42,
+      "to_slot": 0,
+      "type": "CONDITIONING"
+    }
+  ]
+}

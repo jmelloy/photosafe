@@ -1,3 +1,9 @@
 pillow
 requests
 pandas
+exifread
+PyYAML
+python-ulid
+
+# Note: exiftool must be installed separately
+# brew install exiftool
