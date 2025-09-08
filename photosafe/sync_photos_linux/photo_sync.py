@@ -271,7 +271,7 @@ if __name__ == "__main__":
 
             r = requests.post(
                 f"{base_url}/api/photos/",
-                data=json.dumps(data, cls=DateTimeEncoder).replace("\u0000", ""),
+                data=json.dumps(data, cls=DateTimeEncoder).replace("\\u0000", ""),
                 headers={
                     "Content-Type": "application/json",
                     "Authorization": f"Token {token}",
@@ -286,7 +286,7 @@ if __name__ == "__main__":
 
                 r = requests.patch(
                     f"{base_url}/api/photos/{data['uuid']}/",
-                    data=json.dumps(data, cls=DateTimeEncoder).replace("\u0000", ""),
+                    data=json.dumps(data, cls=DateTimeEncoder).replace("\\u0000", ""),
                     headers={
                         "Content-Type": "application/json",
                         "Authorization": f"Token {token}",
