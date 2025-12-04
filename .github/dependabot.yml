@@ -1,0 +1,73 @@
+version: 2
+updates:
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+  # Python - Main photosafe application
+  - package-ecosystem: "pip"
+    directory: "/photosafe"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "python"
+
+  # Python - v2 backend
+  - package-ecosystem: "pip"
+    directory: "/v2/python-backend"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "python"
+
+  # Python - dump utilities
+  - package-ecosystem: "pip"
+    directory: "/dump"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "python"
+
+  # Node.js - v2 web frontend
+  - package-ecosystem: "npm"
+    directory: "/v2/web"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "npm"
+
+  # Node.js - iCloud API
+  - package-ecosystem: "npm"
+    directory: "/photosafe/icloud-api"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "npm"
+
+  # Go - v2 backend
+  - package-ecosystem: "gomod"
+    directory: "/v2/go-backend"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "go"
+
+  # Git submodules
+  - package-ecosystem: "gitsubmodule"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "submodules"
