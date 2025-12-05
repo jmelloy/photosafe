@@ -13,12 +13,11 @@
             type="text"
             placeholder="Search photos..."
             class="search-input"
-            @input="filterPhotos"
           />
         </div>
         
         <div class="filter-group">
-          <select v-model="selectedAlbum" @change="filterPhotos" class="filter-select">
+          <select v-model="selectedAlbum" class="filter-select">
             <option value="">All Albums</option>
             <option v-for="album in albums" :key="album" :value="album">{{ album }}</option>
           </select>
@@ -28,7 +27,6 @@
             type="date"
             class="filter-input"
             placeholder="Start date"
-            @change="filterPhotos"
           />
           
           <input 
@@ -36,7 +34,6 @@
             type="date"
             class="filter-input"
             placeholder="End date"
-            @change="filterPhotos"
           />
           
           <button 
@@ -87,13 +84,7 @@ export default {
     }
 
     const extractAlbums = () => {
-      const albumSet = new Set()
-      photos.value.forEach(photo => {
-        if (photo.albums && Array.isArray(photo.albums)) {
-          photo.albums.forEach(album => albumSet.add(album))
-        }
-      })
-      albums.value = Array.from(albumSet).sort()
+      albums.value = [...new Set(photos.value.flatMap(photo => photo.albums || []))].sort()
     }
 
     const hasActiveFilters = computed(() => {
@@ -143,10 +134,6 @@ export default {
       return result
     })
 
-    const filterPhotos = () => {
-      // Reactive filtering happens automatically through computed property
-    }
-
     const clearFilters = () => {
       searchQuery.value = ''
       selectedAlbum.value = ''
@@ -181,7 +168,6 @@ export default {
       albums,
       hasActiveFilters,
       loadPhotos,
-      filterPhotos,
       clearFilters,
       handleDeletePhoto
     }
