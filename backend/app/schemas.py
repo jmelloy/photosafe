@@ -1,17 +1,175 @@
 """Pydantic schemas for request/response validation"""
 from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional, List, Dict, Any
 
 
-class PhotoResponse(BaseModel):
-    """Photo response schema"""
+class VersionBase(BaseModel):
+    """Version base schema"""
+    version: str
+    s3_path: str
+    filename: Optional[str] = None
+    width: Optional[int] = None
+    height: Optional[int] = None
+    size: Optional[int] = None
+    type: Optional[str] = None
+
+
+class VersionCreate(VersionBase):
+    """Version create schema"""
+    pass
+
+
+class VersionResponse(VersionBase):
+    """Version response schema"""
     id: int
-    filename: str
-    original_filename: str
-    url: str
-    content_type: str
-    file_size: int
-    uploaded_at: datetime
+    photo_uuid: Optional[str] = None
 
+    class Config:
+        from_attributes = True
+
+
+class PhotoBase(BaseModel):
+    """Photo base schema"""
+    uuid: str
+    masterFingerprint: Optional[str] = None
+    original_filename: str
+    date: datetime
+    description: Optional[str] = None
+    title: Optional[str] = None
+    keywords: Optional[List[str]] = None
+    labels: Optional[List[str]] = None
+    albums: Optional[List[str]] = None
+    persons: Optional[List[str]] = None
+    faces: Optional[Dict[str, Any]] = None
+    favorite: Optional[bool] = None
+    hidden: Optional[bool] = None
+    isphoto: Optional[bool] = None
+    ismovie: Optional[bool] = None
+    burst: Optional[bool] = None
+    live_photo: Optional[bool] = None
+    portrait: Optional[bool] = None
+    screenshot: Optional[bool] = None
+    slow_mo: Optional[bool] = None
+    time_lapse: Optional[bool] = None
+    hdr: Optional[bool] = None
+    selfie: Optional[bool] = None
+    panorama: Optional[bool] = None
+    intrash: Optional[bool] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    uti: Optional[str] = None
+    date_modified: Optional[datetime] = None
+    place: Optional[Dict[str, Any]] = None
+    exif: Optional[Dict[str, Any]] = None
+    score: Optional[Dict[str, Any]] = None
+    search_info: Optional[Dict[str, Any]] = None
+    fields: Optional[Dict[str, Any]] = None
+    height: Optional[int] = None
+    width: Optional[int] = None
+    size: Optional[int] = None
+    orientation: Optional[int] = None
+    s3_key_path: Optional[str] = None
+    s3_thumbnail_path: Optional[str] = None
+    s3_edited_path: Optional[str] = None
+    s3_original_path: Optional[str] = None
+    s3_live_path: Optional[str] = None
+    library: Optional[str] = None
+
+
+class PhotoCreate(PhotoBase):
+    """Photo create schema"""
+    versions: Optional[List[VersionCreate]] = None
+
+
+class PhotoUpdate(BaseModel):
+    """Photo update schema - all fields optional"""
+    masterFingerprint: Optional[str] = None
+    original_filename: Optional[str] = None
+    date: Optional[datetime] = None
+    description: Optional[str] = None
+    title: Optional[str] = None
+    keywords: Optional[List[str]] = None
+    labels: Optional[List[str]] = None
+    albums: Optional[List[str]] = None
+    persons: Optional[List[str]] = None
+    faces: Optional[Dict[str, Any]] = None
+    favorite: Optional[bool] = None
+    hidden: Optional[bool] = None
+    isphoto: Optional[bool] = None
+    ismovie: Optional[bool] = None
+    burst: Optional[bool] = None
+    live_photo: Optional[bool] = None
+    portrait: Optional[bool] = None
+    screenshot: Optional[bool] = None
+    slow_mo: Optional[bool] = None
+    time_lapse: Optional[bool] = None
+    hdr: Optional[bool] = None
+    selfie: Optional[bool] = None
+    panorama: Optional[bool] = None
+    intrash: Optional[bool] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    uti: Optional[str] = None
+    date_modified: Optional[datetime] = None
+    place: Optional[Dict[str, Any]] = None
+    exif: Optional[Dict[str, Any]] = None
+    score: Optional[Dict[str, Any]] = None
+    search_info: Optional[Dict[str, Any]] = None
+    fields: Optional[Dict[str, Any]] = None
+    height: Optional[int] = None
+    width: Optional[int] = None
+    size: Optional[int] = None
+    orientation: Optional[int] = None
+    s3_key_path: Optional[str] = None
+    s3_thumbnail_path: Optional[str] = None
+    s3_edited_path: Optional[str] = None
+    s3_original_path: Optional[str] = None
+    s3_live_path: Optional[str] = None
+    library: Optional[str] = None
+    versions: Optional[List[VersionCreate]] = None
+
+
+class PhotoResponse(PhotoBase):
+    """Photo response schema"""
+    uploaded_at: Optional[datetime] = None
+    versions: Optional[List[VersionResponse]] = None
+    
+    # Backwards compatibility fields
+    filename: Optional[str] = None
+    file_path: Optional[str] = None
+    content_type: Optional[str] = None
+    file_size: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AlbumBase(BaseModel):
+    """Album base schema"""
+    uuid: str
+    title: str = ""
+    creation_date: Optional[datetime] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+
+
+class AlbumCreate(AlbumBase):
+    """Album create schema"""
+    photos: Optional[List[str]] = None  # List of photo UUIDs
+
+
+class AlbumUpdate(BaseModel):
+    """Album update schema"""
+    title: Optional[str] = None
+    creation_date: Optional[datetime] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    photos: Optional[List[str]] = None  # List of photo UUIDs
+
+
+class AlbumResponse(AlbumBase):
+    """Album response schema"""
+    
     class Config:
         from_attributes = True
