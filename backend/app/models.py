@@ -15,6 +15,24 @@ album_photos = Table(
 )
 
 
+class User(Base):
+    """User model matching Django User model"""
+    __tablename__ = "users"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    name = Column(String, nullable=True)
+    is_active = Column(Boolean, default=True)
+    is_superuser = Column(Boolean, default=False)
+    date_joined = Column(DateTime, default=datetime.utcnow)
+    last_login = Column(DateTime, nullable=True)
+    
+    # Relationships
+    photos = relationship("Photo", back_populates="owner")
+
+
 class Photo(Base):
     """Photo model matching Django Photo model"""
     __tablename__ = "photos"
@@ -94,7 +112,11 @@ class Photo(Base):
     file_size = Column(Integer, nullable=True)
     uploaded_at = Column(DateTime, default=datetime.utcnow)
     
+    # Owner relationship - matching Django Photo model
+    owner_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+    
     # Relationships
+    owner = relationship("User", back_populates="photos")
     versions = relationship("Version", back_populates="photo", cascade="all, delete-orphan")
 
 
