@@ -3,18 +3,23 @@ from fastapi import FastAPI, File, UploadFile, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.security import OAuth2PasswordRequestForm
 from typing import List, Optional
 import os
 import shutil
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from .database import engine, Base, get_db
-from .models import Photo, Album, Version
+from .models import Photo, Album, Version, User
 from .schemas import (
     PhotoResponse, PhotoCreate, PhotoUpdate,
     AlbumResponse, AlbumCreate, AlbumUpdate,
-    VersionResponse
+    VersionResponse, UserCreate, UserResponse, Token
+)
+from .auth import (
+    authenticate_user, create_access_token, get_password_hash,
+    get_current_active_user, ACCESS_TOKEN_EXPIRE_MINUTES
 )
 from sqlalchemy.orm import Session
 from fastapi import Depends
@@ -68,12 +73,85 @@ async def root():
     return {"message": "PhotoSafe Gallery API", "version": "1.0.0"}
 
 
+# ============= AUTHENTICATION ENDPOINTS =============
+
+@app.post("/api/auth/register", response_model=UserResponse, status_code=201)
+async def register(user_data: UserCreate, db: Session = Depends(get_db)):
+    """Register a new user"""
+    # Check if username already exists
+    existing_user = db.query(User).filter(User.username == user_data.username).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="Username already registered"
+        )
+    
+    # Check if email already exists
+    existing_email = db.query(User).filter(User.email == user_data.email).first()
+    if existing_email:
+        raise HTTPException(
+            status_code=400,
+            detail="Email already registered"
+        )
+    
+    # Create new user
+    hashed_password = get_password_hash(user_data.password)
+    db_user = User(
+        username=user_data.username,
+        email=user_data.email,
+        name=user_data.name,
+        hashed_password=hashed_password
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    
+    return db_user
+
+
+@app.post("/api/auth/login", response_model=Token)
+async def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
+):
+    """Login and get access token"""
+    user = authenticate_user(db, form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Update last login
+    user.last_login = datetime.utcnow()
+    db.commit()
+    
+    # Create access token
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.get("/api/auth/me", response_model=UserResponse)
+async def get_current_user_info(
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get current user information"""
+    return current_user
+
+
+
 # ============= PHOTO ENDPOINTS =============
 
 @app.post("/api/photos/", response_model=PhotoResponse, status_code=201)
 async def create_photo(
     photo_data: PhotoCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """Create a new photo (for sync_photos_linux compatibility)"""
     # Check if photo already exists
@@ -93,8 +171,8 @@ async def create_photo(
         if field in photo_dict and photo_dict[field] is not None:
             photo_dict[field] = serialize_json_field(photo_dict[field])
     
-    # Create photo
-    db_photo = Photo(**photo_dict)
+    # Create photo with owner
+    db_photo = Photo(**photo_dict, owner_id=current_user.id)
     db.add(db_photo)
     db.flush()
     
@@ -116,12 +194,17 @@ async def create_photo(
 async def update_photo(
     uuid: str,
     photo_data: PhotoUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """Update a photo (for sync_photos_linux compatibility)"""
     db_photo = db.query(Photo).filter(Photo.uuid == uuid).first()
     if not db_photo:
         raise HTTPException(status_code=404, detail="Photo not found")
+    
+    # Verify ownership
+    if db_photo.owner_id and db_photo.owner_id != current_user.id and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized to update this photo")
     
     # Extract versions data
     versions_data = photo_data.versions or []
@@ -164,29 +247,50 @@ async def update_photo(
 async def list_photos(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
-    """List all photos"""
-    photos = db.query(Photo).order_by(Photo.date.desc()).offset(skip).limit(limit).all()
+    """List all photos owned by the current user"""
+    # Superusers can see all photos, regular users only see their own
+    if current_user.is_superuser:
+        photos = db.query(Photo).order_by(Photo.date.desc()).offset(skip).limit(limit).all()
+    else:
+        photos = db.query(Photo).filter(Photo.owner_id == current_user.id).order_by(Photo.date.desc()).offset(skip).limit(limit).all()
     return [create_photo_response(photo) for photo in photos]
 
 
 @app.get("/api/photos/{uuid}/", response_model=PhotoResponse)
-async def get_photo(uuid: str, db: Session = Depends(get_db)):
+async def get_photo(
+    uuid: str, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
     """Get a specific photo by UUID"""
     photo = db.query(Photo).filter(Photo.uuid == uuid).first()
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
     
+    # Verify ownership
+    if photo.owner_id and photo.owner_id != current_user.id and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized to view this photo")
+    
     return create_photo_response(photo)
 
 
 @app.delete("/api/photos/{uuid}/")
-async def delete_photo(uuid: str, db: Session = Depends(get_db)):
+async def delete_photo(
+    uuid: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
     """Delete a photo by UUID"""
     photo = db.query(Photo).filter(Photo.uuid == uuid).first()
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
+    
+    # Verify ownership
+    if photo.owner_id and photo.owner_id != current_user.id and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this photo")
     
     # Delete file from disk if it exists
     if photo.file_path:
@@ -422,7 +526,8 @@ async def delete_album(uuid: str, db: Session = Depends(get_db)):
 @app.post("/api/photos/upload", response_model=PhotoResponse)
 async def upload_photo(
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """Upload a new photo (legacy endpoint for backwards compatibility)"""
     # Validate file type
@@ -450,7 +555,8 @@ async def upload_photo(
         filename=filename,
         file_path=str(file_path),
         content_type=file.content_type,
-        file_size=os.path.getsize(file_path)
+        file_size=os.path.getsize(file_path),
+        owner_id=current_user.id
     )
     db.add(db_photo)
     db.commit()

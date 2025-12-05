@@ -173,3 +173,40 @@ class AlbumResponse(AlbumBase):
     
     class Config:
         from_attributes = True
+
+
+# ============= USER SCHEMAS =============
+
+class UserBase(BaseModel):
+    """User base schema"""
+    username: str
+    email: str
+    name: Optional[str] = None
+
+
+class UserCreate(UserBase):
+    """User create schema"""
+    password: str
+
+
+class UserResponse(UserBase):
+    """User response schema"""
+    id: int
+    is_active: bool
+    is_superuser: bool
+    date_joined: datetime
+    last_login: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class Token(BaseModel):
+    """Token response schema"""
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    """Token data schema"""
+    username: Optional[str] = None

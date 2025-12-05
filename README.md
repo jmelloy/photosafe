@@ -70,7 +70,14 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. Run the server:
+4. Configure environment variables (optional):
+```bash
+cp .env.example .env
+# Edit .env and set your SECRET_KEY for JWT authentication
+# Generate a secure key with: openssl rand -hex 32
+```
+
+5. Run the server:
 ```bash
 uvicorn app.main:app --reload
 ```
@@ -98,10 +105,25 @@ The frontend will be available at http://localhost:5173
 
 ## API Endpoints
 
-- `GET /api/photos` - List all photos
-- `GET /api/photos/{photo_id}` - Get a specific photo
-- `POST /api/photos/upload` - Upload a new photo
-- `DELETE /api/photos/{photo_id}` - Delete a photo
+### Authentication
+- `POST /api/auth/register` - Register a new user
+- `POST /api/auth/login` - Login and get JWT access token
+- `GET /api/auth/me` - Get current authenticated user information
+
+### Photos (Requires Authentication)
+- `GET /api/photos` - List all photos owned by the current user
+- `GET /api/photos/{uuid}` - Get a specific photo by UUID
+- `POST /api/photos/` - Create a new photo
+- `PATCH /api/photos/{uuid}/` - Update a photo
+- `DELETE /api/photos/{uuid}/` - Delete a photo
+- `POST /api/photos/upload` - Upload a new photo file
+
+### Albums (Requires Authentication)
+- `GET /api/albums` - List all albums
+- `GET /api/albums/{uuid}` - Get a specific album
+- `POST /api/albums/` - Create a new album
+- `PUT /api/albums/{uuid}/` - Update or create an album
+- `DELETE /api/albums/{uuid}/` - Delete an album
 
 Full API documentation is available at http://localhost:8000/docs when the backend is running.
 
