@@ -14,7 +14,7 @@ django<4  # pyup: < 3.2  # https://www.djangoproject.com/
 django-environ  # https://github.com/joke2k/django-environ
 django-model-utils  # https://github.com/jazzband/django-model-utils
 django-allauth  # https://github.com/pennersr/django-allauth
-django-crispy-forms<2.0  # https://github.com/django-crispy-forms/django-crispy-forms
+django-crispy-forms<3.0  # https://github.com/django-crispy-forms/django-crispy-forms
 django-redis==4.12.1  # https://github.com/jazzband/django-redis
 # Django REST Framework
 djangorestframework  # https://github.com/encode/django-rest-framework
