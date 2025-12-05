@@ -1,6 +1,5 @@
 """Database models"""
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Float, ForeignKey, Text, Table
-from sqlalchemy.dialects.postgresql import UUID, ARRAY, JSONB
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid

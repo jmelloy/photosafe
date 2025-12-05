@@ -57,7 +57,7 @@ def deserialize_json_field(value):
     if isinstance(value, str):
         try:
             return json.loads(value)
-        except:
+        except (json.JSONDecodeError, ValueError):
             return value
     return value
 
