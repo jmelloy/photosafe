@@ -84,7 +84,9 @@ export default {
     }
 
     const extractAlbums = () => {
-      albums.value = [...new Set(photos.value.flatMap(photo => photo.albums || []))].sort()
+      albums.value = [...new Set(photos.value.flatMap(photo => 
+        Array.isArray(photo.albums) ? photo.albums : []
+      ))].sort()
     }
 
     const hasActiveFilters = computed(() => {
