@@ -85,7 +85,7 @@ export default {
 
     const extractAlbums = () => {
       albums.value = [...new Set(photos.value.flatMap(photo => 
-        Array.isArray(photo.albums) ? photo.albums : []
+        photo.albums && Array.isArray(photo.albums) ? photo.albums : []
       ))].sort()
     }
 
