@@ -120,15 +120,15 @@ export default {
 
 <style scoped>
 .gallery-container {
-  background: white;
+  background: #1e1e1e;
   border-radius: 12px;
   padding: 2rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
 .gallery-container h2 {
   margin-bottom: 1.5rem;
-  color: #333;
+  color: #e0e0e0;
 }
 
 .loading,
@@ -138,13 +138,13 @@ export default {
   align-items: center;
   justify-content: center;
   padding: 4rem 2rem;
-  color: #666;
+  color: #b0b0b0;
 }
 
 .spinner {
   width: 48px;
   height: 48px;
-  border: 4px solid #f3f3f3;
+  border: 4px solid #3a3a3a;
   border-top: 4px solid #667eea;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -159,7 +159,7 @@ export default {
 .empty-icon {
   width: 96px;
   height: 96px;
-  color: #ccc;
+  color: #4a4a4a;
   margin-bottom: 1rem;
 }
 
@@ -170,23 +170,23 @@ export default {
 }
 
 .photo-card {
-  background: white;
+  background: #2a2a2a;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .photo-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 .photo-wrapper {
   position: relative;
   padding-top: 100%;
   overflow: hidden;
-  background: #f5f5f5;
+  background: #1a1a1a;
 }
 
 .photo-image {
@@ -246,7 +246,7 @@ export default {
 
 .photo-name {
   font-weight: 500;
-  color: #333;
+  color: #e0e0e0;
   margin-bottom: 0.25rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -255,7 +255,7 @@ export default {
 
 .photo-date {
   font-size: 0.875rem;
-  color: #666;
+  color: #b0b0b0;
 }
 
 /* Modal styles */
@@ -277,7 +277,7 @@ export default {
   position: relative;
   max-width: 90vw;
   max-height: 90vh;
-  background: white;
+  background: #2a2a2a;
   border-radius: 8px;
   overflow: hidden;
   display: flex;
@@ -312,16 +312,16 @@ export default {
 
 .modal-info {
   padding: 1.5rem;
-  background: white;
+  background: #2a2a2a;
 }
 
 .modal-info h3 {
   margin-bottom: 0.5rem;
-  color: #333;
+  color: #e0e0e0;
 }
 
 .modal-info p {
-  color: #666;
+  color: #b0b0b0;
   margin-bottom: 0.25rem;
 }
 </style>
