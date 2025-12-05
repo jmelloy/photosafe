@@ -12,11 +12,6 @@ export const getPhoto = async (id) => {
   return response.data
 }
 
-export const getAlbums = async () => {
-  const response = await axios.get(`${API_BASE_URL}/albums`)
-  return response.data
-}
-
 export const uploadPhoto = async (file) => {
   const formData = new FormData()
   formData.append('file', file)

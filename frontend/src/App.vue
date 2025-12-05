@@ -54,7 +54,7 @@
 <script>
 import { ref, computed, onMounted } from 'vue'
 import PhotoGallery from './components/PhotoGallery.vue'
-import { getPhotos, deletePhoto, getAlbums } from './api/photos'
+import { getPhotos, deletePhoto } from './api/photos'
 
 export default {
   name: 'App',
