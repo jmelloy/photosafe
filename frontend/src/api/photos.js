@@ -1,14 +1,12 @@
-import axios from "axios";
-
-const API_BASE_URL = "/api";
+import api from "./client";
 
 export const getPhotos = async () => {
-  const response = await axios.get(`${API_BASE_URL}/photos`);
+  const response = await api.get("/photos/");
   return response.data;
 };
 
 export const getPhoto = async (id) => {
-  const response = await axios.get(`${API_BASE_URL}/photos/${id}`);
+  const response = await api.get(`/photos/${id}`);
   return response.data;
 };
 
@@ -16,7 +14,7 @@ export const uploadPhoto = async (file) => {
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await axios.post(`${API_BASE_URL}/photos/upload`, formData, {
+  const response = await api.post("/photos/upload", formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },
@@ -25,6 +23,6 @@ export const uploadPhoto = async (file) => {
 };
 
 export const deletePhoto = async (id) => {
-  const response = await axios.delete(`${API_BASE_URL}/photos/${id}`);
+  const response = await api.delete(`/photos/${id}`);
   return response.data;
 };
