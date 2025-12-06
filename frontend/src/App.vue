@@ -218,6 +218,7 @@ export default {
     };
 
     const handleLoginSuccess = async () => {
+      isAuthenticatedRef.value = true;
       await loadCurrentUser();
       await loadPhotos();
     };
@@ -227,10 +228,13 @@ export default {
       currentUser.value = null;
       photos.value = [];
       currentView.value = "login";
+      isAuthenticatedRef.value = false;
     };
 
+    const isAuthenticatedRef = ref(isAuthenticated());
+
     onMounted(() => {
-      if (isAuthenticated()) {
+      if (isAuthenticatedRef.value) {
         loadCurrentUser();
         loadPhotos();
       }
@@ -249,7 +253,7 @@ export default {
       loadPhotos,
       clearFilters,
       handleDeletePhoto,
-      isAuthenticated: isAuthenticated(),
+      isAuthenticated: isAuthenticatedRef,
       currentView,
       currentUser,
       handleLoginSuccess,

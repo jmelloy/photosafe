@@ -23,7 +23,7 @@ api.interceptors.request.use(
 );
 
 export const getPhotos = async () => {
-  const response = await api.get("/photos");
+  const response = await api.get("/photos/");
   return response.data;
 };
 
