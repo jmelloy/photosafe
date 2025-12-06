@@ -77,7 +77,12 @@ cp .env.example .env
 # Generate a secure key with: openssl rand -hex 32
 ```
 
-5. Run the server:
+5. Initialize the database with migrations:
+```bash
+alembic upgrade head
+```
+
+6. Run the server:
 ```bash
 uvicorn app.main:app --reload
 ```
@@ -127,17 +132,45 @@ The frontend will be available at http://localhost:5173
 
 Full API documentation is available at http://localhost:8000/docs when the backend is running.
 
+## Database Migrations
+
+The backend uses Alembic for database migrations. This provides version control for your database schema.
+
+### Common Migration Commands
+
+```bash
+# Apply all pending migrations
+alembic upgrade head
+
+# View migration history
+alembic history
+
+# Create a new migration after modifying models
+alembic revision --autogenerate -m "Description of changes"
+
+# Rollback one migration
+alembic downgrade -1
+```
+
+For more details, see [backend/MIGRATIONS.md](backend/MIGRATIONS.md).
+
 ## Project Structure
 
 ```
 photosafe/
 ├── backend/
+│   ├── alembic/
+│   │   ├── versions/        # Migration files
+│   │   └── env.py          # Alembic environment config
 │   ├── app/
 │   │   ├── __init__.py
 │   │   ├── main.py          # FastAPI application
 │   │   ├── models.py        # Database models
 │   │   ├── schemas.py       # Pydantic schemas
-│   │   └── database.py      # Database configuration
+│   │   ├── database.py      # Database configuration
+│   │   └── auth.py          # Authentication
+│   ├── alembic.ini          # Alembic configuration
+│   ├── MIGRATIONS.md        # Migration documentation
 │   ├── Dockerfile
 │   └── requirements.txt
 ├── frontend/

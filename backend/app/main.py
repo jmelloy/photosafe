@@ -24,8 +24,8 @@ from .auth import (
 from sqlalchemy.orm import Session
 from fastapi import Depends
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
+# Database tables are now created via Alembic migrations
+# To initialize the database, run: alembic upgrade head
 
 app = FastAPI(title="PhotoSafe Gallery API", version="1.0.0")
 
