@@ -80,7 +80,11 @@ photosafe library update 1 --name "New Name" --path /new/path
 
 ### Photo Import
 
-Import photos from a folder with optional metadata sidecars.
+Import photos from a folder with automatic EXIF extraction and optional metadata sidecars.
+
+#### Automatic EXIF Extraction
+
+All images are automatically scanned for EXIF data during import. Camera settings, exposure information, and GPS coordinates are extracted and stored in the `exif` field.
 
 #### Import with JSON Sidecar
 
@@ -93,6 +97,37 @@ photosafe import \
   --folder /path/to/photos \
   --sidecar-format json
 ```
+
+#### Import with meta.json for Arbitrary Metadata
+
+Place a `meta.json` file in your photo directory to add arbitrary metadata to all photos:
+
+```bash
+# Directory structure:
+# /photos/
+#   ├── meta.json          # Arbitrary metadata for all photos
+#   ├── photo1.jpg
+#   ├── photo1.jpg.json    # Photo-specific metadata
+#   └── photo2.jpg
+
+photosafe import \
+  --username john \
+  --library-id 1 \
+  --folder /path/to/photos
+```
+
+The `meta.json` file can contain any arbitrary metadata:
+
+```json
+{
+  "photographer": "John Doe",
+  "location_name": "Central Park",
+  "event": "Summer Festival 2024",
+  "copyright": "© 2024 John Doe"
+}
+```
+
+This metadata will be stored in the `fields` JSON column and can be queried later.
 
 #### Import with Library Creation
 
@@ -167,6 +202,18 @@ The import command supports JSON sidecar files with the following format:
 ```
 
 This format is compatible with the output of the PhotoSafe dump scripts and Apple Photos export tools.
+
+### Metadata Priority
+
+When multiple metadata sources provide the same field:
+
+1. **JSON sidecar** (photo-specific) - highest priority
+2. **meta.json** (directory-wide) - medium priority  
+3. **EXIF data** (extracted from image) - lowest priority
+
+For example, if both a sidecar file and EXIF data contain camera information, the sidecar data is used.
+
+See [METADATA_IMPORT.md](METADATA_IMPORT.md) for detailed documentation on metadata handling.
 
 ## Examples
 
@@ -253,7 +300,10 @@ python -m pytest test_cli.py -v
 - ✅ User creation and management
 - ✅ Multiple libraries per user
 - ✅ Photo import from folders
+- ✅ **Automatic EXIF extraction** from images
 - ✅ JSON sidecar metadata support
+- ✅ **meta.json for arbitrary metadata**
+- ✅ **Arbitrary metadata storage in fields column**
 - ✅ S3 upload integration
 - ✅ Dry-run mode for safe testing
 - 🔄 XMP sidecar support (basic structure, needs enhancement)
