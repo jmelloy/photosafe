@@ -260,7 +260,7 @@ def create_photo_from_file(
     if photo_date and isinstance(photo_date, str):
         try:
             photo_date = datetime.fromisoformat(photo_date.replace("Z", "+00:00"))
-        except:
+        except (ValueError, TypeError):
             photo_date = datetime.utcnow()
     elif not photo_date:
         # Use file modification time
