@@ -48,6 +48,27 @@ class User(Base):
 
     # Relationships
     photos = relationship("Photo", back_populates="owner")
+    libraries = relationship("Library", back_populates="owner")
+
+
+class Library(Base):
+    """Library model for managing multiple photo libraries per user"""
+
+    __tablename__ = "libraries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    path = Column(Text, nullable=True)
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Owner relationship
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    # Relationships
+    owner = relationship("User", back_populates="libraries")
+    photos = relationship("Photo", back_populates="library_ref")
 
 
 class Photo(Base):
@@ -120,8 +141,9 @@ class Photo(Base):
     s3_original_path = Column(Text, nullable=True)
     s3_live_path = Column(Text, nullable=True)
 
-    # Library support
+    # Library support - keep library string for backwards compatibility
     library = Column(Text, nullable=True)
+    library_id = Column(Integer, ForeignKey("libraries.id"), nullable=True)
 
     # For backwards compatibility with existing upload functionality
     filename = Column(String, nullable=True)
@@ -135,6 +157,7 @@ class Photo(Base):
 
     # Relationships
     owner = relationship("User", back_populates="photos")
+    library_ref = relationship("Library", back_populates="photos")
     versions = relationship(
         "Version", back_populates="photo", cascade="all, delete-orphan"
     )

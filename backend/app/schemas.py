@@ -216,6 +216,46 @@ class UserResponse(UserBase):
         from_attributes = True
 
 
+# ============= LIBRARY SCHEMAS =============
+
+
+class LibraryBase(BaseModel):
+    """Library base schema"""
+
+    name: str
+    path: Optional[str] = None
+    description: Optional[str] = None
+
+
+class LibraryCreate(LibraryBase):
+    """Library create schema"""
+
+    pass
+
+
+class LibraryUpdate(BaseModel):
+    """Library update schema"""
+
+    name: Optional[str] = None
+    path: Optional[str] = None
+    description: Optional[str] = None
+
+
+class LibraryResponse(LibraryBase):
+    """Library response schema"""
+
+    id: int
+    owner_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ============= TOKEN SCHEMAS =============
+
+
 class Token(BaseModel):
     """Token response schema"""
 
