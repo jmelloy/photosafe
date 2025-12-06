@@ -27,12 +27,21 @@ When setting up the application for the first time:
 cd backend
 ```
 
-2. Run migrations to create the database tables:
+2. Configure your database connection by setting the `DATABASE_URL` environment variable:
+```bash
+# For SQLite (development):
+export DATABASE_URL="sqlite:///./photosafe.db"
+
+# For PostgreSQL (production):
+export DATABASE_URL="postgresql://user:password@localhost:5432/photosafe"
+```
+
+3. Run migrations to create the database tables:
 ```bash
 alembic upgrade head
 ```
 
-This will create the `photosafe.db` SQLite database with all necessary tables.
+This will create the database with all necessary tables. For SQLite, it creates `photosafe.db`. For PostgreSQL, it creates tables in the specified database.
 
 ## Migration Commands
 
@@ -141,12 +150,23 @@ def downgrade():
 
 ### Database URL
 
-The database URL is configured in `app/database.py`:
+The database URL is configured via the `DATABASE_URL` environment variable in `app/database.py`:
+
+**SQLite (Development):**
 ```python
-SQLALCHEMY_DATABASE_URL = "sqlite:///./photosafe.db"
+DATABASE_URL = "sqlite:///./photosafe.db"
+```
+
+**PostgreSQL (Production):**
+```python
+DATABASE_URL = "postgresql://user:password@host:5432/database"
 ```
 
 This URL is automatically used by Alembic through the configuration in `alembic/env.py`.
+
+The application automatically adapts to use the appropriate database types:
+- **PostgreSQL**: Uses native `JSONB` and `ARRAY(String)` types for better performance and querying
+- **SQLite**: Uses `Text` columns and JSON serialization for compatibility
 
 ### Alembic Configuration
 
@@ -221,12 +241,64 @@ This usually means the migration file is missing or the database version table i
 ### Starting Fresh
 
 To completely reset the database:
+
+**SQLite:**
 ```bash
 rm photosafe.db
 alembic upgrade head
 ```
 
+**PostgreSQL:**
+```bash
+# Drop and recreate the database
+dropdb photosafe
+createdb photosafe
+alembic upgrade head
+```
+
 **Warning**: This will delete all data!
+
+## Database-Specific Migrations
+
+### PostgreSQL vs SQLite
+
+The application supports both PostgreSQL and SQLite. The models automatically adapt:
+
+- **PostgreSQL**: Uses `JSONB` for JSON fields and `ARRAY(String)` for array fields
+- **SQLite**: Uses `Text` for both, with JSON serialization/deserialization in the application layer
+
+The migration `a1b2c3d4e5f6_convert_to_postgresql_jsonb_array.py` handles the conversion from Text to PostgreSQL-specific types. This migration:
+- Detects the database dialect at runtime
+- Only applies PostgreSQL-specific changes when using PostgreSQL
+- Is a no-op when using SQLite
+
+### Migrating from SQLite to PostgreSQL
+
+If you need to migrate existing data from SQLite to PostgreSQL:
+
+1. **Export data from SQLite:**
+```bash
+# Using a Python script to export to JSON or CSV
+python export_sqlite_data.py
+```
+
+2. **Set up PostgreSQL database:**
+```bash
+createdb photosafe
+export DATABASE_URL="postgresql://user:password@localhost:5432/photosafe"
+```
+
+3. **Run migrations:**
+```bash
+alembic upgrade head
+```
+
+4. **Import data:**
+```bash
+python import_data.py
+```
+
+**Note**: When migrating data, JSON fields stored as strings in SQLite will be automatically converted to native JSONB in PostgreSQL by the migration.
 
 ## Integration with Application
 
