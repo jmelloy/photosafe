@@ -10,7 +10,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-
+from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = "49348f7a48f6"
@@ -54,11 +54,11 @@ def upgrade() -> None:
         sa.Column("date", sa.DateTime(), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("title", sa.Text(), nullable=True),
-        sa.Column("keywords", sa.Text(), nullable=True),
-        sa.Column("labels", sa.Text(), nullable=True),
-        sa.Column("albums", sa.Text(), nullable=True),
-        sa.Column("persons", sa.Text(), nullable=True),
-        sa.Column("faces", sa.Text(), nullable=True),
+        sa.Column("keywords", postgresql.ARRAY(sa.String()), nullable=True),
+        sa.Column("labels", postgresql.ARRAY(sa.String()), nullable=True),
+        sa.Column("albums", postgresql.ARRAY(sa.String()), nullable=True),
+        sa.Column("persons", postgresql.ARRAY(sa.String()), nullable=True),
+        sa.Column("faces", postgresql.JSONB(), nullable=True),
         sa.Column("favorite", sa.Boolean(), nullable=True),
         sa.Column("hidden", sa.Boolean(), nullable=True),
         sa.Column("isphoto", sa.Boolean(), nullable=True),
@@ -77,11 +77,11 @@ def upgrade() -> None:
         sa.Column("longitude", sa.Float(), nullable=True),
         sa.Column("uti", sa.Text(), nullable=True),
         sa.Column("date_modified", sa.DateTime(), nullable=True),
-        sa.Column("place", sa.Text(), nullable=True),
-        sa.Column("exif", sa.Text(), nullable=True),
-        sa.Column("score", sa.Text(), nullable=True),
-        sa.Column("search_info", sa.Text(), nullable=True),
-        sa.Column("fields", sa.Text(), nullable=True),
+        sa.Column("place", postgresql.JSONB(), nullable=True),
+        sa.Column("exif", postgresql.JSONB(), nullable=True),
+        sa.Column("score", postgresql.JSONB(), nullable=True),
+        sa.Column("search_info", postgresql.JSONB(), nullable=True),
+        sa.Column("fields", postgresql.JSONB(), nullable=True),
         sa.Column("height", sa.Integer(), nullable=True),
         sa.Column("width", sa.Integer(), nullable=True),
         sa.Column("size", sa.Integer(), nullable=True),
