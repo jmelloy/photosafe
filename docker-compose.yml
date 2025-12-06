@@ -26,6 +26,7 @@ services:
       - "8000:8000"
     volumes:
       - ./backend/uploads:/app/uploads
+      - ./backend:/app
     environment:
       - PYTHONUNBUFFERED=1
       - DATABASE_URL=postgresql://photosafe:photosafe@db:5432/photosafe
@@ -39,10 +40,13 @@ services:
     container_name: photosafe-frontend
     ports:
       - "5173:5173"
+    volumes:
+      - ./frontend:/app/web
+    environment:
+      - VITE_API_URL=http://backend:8000
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
     depends_on:
       - backend
-    environment:
-      - VITE_API_URL=http://localhost:8000
     restart: unless-stopped
 
 volumes:

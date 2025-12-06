@@ -1,11 +1,11 @@
 {
   "python.formatting.provider": "none",
   "python.pythonPath": "/Users/jmelloy/.virtualenvs/photosafe/bin/python",
-  "python.defaultInterpreterPath": "/Users/jeffreymelloy/.local/share/mise/installs/python/3.12.10/bin/python",
+  "python.defaultInterpreterPath": "/Users/jeffreymelloy/.local/share/mise/installs/python/3.13.3t/bin/python",
   "[python]": {
     "editor.defaultFormatter": "ms-python.black-formatter"
   },
-  "go.goroot": "/Users/jeffreymelloy/.local/share/mise/installs/go/1.24.5",
+  "go.goroot": "/Users/jeffreymelloy/.local/share/mise/installs/go/1.24.4",
   "go.alternateTools": {
     "go": "/Users/jeffreymelloy/.local/share/mise/shims/go",
     "dlv": "/Users/jeffreymelloy/.local/share/mise/shims/dlv",

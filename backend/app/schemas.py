@@ -1,4 +1,5 @@
 """Pydantic schemas for request/response validation"""
+
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, List, Dict, Any
@@ -6,6 +7,7 @@ from typing import Optional, List, Dict, Any
 
 class VersionBase(BaseModel):
     """Version base schema"""
+
     version: str
     s3_path: str
     filename: Optional[str] = None
@@ -17,11 +19,13 @@ class VersionBase(BaseModel):
 
 class VersionCreate(VersionBase):
     """Version create schema"""
+
     pass
 
 
 class VersionResponse(VersionBase):
     """Version response schema"""
+
     id: int
     photo_uuid: Optional[str] = None
 
@@ -31,6 +35,7 @@ class VersionResponse(VersionBase):
 
 class PhotoBase(BaseModel):
     """Photo base schema"""
+
     uuid: str
     masterFingerprint: Optional[str] = None
     original_filename: str
@@ -79,11 +84,13 @@ class PhotoBase(BaseModel):
 
 class PhotoCreate(PhotoBase):
     """Photo create schema"""
+
     versions: Optional[List[VersionCreate]] = None
 
 
 class PhotoUpdate(BaseModel):
     """Photo update schema - all fields optional"""
+
     masterFingerprint: Optional[str] = None
     original_filename: Optional[str] = None
     date: Optional[datetime] = None
@@ -132,9 +139,10 @@ class PhotoUpdate(BaseModel):
 
 class PhotoResponse(PhotoBase):
     """Photo response schema"""
+
     uploaded_at: Optional[datetime] = None
     versions: Optional[List[VersionResponse]] = None
-    
+
     # Backwards compatibility fields
     filename: Optional[str] = None
     file_path: Optional[str] = None
@@ -147,6 +155,7 @@ class PhotoResponse(PhotoBase):
 
 class AlbumBase(BaseModel):
     """Album base schema"""
+
     uuid: str
     title: str = ""
     creation_date: Optional[datetime] = None
@@ -156,11 +165,13 @@ class AlbumBase(BaseModel):
 
 class AlbumCreate(AlbumBase):
     """Album create schema"""
+
     photos: Optional[List[str]] = None  # List of photo UUIDs
 
 
 class AlbumUpdate(BaseModel):
     """Album update schema"""
+
     title: Optional[str] = None
     creation_date: Optional[datetime] = None
     start_date: Optional[datetime] = None
@@ -170,15 +181,17 @@ class AlbumUpdate(BaseModel):
 
 class AlbumResponse(AlbumBase):
     """Album response schema"""
-    
+
     class Config:
         from_attributes = True
 
 
 # ============= USER SCHEMAS =============
 
+
 class UserBase(BaseModel):
     """User base schema"""
+
     username: str
     email: str
     name: Optional[str] = None
@@ -186,27 +199,31 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     """User create schema"""
+
     password: str
 
 
 class UserResponse(UserBase):
     """User response schema"""
+
     id: int
     is_active: bool
     is_superuser: bool
     date_joined: datetime
     last_login: Optional[datetime] = None
-    
+
     class Config:
         from_attributes = True
 
 
 class Token(BaseModel):
     """Token response schema"""
+
     access_token: str
     token_type: str
 
 
 class TokenData(BaseModel):
     """Token data schema"""
+
     username: Optional[str] = None

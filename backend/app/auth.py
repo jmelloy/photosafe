@@ -1,4 +1,5 @@
 """Authentication utilities for JWT-based auth"""
+
 from datetime import datetime, timedelta
 from typing import Optional
 import os
@@ -52,8 +53,7 @@ def authenticate_user(db: Session, username: str, password: str) -> Optional[Use
 
 
 def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
+    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
 ) -> User:
     """Get the current authenticated user from JWT token"""
     credentials_exception = HTTPException(
@@ -68,7 +68,7 @@ def get_current_user(
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    
+
     user = db.query(User).filter(User.username == username).first()
     if user is None:
         raise credentials_exception

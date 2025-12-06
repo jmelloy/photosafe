@@ -25,12 +25,12 @@ def run_command(cmd, description):
     print(f"{'='*60}")
     print(f"Command: {cmd}")
     print()
-    
+
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
     print(result.stdout)
     if result.stderr:
         print("STDERR:", result.stderr)
-    
+
     if result.returncode != 0:
         print(f"❌ Command failed with exit code {result.returncode}")
         return False
@@ -40,36 +40,36 @@ def run_command(cmd, description):
 
 
 def main():
-    print("="*60)
+    print("=" * 60)
     print("Alembic Migration Demo for PhotoSafe FastAPI Backend")
-    print("="*60)
-    
+    print("=" * 60)
+
     # 1. Check current migration status
     if not run_command("alembic current", "Checking current migration status"):
         return 1
-    
+
     # 2. Show migration history
     if not run_command("alembic history", "Showing migration history"):
         return 1
-    
+
     # 3. Run migrations
     if not run_command("alembic upgrade head", "Applying migrations"):
         return 1
-    
+
     # 4. Verify database tables were created
     if not run_command('sqlite3 photosafe.db ".tables"', "Verifying database tables"):
         return 1
-    
+
     # 5. Create test data using Python
     print(f"\n{'='*60}")
     print("▶ Creating test data")
     print(f"{'='*60}")
-    
+
     from app.database import SessionLocal
     from app.models import User
     from app.auth import get_password_hash
     from datetime import datetime
-    
+
     db = SessionLocal()
     try:
         # Check if user already exists
@@ -85,23 +85,23 @@ def main():
                 name="Test User",
                 is_active=True,
                 is_superuser=False,
-                date_joined=datetime.utcnow()
+                date_joined=datetime.utcnow(),
             )
             db.add(test_user)
             db.commit()
             print(f"✅ Created test user: {test_user.username}")
-        
+
         # Verify data
         user_count = db.query(User).count()
         print(f"✅ Total users in database: {user_count}")
-        
+
     except Exception as e:
         print(f"❌ Error creating test data: {e}")
         db.rollback()
         return 1
     finally:
         db.close()
-    
+
     # 6. Test rollback (optional - commented out to preserve data)
     # print(f"\n{'='*60}")
     # print("▶ Testing migration rollback (optional)")
@@ -110,16 +110,18 @@ def main():
     #     return 1
     # if not run_command("alembic upgrade head", "Re-applying migration"):
     #     return 1
-    
+
     print(f"\n{'='*60}")
     print("✅ All migration tests passed successfully!")
     print(f"{'='*60}")
     print("\nNext steps:")
     print("1. Start the FastAPI server: uvicorn app.main:app --reload")
-    print("2. Create new migrations when models change: alembic revision --autogenerate -m 'Description'")
+    print(
+        "2. Create new migrations when models change: alembic revision --autogenerate -m 'Description'"
+    )
     print("3. Apply migrations: alembic upgrade head")
     print("\nFor more information, see MIGRATIONS.md")
-    
+
     return 0
 
 
