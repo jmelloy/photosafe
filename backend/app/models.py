@@ -1,20 +1,25 @@
 """Database models"""
-
-from sqlalchemy import (
-    Column,
-    Integer,
-    String,
-    DateTime,
-    Boolean,
-    Float,
-    ForeignKey,
-    Text,
-    Table,
-)
+import os
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Float, ForeignKey, Text, Table
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
-from .database import Base
+from .database import Base, SQLALCHEMY_DATABASE_URL
+
+
+# Determine if we're using PostgreSQL
+IS_POSTGRESQL = not SQLALCHEMY_DATABASE_URL.startswith("sqlite")
+
+# Import PostgreSQL-specific types only when needed
+if IS_POSTGRESQL:
+    from sqlalchemy.dialects.postgresql import JSONB, ARRAY
+    JSONType = JSONB
+    def ArrayType():
+        return ARRAY(String)
+else:
+    JSONType = Text
+    def ArrayType():
+        return Text
 
 
 # Association table for many-to-many relationship between albums and photos
@@ -59,16 +64,16 @@ class Photo(Base):
     date = Column(DateTime, nullable=False)
     description = Column(Text, nullable=True)
     title = Column(Text, nullable=True)
-
-    # Arrays - using JSON for SQLite compatibility, can be ARRAY for PostgreSQL
-    keywords = Column(Text, nullable=True)  # JSON string for array
-    labels = Column(Text, nullable=True)  # JSON string for array
-    albums = Column(Text, nullable=True)  # JSON string for array
-    persons = Column(Text, nullable=True)  # JSON string for array
-
-    # JSON fields
-    faces = Column(Text, nullable=True)  # JSON string
-
+    
+    # Arrays - using ARRAY for PostgreSQL, JSON for SQLite
+    keywords = Column(ArrayType(), nullable=True)  # ARRAY(String) for PostgreSQL, JSON string for SQLite
+    labels = Column(ArrayType(), nullable=True)  # ARRAY(String) for PostgreSQL, JSON string for SQLite
+    albums = Column(ArrayType(), nullable=True)  # ARRAY(String) for PostgreSQL, JSON string for SQLite
+    persons = Column(ArrayType(), nullable=True)  # ARRAY(String) for PostgreSQL, JSON string for SQLite
+    
+    # JSON fields - using JSONB for PostgreSQL, JSON string for SQLite
+    faces = Column(JSONType, nullable=True)
+    
     # Boolean flags
     favorite = Column(Boolean, nullable=True)
     hidden = Column(Boolean, nullable=True)
@@ -94,14 +99,14 @@ class Photo(Base):
 
     # Dates
     date_modified = Column(DateTime, nullable=True)
-
-    # JSON fields
-    place = Column(Text, nullable=True)  # JSON string
-    exif = Column(Text, nullable=True)  # JSON string
-    score = Column(Text, nullable=True)  # JSON string
-    search_info = Column(Text, nullable=True)  # JSON string
-    fields = Column(Text, nullable=True)  # JSON string
-
+    
+    # JSON fields - using JSONB for PostgreSQL, JSON string for SQLite
+    place = Column(JSONType, nullable=True)
+    exif = Column(JSONType, nullable=True)
+    score = Column(JSONType, nullable=True)
+    search_info = Column(JSONType, nullable=True)
+    fields = Column(JSONType, nullable=True)
+    
     # Dimensions and size
     height = Column(Integer, nullable=True)
     width = Column(Integer, nullable=True)

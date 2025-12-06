@@ -8,7 +8,8 @@ A modern photo gallery application built with FastAPI and Vue 3.
 - 🖼️ Beautiful grid-based photo gallery
 - 🔍 View photos in full-size modal
 - 🗑️ Delete photos
-- 💾 SQLite database for metadata storage
+- 💾 PostgreSQL database for production-ready metadata storage
+- 🔄 SQLite support for local development
 - 🐳 Docker support for easy deployment
 
 ## Tech Stack
@@ -16,7 +17,8 @@ A modern photo gallery application built with FastAPI and Vue 3.
 ### Backend
 - **FastAPI**: Modern, fast web framework for building APIs
 - **SQLAlchemy**: SQL toolkit and ORM
-- **SQLite**: Lightweight database
+- **PostgreSQL**: Production-grade relational database
+- **SQLite**: Lightweight database for development
 - **Uvicorn**: ASGI server
 
 ### Frontend
@@ -40,15 +42,18 @@ git clone https://github.com/jmelloy/photosafe.git
 cd photosafe
 ```
 
-2. Start the application:
+2. Start the application (includes PostgreSQL database):
 ```bash
 docker-compose up --build
 ```
+
+> **Security Note**: The default docker-compose.yml uses simple credentials for development. For production deployments, change the PostgreSQL credentials in docker-compose.yml or use environment variables/Docker secrets.
 
 3. Access the application:
    - Frontend: http://localhost:5173
    - Backend API: http://localhost:8000
    - API Docs: http://localhost:8000/docs
+   - PostgreSQL: localhost:5432 (user: photosafe, password: photosafe, database: photosafe)
 
 ### Manual Setup
 
@@ -73,8 +78,11 @@ pip install -r requirements.txt
 4. Configure environment variables (optional):
 ```bash
 cp .env.example .env
-# Edit .env and set your SECRET_KEY for JWT authentication
-# Generate a secure key with: openssl rand -hex 32
+# Edit .env and set your configuration:
+# - SECRET_KEY for JWT authentication (generate with: openssl rand -hex 32)
+# - DATABASE_URL for database connection
+#   - SQLite (development): sqlite:///./photosafe.db
+#   - PostgreSQL (production): postgresql://user:password@localhost:5432/dbname
 ```
 
 5. Initialize the database with migrations:
@@ -131,6 +139,42 @@ The frontend will be available at http://localhost:5173
 - `DELETE /api/albums/{uuid}/` - Delete an album
 
 Full API documentation is available at http://localhost:8000/docs when the backend is running.
+
+## Database Configuration
+
+The application supports both PostgreSQL and SQLite databases:
+
+### PostgreSQL (Production - Recommended)
+
+PostgreSQL provides better performance, scalability, and advanced features like JSONB and ARRAY types for structured data.
+
+**Using Docker Compose:**
+```bash
+docker-compose up --build
+```
+The PostgreSQL database is automatically configured and started.
+
+**Manual Setup:**
+1. Install PostgreSQL 12 or higher
+2. Create a database: `createdb photosafe`
+3. Set the `DATABASE_URL` environment variable:
+   ```bash
+   export DATABASE_URL="postgresql://user:password@localhost:5432/photosafe"
+   ```
+4. Run migrations: `alembic upgrade head`
+
+### SQLite (Development)
+
+SQLite is great for local development and testing.
+
+**Setup:**
+1. Set the `DATABASE_URL` environment variable (or omit to use default):
+   ```bash
+   export DATABASE_URL="sqlite:///./photosafe.db"
+   ```
+2. Run migrations: `alembic upgrade head`
+
+**Note:** When using SQLite, JSON fields are stored as text and parsed at runtime. PostgreSQL uses native JSONB and ARRAY types for better performance and querying capabilities.
 
 ## Database Migrations
 

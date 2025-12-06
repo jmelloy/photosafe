@@ -1,13 +1,38 @@
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: photosafe-db
+    environment:
+      # IMPORTANT: Change these credentials for production deployments!
+      # For production, use Docker secrets or environment variables
+      POSTGRES_DB: photosafe
+      POSTGRES_USER: photosafe
+      POSTGRES_PASSWORD: photosafe
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U photosafe"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   backend:
     build: ./backend
     container_name: photosafe-backend
     ports:
       - "8000:8000"
     volumes:
+      - ./backend/uploads:/app/uploads
       - ./backend:/app
     environment:
       - PYTHONUNBUFFERED=1
+      - DATABASE_URL=postgresql://photosafe:photosafe@db:5432/photosafe
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
 
   frontend:
@@ -25,5 +50,5 @@ services:
     restart: unless-stopped
 
 volumes:
+  postgres_data:
   uploads:
-  database:
