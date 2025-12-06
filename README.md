@@ -11,6 +11,10 @@ A modern photo gallery application built with FastAPI and Vue 3.
 - 💾 PostgreSQL database for production-ready metadata storage
 - 🔄 SQLite support for local development
 - 🐳 Docker support for easy deployment
+- 🔧 **CLI for bulk operations** - User management, library organization, and photo import
+- 📚 **Multiple libraries per user** - Organize photos into separate collections
+- 📥 **Import with metadata** - Import photos from folders with JSON/XMP sidecar files
+- ☁️ **S3 integration** - Upload imported photos to S3 storage
 
 ## Tech Stack
 
@@ -198,6 +202,32 @@ alembic downgrade -1
 
 For more details, see [backend/MIGRATIONS.md](backend/MIGRATIONS.md).
 
+## CLI - Command Line Interface
+
+PhotoSafe includes a powerful CLI for bulk operations, user management, and photo imports.
+
+### Installation
+
+```bash
+cd backend
+pip install -e .
+```
+
+### Quick Examples
+
+```bash
+# Create a user
+photosafe user create --username john --email john@example.com
+
+# Create a library
+photosafe library create --username john --name "My Photos"
+
+# Import photos from a folder
+photosafe import --username john --library-id 1 --folder /path/to/photos
+```
+
+For complete CLI documentation, see [backend/CLI_README.md](backend/CLI_README.md).
+
 ## Project Structure
 
 ```
@@ -209,12 +239,20 @@ photosafe/
 │   ├── app/
 │   │   ├── __init__.py
 │   │   ├── main.py          # FastAPI application
-│   │   ├── models.py        # Database models
+│   │   ├── models.py        # Database models (User, Photo, Album, Library, Version)
 │   │   ├── schemas.py       # Pydantic schemas
 │   │   ├── database.py      # Database configuration
 │   │   └── auth.py          # Authentication
+│   ├── cli/
+│   │   ├── __init__.py
+│   │   ├── main.py          # CLI entry point
+│   │   ├── user_commands.py # User management commands
+│   │   ├── library_commands.py # Library management commands
+│   │   └── import_commands.py  # Photo import commands
 │   ├── alembic.ini          # Alembic configuration
+│   ├── CLI_README.md        # CLI documentation
 │   ├── MIGRATIONS.md        # Migration documentation
+│   ├── setup.py            # CLI package setup
 │   ├── Dockerfile
 │   └── requirements.txt
 ├── frontend/
