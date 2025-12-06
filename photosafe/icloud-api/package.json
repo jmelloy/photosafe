@@ -1,5 +1,5 @@
 {
   "dependencies": {
-    "har-to-openapi": "^2.1.0"
+    "har-to-openapi": "^2.2.1"
   }
 }
