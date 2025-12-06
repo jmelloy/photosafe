@@ -3,6 +3,8 @@ services:
     image: postgres:16-alpine
     container_name: photosafe-db
     environment:
+      # IMPORTANT: Change these credentials for production deployments!
+      # For production, use Docker secrets or environment variables
       POSTGRES_DB: photosafe
       POSTGRES_USER: photosafe
       POSTGRES_PASSWORD: photosafe

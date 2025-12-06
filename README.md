@@ -47,6 +47,8 @@ cd photosafe
 docker-compose up --build
 ```
 
+> **Security Note**: The default docker-compose.yml uses simple credentials for development. For production deployments, change the PostgreSQL credentials in docker-compose.yml or use environment variables/Docker secrets.
+
 3. Access the application:
    - Frontend: http://localhost:5173
    - Backend API: http://localhost:8000
