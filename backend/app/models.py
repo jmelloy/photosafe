@@ -1,7 +1,6 @@
 """Database models"""
 import os
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Float, ForeignKey, Text, Table
-from sqlalchemy.dialects.postgresql import JSONB, ARRAY
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
@@ -11,10 +10,16 @@ from .database import Base, SQLALCHEMY_DATABASE_URL
 # Determine if we're using PostgreSQL
 IS_POSTGRESQL = not SQLALCHEMY_DATABASE_URL.startswith("sqlite")
 
-# Use JSONB for PostgreSQL, Text for SQLite
-JSONType = JSONB if IS_POSTGRESQL else Text
-# Use ARRAY(String) for PostgreSQL, Text for SQLite (will store as JSON string)
-ArrayType = lambda: ARRAY(String) if IS_POSTGRESQL else Text
+# Import PostgreSQL-specific types only when needed
+if IS_POSTGRESQL:
+    from sqlalchemy.dialects.postgresql import JSONB, ARRAY
+    JSONType = JSONB
+    def ArrayType():
+        return ARRAY(String)
+else:
+    JSONType = Text
+    def ArrayType():
+        return Text
 
 
 # Association table for many-to-many relationship between albums and photos

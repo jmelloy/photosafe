@@ -23,6 +23,13 @@ def upgrade() -> None:
     Convert Text columns to PostgreSQL-specific types (JSONB and ARRAY).
     This migration only applies when using PostgreSQL.
     For SQLite, this migration does nothing (columns remain as Text).
+    
+    Note: This migration assumes the database is starting fresh with PostgreSQL.
+    If migrating existing SQLite data to PostgreSQL, you should:
+    1. Export data from SQLite
+    2. Create fresh PostgreSQL database
+    3. Run migrations
+    4. Import data with proper type conversion
     """
     # Get the database dialect
     bind = op.get_bind()
@@ -30,69 +37,63 @@ def upgrade() -> None:
     
     # Only apply PostgreSQL-specific changes if we're using PostgreSQL
     if dialect_name == 'postgresql':
-        # Convert JSON string columns to JSONB
+        # Convert JSON string columns to JSONB and array columns to ARRAY
+        # Note: This assumes columns are currently NULL or will be populated after migration
+        # For data migration from SQLite, see MIGRATIONS.md
         with op.batch_alter_table('photos', schema=None) as batch_op:
             # Convert array fields from Text to ARRAY(String)
+            # If migrating data, ensure array data is in PostgreSQL array format or NULL
             batch_op.alter_column('keywords',
                 existing_type=sa.Text(),
                 type_=postgresql.ARRAY(sa.String()),
-                existing_nullable=True,
-                postgresql_using='keywords::text[]')
+                existing_nullable=True)
             
             batch_op.alter_column('labels',
                 existing_type=sa.Text(),
                 type_=postgresql.ARRAY(sa.String()),
-                existing_nullable=True,
-                postgresql_using='labels::text[]')
+                existing_nullable=True)
             
             batch_op.alter_column('albums',
                 existing_type=sa.Text(),
                 type_=postgresql.ARRAY(sa.String()),
-                existing_nullable=True,
-                postgresql_using='albums::text[]')
+                existing_nullable=True)
             
             batch_op.alter_column('persons',
                 existing_type=sa.Text(),
                 type_=postgresql.ARRAY(sa.String()),
-                existing_nullable=True,
-                postgresql_using='persons::text[]')
+                existing_nullable=True)
             
             # Convert JSON fields from Text to JSONB
+            # If migrating data, ensure JSON data is valid JSON or NULL
             batch_op.alter_column('faces',
                 existing_type=sa.Text(),
                 type_=postgresql.JSONB(),
-                existing_nullable=True,
-                postgresql_using='faces::jsonb')
+                existing_nullable=True)
             
             batch_op.alter_column('place',
                 existing_type=sa.Text(),
                 type_=postgresql.JSONB(),
-                existing_nullable=True,
-                postgresql_using='place::jsonb')
+                existing_nullable=True)
             
             batch_op.alter_column('exif',
                 existing_type=sa.Text(),
                 type_=postgresql.JSONB(),
-                existing_nullable=True,
-                postgresql_using='exif::jsonb')
+                existing_nullable=True)
             
             batch_op.alter_column('score',
                 existing_type=sa.Text(),
                 type_=postgresql.JSONB(),
-                existing_nullable=True,
-                postgresql_using='score::jsonb')
+                existing_nullable=True)
             
             batch_op.alter_column('search_info',
                 existing_type=sa.Text(),
                 type_=postgresql.JSONB(),
-                existing_nullable=True,
-                postgresql_using='search_info::jsonb')
+                existing_nullable=True)
             
             batch_op.alter_column('fields',
                 existing_type=sa.Text(),
                 type_=postgresql.JSONB(),
-                existing_nullable=True,
-                postgresql_using='fields::jsonb')
+                existing_nullable=True)
 
 
 def downgrade() -> None:
