@@ -2,8 +2,8 @@
   <div class="upload-container">
     <div class="upload-card">
       <h2>Upload Photo</h2>
-      
-      <div 
+
+      <div
         class="drop-zone"
         :class="{ 'drag-over': isDragging }"
         @dragover.prevent="isDragging = true"
@@ -12,23 +12,32 @@
         @click="triggerFileInput"
       >
         <div v-if="!uploading" class="drop-zone-content">
-          <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          <svg
+            class="upload-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+            />
           </svg>
           <p class="upload-text">Click or drag & drop to upload</p>
           <p class="upload-hint">PNG, JPG, GIF up to 10MB</p>
         </div>
-        
+
         <div v-else class="uploading">
           <div class="spinner"></div>
           <p>Uploading...</p>
         </div>
       </div>
-      
-      <input 
+
+      <input
         ref="fileInput"
-        type="file" 
+        type="file"
         accept="image/*"
         style="display: none"
         @change="handleFileSelect"
@@ -38,54 +47,54 @@
 </template>
 
 <script>
-import { ref } from 'vue'
-import { uploadPhoto } from '../api/photos'
+import { ref } from "vue";
+import { uploadPhoto } from "../api/photos";
 
 export default {
-  name: 'PhotoUpload',
-  emits: ['photo-uploaded'],
+  name: "PhotoUpload",
+  emits: ["photo-uploaded"],
   setup(props, { emit }) {
-    const fileInput = ref(null)
-    const isDragging = ref(false)
-    const uploading = ref(false)
+    const fileInput = ref(null);
+    const isDragging = ref(false);
+    const uploading = ref(false);
 
     const triggerFileInput = () => {
-      fileInput.value.click()
-    }
+      fileInput.value.click();
+    };
 
     const handleFileSelect = async (event) => {
-      const file = event.target.files[0]
+      const file = event.target.files[0];
       if (file) {
-        await uploadFile(file)
+        await uploadFile(file);
       }
-    }
+    };
 
     const handleDrop = async (event) => {
-      isDragging.value = false
-      const file = event.dataTransfer.files[0]
-      if (file && file.type.startsWith('image/')) {
-        await uploadFile(file)
+      isDragging.value = false;
+      const file = event.dataTransfer.files[0];
+      if (file && file.type.startsWith("image/")) {
+        await uploadFile(file);
       } else {
-        alert('Please drop an image file')
+        alert("Please drop an image file");
       }
-    }
+    };
 
     const uploadFile = async (file) => {
-      uploading.value = true
+      uploading.value = true;
       try {
-        await uploadPhoto(file)
-        emit('photo-uploaded')
+        await uploadPhoto(file);
+        emit("photo-uploaded");
         // Reset file input
         if (fileInput.value) {
-          fileInput.value.value = ''
+          fileInput.value.value = "";
         }
       } catch (error) {
-        console.error('Upload failed:', error)
-        alert('Upload failed. Please try again.')
+        console.error("Upload failed:", error);
+        alert("Upload failed. Please try again.");
       } finally {
-        uploading.value = false
+        uploading.value = false;
       }
-    }
+    };
 
     return {
       fileInput,
@@ -93,10 +102,10 @@ export default {
       uploading,
       triggerFileInput,
       handleFileSelect,
-      handleDrop
-    }
-  }
-}
+      handleDrop,
+    };
+  },
+};
 </script>
 
 <style scoped>
@@ -173,7 +182,11 @@ export default {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 </style>

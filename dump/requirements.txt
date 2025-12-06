@@ -4,6 +4,7 @@ pandas
 exifread
 PyYAML
 python-ulid
+tqdm
 
 # Note: exiftool must be installed separately
 # brew install exiftool

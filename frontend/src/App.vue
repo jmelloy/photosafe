@@ -4,39 +4,41 @@
       <h1>📷 PhotoSafe Gallery</h1>
       <p>Your personal photo collection</p>
     </header>
-    
+
     <main class="main">
       <div class="filters">
         <div class="search-container">
-          <input 
+          <input
             v-model="searchQuery"
             type="text"
             placeholder="Search photos..."
             class="search-input"
           />
         </div>
-        
+
         <div class="filter-group">
           <select v-model="selectedAlbum" class="filter-select">
             <option value="">All Albums</option>
-            <option v-for="album in albums" :key="album" :value="album">{{ album }}</option>
+            <option v-for="album in albums" :key="album" :value="album">
+              {{ album }}
+            </option>
           </select>
-          
-          <input 
+
+          <input
             v-model="startDate"
             type="date"
             class="filter-input"
             placeholder="Start date"
           />
-          
-          <input 
+
+          <input
             v-model="endDate"
             type="date"
             class="filter-input"
             placeholder="End date"
           />
-          
-          <button 
+
+          <button
             v-if="hasActiveFilters"
             @click="clearFilters"
             class="clear-button"
@@ -45,119 +47,134 @@
           </button>
         </div>
       </div>
-      
-      <PhotoGallery :photos="filteredPhotos" :loading="loading" @delete-photo="handleDeletePhoto" />
+
+      <PhotoGallery
+        :photos="filteredPhotos"
+        :loading="loading"
+        @delete-photo="handleDeletePhoto"
+      />
     </main>
   </div>
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
-import PhotoGallery from './components/PhotoGallery.vue'
-import { getPhotos, deletePhoto } from './api/photos'
+import { ref, computed, onMounted } from "vue";
+import PhotoGallery from "./components/PhotoGallery.vue";
+import { getPhotos, deletePhoto } from "./api/photos";
 
 export default {
-  name: 'App',
+  name: "App",
   components: {
-    PhotoGallery
+    PhotoGallery,
   },
   setup() {
-    const photos = ref([])
-    const loading = ref(false)
-    const searchQuery = ref('')
-    const selectedAlbum = ref('')
-    const startDate = ref('')
-    const endDate = ref('')
-    const albums = ref([])
+    const photos = ref([]);
+    const loading = ref(false);
+    const searchQuery = ref("");
+    const selectedAlbum = ref("");
+    const startDate = ref("");
+    const endDate = ref("");
+    const albums = ref([]);
 
     const loadPhotos = async () => {
-      loading.value = true
+      loading.value = true;
       try {
-        photos.value = await getPhotos()
-        extractAlbums()
+        photos.value = await getPhotos();
+        extractAlbums();
       } catch (error) {
-        console.error('Failed to load photos:', error)
-        alert('Failed to load photos. Please try again.')
+        console.error("Failed to load photos:", error);
+        alert("Failed to load photos. Please try again.");
       } finally {
-        loading.value = false
+        loading.value = false;
       }
-    }
+    };
 
     const extractAlbums = () => {
-      albums.value = [...new Set(photos.value.flatMap(photo => 
-        photo.albums && Array.isArray(photo.albums) ? photo.albums : []
-      ))].sort()
-    }
+      albums.value = [
+        ...new Set(
+          photos.value.flatMap((photo) =>
+            photo.albums && Array.isArray(photo.albums) ? photo.albums : [],
+          ),
+        ),
+      ].sort();
+    };
 
     const hasActiveFilters = computed(() => {
-      return searchQuery.value || selectedAlbum.value || startDate.value || endDate.value
-    })
+      return (
+        searchQuery.value ||
+        selectedAlbum.value ||
+        startDate.value ||
+        endDate.value
+      );
+    });
 
     const filteredPhotos = computed(() => {
-      let result = photos.value
+      let result = photos.value;
 
       // Search filter
       if (searchQuery.value) {
-        const query = searchQuery.value.toLowerCase()
-        result = result.filter(photo => 
-          photo.original_filename?.toLowerCase().includes(query) ||
-          photo.title?.toLowerCase().includes(query) ||
-          photo.description?.toLowerCase().includes(query)
-        )
+        const query = searchQuery.value.toLowerCase();
+        result = result.filter(
+          (photo) =>
+            photo.original_filename?.toLowerCase().includes(query) ||
+            photo.title?.toLowerCase().includes(query) ||
+            photo.description?.toLowerCase().includes(query),
+        );
       }
 
       // Album filter
       if (selectedAlbum.value) {
-        result = result.filter(photo => 
-          photo.albums && 
-          Array.isArray(photo.albums) && 
-          photo.albums.includes(selectedAlbum.value)
-        )
+        result = result.filter(
+          (photo) =>
+            photo.albums &&
+            Array.isArray(photo.albums) &&
+            photo.albums.includes(selectedAlbum.value),
+        );
       }
 
       // Date range filter
       if (startDate.value) {
-        const start = new Date(startDate.value)
-        result = result.filter(photo => {
-          const photoDate = new Date(photo.date || photo.uploaded_at)
-          return photoDate >= start
-        })
+        const start = new Date(startDate.value);
+        result = result.filter((photo) => {
+          const photoDate = new Date(photo.date || photo.uploaded_at);
+          return photoDate >= start;
+        });
       }
 
       if (endDate.value) {
-        const end = new Date(endDate.value)
-        end.setHours(23, 59, 59, 999) // Include the entire end date
-        result = result.filter(photo => {
-          const photoDate = new Date(photo.date || photo.uploaded_at)
-          return photoDate <= end
-        })
+        const end = new Date(endDate.value);
+        end.setHours(23, 59, 59, 999); // Include the entire end date
+        result = result.filter((photo) => {
+          const photoDate = new Date(photo.date || photo.uploaded_at);
+          return photoDate <= end;
+        });
       }
 
-      return result
-    })
+      return result;
+    });
 
     const clearFilters = () => {
-      searchQuery.value = ''
-      selectedAlbum.value = ''
-      startDate.value = ''
-      endDate.value = ''
-    }
+      searchQuery.value = "";
+      selectedAlbum.value = "";
+      startDate.value = "";
+      endDate.value = "";
+    };
 
     const handleDeletePhoto = async (photoId) => {
-      if (confirm('Are you sure you want to delete this photo?')) {
+      if (confirm("Are you sure you want to delete this photo?")) {
         try {
-          await deletePhoto(photoId)
-          await loadPhotos()
+          await deletePhoto(photoId);
+          await loadPhotos();
         } catch (error) {
-          console.error('Failed to delete photo:', error)
-          alert('Failed to delete photo. Please try again.')
+          console.error("Failed to delete photo:", error);
+          alert("Failed to delete photo. Please try again.");
         }
       }
-    }
+    };
 
     onMounted(() => {
-      loadPhotos()
-    })
+      loadPhotos();
+    });
 
     return {
       photos,
@@ -171,10 +188,10 @@ export default {
       hasActiveFilters,
       loadPhotos,
       clearFilters,
-      handleDeletePhoto
-    }
-  }
-}
+      handleDeletePhoto,
+    };
+  },
+};
 </script>
 
 <style scoped>

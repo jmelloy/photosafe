@@ -1,53 +1,64 @@
 <template>
   <div class="gallery-container">
     <h2>Photo Gallery</h2>
-    
+
     <div v-if="loading" class="loading">
       <div class="spinner"></div>
       <p>Loading photos...</p>
     </div>
-    
+
     <div v-else-if="photos.length === 0" class="empty-state">
-      <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      <svg
+        class="empty-icon"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+        />
       </svg>
       <p>No photos yet. Upload your first photo!</p>
     </div>
-    
+
     <div v-else class="photo-grid">
-      <div 
-        v-for="photo in photos" 
-        :key="photo.id"
-        class="photo-card"
-      >
+      <div v-for="photo in photos" :key="photo.id" class="photo-card">
         <div class="photo-wrapper">
-          <img 
-            :src="photo.url" 
+          <img
+            :src="photo.url"
             :alt="photo.original_filename"
             class="photo-image"
             @click="openPhoto(photo)"
           />
           <div class="photo-overlay">
-            <button 
+            <button
               @click.stop="$emit('delete-photo', photo.id)"
               class="delete-button"
               title="Delete photo"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
               </svg>
             </button>
           </div>
         </div>
         <div class="photo-info">
-          <p class="photo-name" :title="photo.original_filename">{{ photo.original_filename }}</p>
+          <p class="photo-name" :title="photo.original_filename">
+            {{ photo.original_filename }}
+          </p>
           <p class="photo-date">{{ formatDate(photo.uploaded_at) }}</p>
         </div>
       </div>
     </div>
-    
+
     <!-- Modal for full-size photo view -->
     <div v-if="selectedPhoto" class="modal" @click="closePhoto">
       <div class="modal-content" @click.stop>
@@ -64,58 +75,58 @@
 </template>
 
 <script>
-import { ref } from 'vue'
+import { ref } from "vue";
 
 export default {
-  name: 'PhotoGallery',
+  name: "PhotoGallery",
   props: {
     photos: {
       type: Array,
-      required: true
+      required: true,
     },
     loading: {
       type: Boolean,
-      default: false
-    }
+      default: false,
+    },
   },
-  emits: ['delete-photo'],
+  emits: ["delete-photo"],
   setup() {
-    const selectedPhoto = ref(null)
+    const selectedPhoto = ref(null);
 
     const formatDate = (dateString) => {
-      const date = new Date(dateString)
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-    }
+      const date = new Date(dateString);
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    };
 
     const formatFileSize = (bytes) => {
-      if (bytes < 1024) return bytes + ' B'
-      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
-      return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
-    }
+      if (bytes < 1024) return bytes + " B";
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+      return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    };
 
     const openPhoto = (photo) => {
-      selectedPhoto.value = photo
-    }
+      selectedPhoto.value = photo;
+    };
 
     const closePhoto = () => {
-      selectedPhoto.value = null
-    }
+      selectedPhoto.value = null;
+    };
 
     return {
       selectedPhoto,
       formatDate,
       formatFileSize,
       openPhoto,
-      closePhoto
-    }
-  }
-}
+      closePhoto,
+    };
+  },
+};
 </script>
 
 <style scoped>
@@ -152,8 +163,12 @@ export default {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .empty-icon {
@@ -174,7 +189,9 @@ export default {
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 .photo-card:hover {
