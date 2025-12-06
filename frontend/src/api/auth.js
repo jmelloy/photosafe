@@ -1,39 +1,6 @@
-import axios from "axios";
+import api, { getToken, setToken, removeToken } from "./client";
 
-const API_BASE_URL = "/api";
-const TOKEN_KEY = "photosafe_auth_token";
-
-// Create axios instance with auth interceptor
-const api = axios.create({
-  baseURL: API_BASE_URL,
-});
-
-// Add auth header to all requests
-api.interceptors.request.use(
-  (config) => {
-    const token = getToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Token management
-export const getToken = () => {
-  return localStorage.getItem(TOKEN_KEY);
-};
-
-export const setToken = (token) => {
-  localStorage.setItem(TOKEN_KEY, token);
-};
-
-export const removeToken = () => {
-  localStorage.removeItem(TOKEN_KEY);
-};
+export { getToken, setToken, removeToken };
 
 export const isAuthenticated = () => {
   return !!getToken();
@@ -45,7 +12,7 @@ export const login = async (username, password) => {
   formData.append("username", username);
   formData.append("password", password);
 
-  const response = await axios.post(`${API_BASE_URL}/auth/login`, formData, {
+  const response = await api.post("/auth/login", formData, {
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
     },
@@ -57,7 +24,7 @@ export const login = async (username, password) => {
 };
 
 export const register = async (username, email, password, name = "") => {
-  const response = await axios.post(`${API_BASE_URL}/auth/register`, {
+  const response = await api.post("/auth/register", {
     username,
     email,
     password,

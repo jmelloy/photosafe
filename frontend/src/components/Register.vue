@@ -129,9 +129,10 @@ export default {
         );
         success.value =
           "Account created successfully! Redirecting to login...";
+        // Emit register-success after a brief moment to show the success message
         setTimeout(() => {
           emit("register-success");
-        }, 1500);
+        }, 1000);
       } catch (err) {
         console.error("Registration error:", err);
         if (err.response?.data?.detail) {
