@@ -180,6 +180,10 @@ def import_photos(
 
 def extract_exif_data(image_path: Path) -> Dict[str, Any]:
     """Extract EXIF data from an image file using Pillow"""
+    # EXIF constants
+    GPS_IFD_TAG = 0x8825  # GPS IFD tag for GPS information
+    FLASH_FIRED_BIT = 0x1  # Bit 0 indicates if flash was fired
+    
     exif_data = {}
     
     try:
@@ -197,13 +201,13 @@ def extract_exif_data(image_path: Path) -> Dict[str, Any]:
                 if isinstance(value, bytes):
                     try:
                         value = value.decode('utf-8', errors='ignore')
-                    except:
+                    except (UnicodeDecodeError, AttributeError):
                         value = str(value)
                 
                 exif_data[tag_name] = value
             
             # Extract GPS data if available
-            gps_info = exif.get_ifd(0x8825)  # GPS IFD tag
+            gps_info = exif.get_ifd(GPS_IFD_TAG)
             if gps_info:
                 gps_data = {}
                 for tag_id, value in gps_info.items():
@@ -257,7 +261,7 @@ def extract_exif_data(image_path: Path) -> Dict[str, Any]:
             if 'Flash' in exif_data:
                 flash_value = exif_data['Flash']
                 # Flash fired if bit 0 is set
-                structured_exif['flash_fired'] = bool(flash_value & 0x1) if isinstance(flash_value, int) else False
+                structured_exif['flash_fired'] = bool(flash_value & FLASH_FIRED_BIT) if isinstance(flash_value, int) else False
             
             # White balance
             if 'WhiteBalance' in exif_data:
