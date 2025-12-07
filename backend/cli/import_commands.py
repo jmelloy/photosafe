@@ -9,6 +9,8 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 import uuid as uuid_module
 from sqlalchemy.orm import Session
+from PIL import Image
+from PIL.ExifTags import TAGS, GPSTAGS
 
 from app.database import SessionLocal
 from app.models import User, Library, Photo, Version
@@ -99,6 +101,9 @@ def import_photos(
         with click.progressbar(image_files, label="Importing photos") as files:
             for image_file in files:
                 try:
+                    # Extract EXIF data from the image itself
+                    exif_data = extract_exif_data(image_file)
+                    
                     # Look for sidecar file
                     sidecar_path = None
                     if sidecar_format == "json":
@@ -107,11 +112,33 @@ def import_photos(
                             sidecar_path = image_file.with_suffix(".json")
                     elif sidecar_format == "xmp":
                         sidecar_path = image_file.with_suffix(".xmp")
+                    
+                    # Also look for meta.json in the same directory
+                    meta_json_path = image_file.parent / "meta.json"
 
-                    # Parse metadata
+                    # Parse metadata from sidecar files
                     metadata = {}
                     if sidecar_path and sidecar_path.exists():
                         metadata = parse_sidecar(sidecar_path, sidecar_format)
+                    
+                    # Parse and merge meta.json if it exists
+                    if meta_json_path.exists():
+                        meta_json_data = parse_meta_json(meta_json_path)
+                        # Merge meta.json data, giving priority to sidecar data
+                        for key, value in meta_json_data.items():
+                            if key not in metadata:
+                                metadata[key] = value
+                    
+                    # Add EXIF data to metadata
+                    if exif_data:
+                        # If there's already EXIF in metadata (from sidecar), merge them
+                        if 'exif' in metadata and isinstance(metadata['exif'], dict):
+                            # Prefer sidecar EXIF but add any missing fields from extracted EXIF
+                            for key, value in exif_data.items():
+                                if key not in metadata['exif']:
+                                    metadata['exif'][key] = value
+                        else:
+                            metadata['exif'] = exif_data
 
                     # Create photo record
                     photo_data = create_photo_from_file(
@@ -149,6 +176,120 @@ def import_photos(
         click.echo(f"Error during import: {str(e)}", err=True)
     finally:
         db.close()
+
+
+def extract_exif_data(image_path: Path) -> Dict[str, Any]:
+    """Extract EXIF data from an image file using Pillow"""
+    # EXIF constants
+    GPS_IFD_TAG = 0x8825  # GPS IFD tag for GPS information
+    FLASH_FIRED_BIT = 0x1  # Bit 0 indicates if flash was fired
+    
+    exif_data = {}
+    
+    try:
+        with Image.open(image_path) as img:
+            exif = img.getexif()
+            
+            if exif is None:
+                return exif_data
+            
+            # Extract common EXIF fields
+            for tag_id, value in exif.items():
+                tag_name = TAGS.get(tag_id, tag_id)
+                
+                # Convert value to serializable format
+                if isinstance(value, bytes):
+                    try:
+                        value = value.decode('utf-8', errors='ignore')
+                    except (UnicodeDecodeError, AttributeError):
+                        value = str(value)
+                
+                exif_data[tag_name] = value
+            
+            # Extract GPS data if available
+            gps_info = exif.get_ifd(GPS_IFD_TAG)
+            if gps_info:
+                gps_data = {}
+                for tag_id, value in gps_info.items():
+                    tag_name = GPSTAGS.get(tag_id, tag_id)
+                    gps_data[tag_name] = value
+                
+                if gps_data:
+                    exif_data['GPS'] = gps_data
+            
+            # Extract useful fields in a structured format matching Django model
+            structured_exif = {}
+            
+            if 'Make' in exif_data:
+                structured_exif['camera_make'] = exif_data['Make']
+            if 'Model' in exif_data:
+                structured_exif['camera_model'] = exif_data['Model']
+            if 'LensModel' in exif_data:
+                structured_exif['lens_model'] = exif_data['LensModel']
+            
+            # Exposure settings
+            if 'ExposureTime' in exif_data:
+                # Handle tuple format (numerator, denominator)
+                exp_time = exif_data['ExposureTime']
+                if isinstance(exp_time, tuple) and len(exp_time) == 2:
+                    structured_exif['shutter_speed'] = exp_time[0] / exp_time[1]
+                else:
+                    structured_exif['shutter_speed'] = float(exp_time)
+            
+            if 'FNumber' in exif_data:
+                f_num = exif_data['FNumber']
+                if isinstance(f_num, tuple) and len(f_num) == 2:
+                    structured_exif['aperture'] = f_num[0] / f_num[1]
+                else:
+                    structured_exif['aperture'] = float(f_num)
+            
+            # ISO
+            if 'ISOSpeedRatings' in exif_data:
+                structured_exif['iso'] = exif_data['ISOSpeedRatings']
+            elif 'ISO' in exif_data:
+                structured_exif['iso'] = exif_data['ISO']
+            
+            # Focal length
+            if 'FocalLength' in exif_data:
+                focal = exif_data['FocalLength']
+                if isinstance(focal, tuple) and len(focal) == 2:
+                    structured_exif['focal_length'] = focal[0] / focal[1]
+                else:
+                    structured_exif['focal_length'] = float(focal)
+            
+            # Flash
+            if 'Flash' in exif_data:
+                flash_value = exif_data['Flash']
+                # Flash fired if bit 0 is set
+                structured_exif['flash_fired'] = bool(flash_value & FLASH_FIRED_BIT) if isinstance(flash_value, int) else False
+            
+            # White balance
+            if 'WhiteBalance' in exif_data:
+                structured_exif['white_balance'] = exif_data['WhiteBalance']
+            
+            # Metering mode
+            if 'MeteringMode' in exif_data:
+                structured_exif['metering_mode'] = exif_data['MeteringMode']
+            
+            # Exposure bias
+            if 'ExposureBiasValue' in exif_data:
+                bias = exif_data['ExposureBiasValue']
+                if isinstance(bias, tuple) and len(bias) == 2:
+                    structured_exif['exposure_bias'] = bias[0] / bias[1]
+                else:
+                    structured_exif['exposure_bias'] = float(bias)
+            
+            # Add raw EXIF data for reference
+            structured_exif['_raw'] = exif_data
+            
+            return structured_exif
+            
+    except Exception as e:
+        # If we can't read EXIF, just return empty dict
+        click.echo(f"\nWarning: Could not extract EXIF from {image_path.name}: {str(e)}", err=True)
+        return exif_data
+    
+    return exif_data
 
 
 def parse_sidecar(sidecar_path: Path, format: str) -> Dict[str, Any]:
@@ -211,6 +352,39 @@ def parse_sidecar(sidecar_path: Path, format: str) -> Dict[str, Any]:
         metadata = {}
     
     return metadata
+
+
+def parse_meta_json(meta_json_path: Path) -> Dict[str, Any]:
+    """Parse meta.json file for arbitrary metadata
+    
+    This function reads a meta.json file and returns all metadata as-is.
+    Any metadata found will be stored in the 'fields' column of the Photo model.
+    """
+    try:
+        with open(meta_json_path, "r") as f:
+            data = json.load(f)
+            
+            # If the JSON contains a 'fields' key, use that directly
+            # Otherwise, store the entire JSON in fields
+            if isinstance(data, dict):
+                # Check if this looks like PhotoSafe metadata (has known fields)
+                known_fields = {
+                    'uuid', 'masterFingerprint', 'original_filename', 'date', 
+                    'title', 'description', 'keywords', 'labels', 'persons',
+                    'favorite', 'hidden', 'latitude', 'longitude', 'exif'
+                }
+                
+                # If it has known fields, parse them normally
+                if any(field in data for field in known_fields):
+                    return data
+                
+                # Otherwise, treat it as arbitrary metadata
+                return {'fields': data}
+            
+            return {}
+    except Exception as e:
+        click.echo(f"\nWarning: Could not parse meta.json at {meta_json_path}: {str(e)}", err=True)
+        return {}
 
 
 def create_photo_from_file(
@@ -289,13 +463,13 @@ def create_photo_from_file(
         "persons", "favorite", "hidden", "latitude", "longitude", "isphoto",
         "ismovie", "burst", "live_photo", "portrait", "screenshot", "slow_mo",
         "time_lapse", "hdr", "selfie", "panorama", "uti", "width", "height",
-        "orientation", "exif", "place", "score", "search_info", "faces",
+        "orientation", "exif", "place", "score", "search_info", "faces", "fields",
     ]:
         if key in metadata:
             photo_data[key] = metadata[key]
     
     # Serialize JSON fields for SQLite compatibility
-    for field in ["keywords", "labels", "persons", "faces", "place", "exif", "score", "search_info"]:
+    for field in ["keywords", "labels", "persons", "faces", "place", "exif", "score", "search_info", "fields"]:
         if field in photo_data and photo_data[field] is not None:
             if isinstance(photo_data[field], (list, dict)):
                 photo_data[field] = json.dumps(photo_data[field])
