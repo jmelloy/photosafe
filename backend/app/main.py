@@ -12,7 +12,7 @@ import json
 from datetime import datetime, timedelta
 from pathlib import Path
 from .database import engine, Base, get_db
-from .models import Photo, Album, Version, User, IS_POSTGRESQL
+from .models import Photo, Album, Version, User
 from .schemas import (
     PhotoResponse,
     PhotoCreate,
@@ -293,13 +293,8 @@ async def list_photos(
         query = query.filter(Photo.original_filename == original_filename)
     
     if albums:
-        # For PostgreSQL: check if albums array contains the value
-        # For SQLite: check if JSON string contains the value
-        if IS_POSTGRESQL:
-            query = query.filter(Photo.albums.contains([albums]))
-        else:
-            # For SQLite, albums is stored as JSON string
-            query = query.filter(Photo.albums.like(f'%{albums}%'))
+        # Check if albums array contains the value (PostgreSQL)
+        query = query.filter(Photo.albums.contains([albums]))
     
     if date:
         query = query.filter(Photo.date == date)

@@ -17,7 +17,7 @@ Both applications now have functional parity for core photo management features,
 
 ### FastAPI App (backend/app/)
 - **Framework**: FastAPI with Pydantic
-- **Database**: PostgreSQL and SQLite support
+- **Database**: PostgreSQL
 - **Authentication**: JWT (Bearer tokens)
 - **API Pattern**: Function-based routes with Pydantic schemas
 - **Base Path**: `/api/`
@@ -201,11 +201,6 @@ These differences are by design and do not represent gaps in functionality:
 - **Django**: PUT requires resource to exist
 - **FastAPI**: PUT creates resource if it doesn't exist (upsert)
 - **Reason**: FastAPI supports sync_photos_linux compatibility
-
-### 6. Database Support
-- **Django**: PostgreSQL only (uses ArrayField)
-- **FastAPI**: PostgreSQL and SQLite
-- **Reason**: FastAPI has conditional type system for flexibility
 
 ## Changes Made for Parity
 

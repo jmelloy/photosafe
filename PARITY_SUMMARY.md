@@ -67,17 +67,12 @@ The following differences are **intentional** and do not represent gaps in funct
    - FastAPI: `skip` and `limit`
    - Functionally equivalent, different naming
 
-3. **Database Support**
-   - Django: PostgreSQL only (uses ArrayField)
-   - FastAPI: PostgreSQL and SQLite
-   - FastAPI has conditional type system
-
-4. **Library Model**
+3. **Library Model**
    - Django: String field only
    - FastAPI: Full FK relationship model
    - Future enhancement opportunity for Django
 
-5. **Album Update Semantics**
+4. **Album Update Semantics**
    - Django: PUT requires existing resource
    - FastAPI: PUT creates if not exists (upsert)
    - FastAPI supports sync_photos_linux compatibility
@@ -119,7 +114,7 @@ The following differences are **intentional** and do not represent gaps in funct
 ### For Production Use
 1. **Choose one application** - Both are feature-complete, pick based on your framework preference
 2. **Django advantages**: Mature ecosystem, admin interface, ORM flexibility
-3. **FastAPI advantages**: Better async support, automatic API docs, SQLite support
+3. **FastAPI advantages**: Better async support, automatic API docs
 
 ### Migration Path
 If migrating from one to the other:
