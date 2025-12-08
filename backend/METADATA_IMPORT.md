@@ -178,7 +178,7 @@ All metadata is stored in the `photos` table:
 - **Standard fields**: Stored in dedicated columns (e.g., `title`, `description`, `keywords`)
 - **EXIF data**: Stored as JSON in the `exif` column
 - **Arbitrary metadata**: Stored as JSON in the `fields` column
-- **JSON fields**: Automatically serialized for SQLite, native JSONB for PostgreSQL
+- **JSON fields**: Native JSONB for PostgreSQL
 
 ## Best Practices
 
@@ -200,11 +200,4 @@ WHERE fields->>'photographer' = 'John Doe';
 -- Find photos by nested field
 SELECT * FROM photos 
 WHERE fields->'camera_settings'->>'custom_mode' = 'portrait';
-```
-
-For SQLite, the `fields` column stores JSON as text, so you'll need to use JSON functions:
-
-```sql
-SELECT * FROM photos 
-WHERE json_extract(fields, '$.photographer') = 'John Doe';
 ```

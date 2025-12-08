@@ -12,7 +12,7 @@ This implementation addresses all the requirements specified in the problem stat
 - Created `Library` model with relationship to `User` model
 - Users can own multiple libraries via `user.libraries` relationship
 - Photos can be assigned to libraries via `library_id` foreign key
-- Migration created using Alembic with batch mode for SQLite compatibility
+- Migration created using Alembic
 
 **Files:**
 - `backend/app/models.py`: Library model (lines 53-72)
@@ -186,7 +186,6 @@ photosafe/
 The implementation includes a proper Alembic migration:
 - Creates `libraries` table
 - Adds `library_id` to photos table
-- Uses batch mode for SQLite compatibility
 
 To apply:
 ```bash
