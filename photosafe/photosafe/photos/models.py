@@ -80,6 +80,13 @@ class Photo(models.Model):
 
     library = models.TextField(null=True, blank=True)
 
+    # Additional fields for file upload compatibility with FastAPI
+    filename = models.TextField(null=True, blank=True)
+    file_path = models.TextField(null=True, blank=True)
+    content_type = models.TextField(null=True, blank=True)
+    file_size = models.IntegerField(null=True, blank=True)
+    uploaded_at = models.DateTimeField(null=True, blank=True)
+
 
 class Version(models.Model):
     photo = models.ForeignKey(

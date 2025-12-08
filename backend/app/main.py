@@ -12,7 +12,7 @@ import json
 from datetime import datetime, timedelta
 from pathlib import Path
 from .database import engine, Base, get_db
-from .models import Photo, Album, Version, User
+from .models import Photo, Album, Version, User, IS_POSTGRESQL
 from .schemas import (
     PhotoResponse,
     PhotoCreate,
@@ -275,24 +275,36 @@ async def update_photo(
 async def list_photos(
     skip: int = 0,
     limit: int = 100,
+    original_filename: Optional[str] = None,
+    albums: Optional[str] = None,
+    date: Optional[datetime] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """List all photos owned by the current user"""
+    """List all photos owned by the current user with optional filtering"""
     # Superusers can see all photos, regular users only see their own
     if current_user.is_superuser:
-        photos = (
-            db.query(Photo).order_by(Photo.date.desc()).offset(skip).limit(limit).all()
-        )
+        query = db.query(Photo)
     else:
-        photos = (
-            db.query(Photo)
-            .filter(Photo.owner_id == current_user.id)
-            .order_by(Photo.date.desc())
-            .offset(skip)
-            .limit(limit)
-            .all()
-        )
+        query = db.query(Photo).filter(Photo.owner_id == current_user.id)
+    
+    # Apply filters
+    if original_filename:
+        query = query.filter(Photo.original_filename == original_filename)
+    
+    if albums:
+        # For PostgreSQL: check if albums array contains the value
+        # For SQLite: check if JSON string contains the value
+        if IS_POSTGRESQL:
+            query = query.filter(Photo.albums.contains([albums]))
+        else:
+            # For SQLite, albums is stored as JSON string
+            query = query.filter(Photo.albums.like(f'%{albums}%'))
+    
+    if date:
+        query = query.filter(Photo.date == date)
+    
+    photos = query.order_by(Photo.date.desc()).offset(skip).limit(limit).all()
     return [create_photo_response(photo) for photo in photos]
 
 
@@ -501,6 +513,43 @@ async def update_or_create_album(
         db.flush()
 
         # Add photos to album
+        for photo_uuid in photo_uuids:
+            photo = db.query(Photo).filter(Photo.uuid == photo_uuid).first()
+            if photo:
+                db_album.photos.append(photo)
+
+    db.commit()
+    db.refresh(db_album)
+
+    return AlbumResponse(
+        uuid=db_album.uuid,
+        title=db_album.title,
+        creation_date=db_album.creation_date,
+        start_date=db_album.start_date,
+        end_date=db_album.end_date,
+    )
+
+
+@app.patch("/api/albums/{uuid}/", response_model=AlbumResponse)
+async def patch_album(
+    uuid: str, album_data: AlbumUpdate, db: Session = Depends(get_db)
+):
+    """Partially update an album (Django DRF compatibility)"""
+    db_album = db.query(Album).filter(Album.uuid == uuid).first()
+    if not db_album:
+        raise HTTPException(status_code=404, detail="Album not found")
+
+    # Extract photos list if provided
+    photo_uuids = album_data.photos
+
+    # Update only provided fields
+    update_dict = album_data.model_dump(exclude={"photos"}, exclude_unset=True)
+    for key, value in update_dict.items():
+        setattr(db_album, key, value)
+
+    # Update photos if provided
+    if photo_uuids is not None:
+        db_album.photos.clear()
         for photo_uuid in photo_uuids:
             photo = db.query(Photo).filter(Photo.uuid == photo_uuid).first()
             if photo:
