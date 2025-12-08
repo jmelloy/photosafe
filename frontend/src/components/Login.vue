@@ -46,46 +46,52 @@
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
 import { ref } from "vue";
 import { login } from "../api/auth";
 
-export default {
-  name: "Login",
-  emits: ["login-success", "switch-to-register"],
-  setup(props, { emit }) {
-    const username = ref("");
-    const password = ref("");
-    const error = ref("");
-    const loading = ref(false);
+interface LoginEmits {
+  (e: "login-success"): void;
+  (e: "switch-to-register"): void;
+}
 
-    const handleLogin = async () => {
-      error.value = "";
-      loading.value = true;
+const emit = defineEmits<LoginEmits>();
 
-      try {
-        await login(username.value, password.value);
-        emit("login-success");
-      } catch (err) {
-        console.error("Login error:", err);
-        if (err.response?.status === 401) {
-          error.value = "Invalid username or password";
-        } else {
-          error.value = "An error occurred. Please try again.";
-        }
-      } finally {
-        loading.value = false;
-      }
-    };
+const username = ref<string>("");
+const password = ref<string>("");
+const error = ref<string>("");
+const loading = ref<boolean>(false);
 
-    return {
-      username,
-      password,
-      error,
-      loading,
-      handleLogin,
-    };
-  },
+const handleLogin = async () => {
+  error.value = "";
+  loading.value = true;
+
+  try {
+    console.log("[Login] Attempting login for user:", username.value);
+    await login(username.value, password.value);
+    console.log("[Login] Login successful");
+    emit("login-success");
+  } catch (err: any) {
+    console.error("Login error:", err);
+    console.error("Login error details:", {
+      message: err.message,
+      response: err.response,
+      status: err.response?.status,
+      data: err.response?.data,
+    });
+    if (err.response?.status === 401) {
+      error.value = "Invalid username or password";
+    } else if (
+      err.code === "ECONNREFUSED" ||
+      err.message?.includes("Network Error")
+    ) {
+      error.value = "Cannot connect to server. Is the backend running?";
+    } else {
+      error.value = `An error occurred: ${err.message || "Please try again."}`;
+    }
+  } finally {
+    loading.value = false;
+  }
 };
 </script>
 

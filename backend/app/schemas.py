@@ -148,6 +148,7 @@ class PhotoResponse(PhotoBase):
     file_path: Optional[str] = None
     content_type: Optional[str] = None
     file_size: Optional[int] = None
+    url: Optional[str] = None  # Computed URL for frontend display
 
     class Config:
         from_attributes = True

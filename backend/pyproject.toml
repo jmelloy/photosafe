@@ -19,11 +19,12 @@ dependencies = [
     "aiofiles>=24.1.0",
     "pillow>=11.0.0",
     "python-jose[cryptography]>=3.4.0",
-    "bcrypt>=3.2.2",
+    "bcrypt<4",
     "passlib[bcrypt]",
     "pydantic-settings>=2.6.1",
     "alembic>=1.17.2",
     "psycopg2-binary>=2.9.10",
+    "python-ulid>=2.3.0",
 ]
 
 [project.scripts]
@@ -33,4 +34,4 @@ photosafe = "cli.main:cli"
 packages = ["app", "cli"]
 
 [tool.setuptools.package-dir]
-"" = "backend"
+"" = "."

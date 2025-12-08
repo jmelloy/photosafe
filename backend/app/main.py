@@ -354,6 +354,63 @@ async def delete_photo(
 
 def create_photo_response(photo: Photo) -> PhotoResponse:
     """Helper function to create PhotoResponse from Photo model"""
+    # S3 base URL
+    S3_BASE_URL = "https://photos.melloy.life"
+
+    # Compute URL for frontend display
+    # Priority: S3 paths first (if available), then local file_path
+    url = None
+
+    def build_s3_url(s3_path: str) -> str:
+        """Build full S3 URL from S3 path/key"""
+        if not s3_path:
+            return None
+        # If already a full URL, return as-is
+        if s3_path.startswith("http://") or s3_path.startswith("https://"):
+            return s3_path
+        # Otherwise, construct URL with base domain
+        s3_path = s3_path.lstrip("/")
+        return f"{S3_BASE_URL}/{s3_path}"
+
+    # Check for S3 paths - prioritize thumbnail, then key path, then edited, then original
+    if photo.s3_thumbnail_path:
+        # Use S3 thumbnail if available
+        url = build_s3_url(photo.s3_thumbnail_path)
+    elif photo.s3_key_path:
+        # Use S3 key path if available
+        url = build_s3_url(photo.s3_key_path)
+    elif photo.s3_edited_path:
+        # Use S3 edited path if available
+        url = build_s3_url(photo.s3_edited_path)
+    elif photo.s3_original_path:
+        # Use S3 original path if available
+        url = build_s3_url(photo.s3_original_path)
+    elif photo.file_path:
+        # Fallback to local file_path
+        # Convert file_path to URL
+        file_path_str = str(photo.file_path).replace("\\", "/")
+
+        # If file_path contains "uploads", extract the path from there
+        if "uploads" in file_path_str:
+            # Find the uploads directory and everything after it
+            uploads_index = file_path_str.find("uploads")
+            if uploads_index != -1:
+                url = "/" + file_path_str[uploads_index:]
+            else:
+                url = f"/uploads/{Path(photo.file_path).name}"
+        else:
+            # If no uploads in path, assume it's relative to uploads directory
+            # Extract just the filename if it's an absolute path
+            file_path = Path(photo.file_path)
+            if file_path.is_absolute():
+                url = f"/uploads/{file_path.name}"
+            else:
+                # Relative path - prepend /uploads if not already there
+                if not file_path_str.startswith("/"):
+                    url = f"/uploads/{file_path_str}"
+                else:
+                    url = file_path_str
+
     # Deserialize JSON fields
     response_dict = {
         "uuid": photo.uuid,
@@ -405,6 +462,7 @@ def create_photo_response(photo: Photo) -> PhotoResponse:
         "file_path": photo.file_path,
         "content_type": photo.content_type,
         "file_size": photo.file_size,
+        "url": url,
         "versions": (
             [
                 VersionResponse(
