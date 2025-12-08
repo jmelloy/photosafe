@@ -25,7 +25,7 @@
     </div>
 
     <div v-else class="photo-grid">
-      <div v-for="photo in photos" :key="photo.id" class="photo-card">
+      <div v-for="photo in photos" :key="photo.uuid" class="photo-card">
         <div class="photo-wrapper">
           <img
             :src="photo.url"
@@ -35,7 +35,7 @@
           />
           <div class="photo-overlay">
             <button
-              @click.stop="$emit('delete-photo', photo.id)"
+              @click.stop="$emit('delete-photo', photo.uuid)"
               class="delete-button"
               title="Delete photo"
             >
@@ -74,58 +74,49 @@
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
 import { ref } from "vue";
+import type { Photo } from "../types/api";
 
-export default {
-  name: "PhotoGallery",
-  props: {
-    photos: {
-      type: Array,
-      required: true,
-    },
-    loading: {
-      type: Boolean,
-      default: false,
-    },
-  },
-  emits: ["delete-photo"],
-  setup() {
-    const selectedPhoto = ref(null);
+interface PhotoGalleryProps {
+  photos: Photo[];
+  loading?: boolean;
+}
 
-    const formatDate = (dateString) => {
-      const date = new Date(dateString);
-      return date.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    };
+interface PhotoGalleryEmits {
+  (e: "delete-photo", id: string): void;
+}
 
-    const formatFileSize = (bytes) => {
-      if (bytes < 1024) return bytes + " B";
-      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-      return (bytes / (1024 * 1024)).toFixed(1) + " MB";
-    };
+defineProps<PhotoGalleryProps>();
+const emit = defineEmits<PhotoGalleryEmits>();
 
-    const openPhoto = (photo) => {
-      selectedPhoto.value = photo;
-    };
+const selectedPhoto = ref<Photo | null>(null);
 
-    const closePhoto = () => {
-      selectedPhoto.value = null;
-    };
+const formatDate = (dateString?: string): string => {
+  if (!dateString) return "Unknown";
+  const date = new Date(dateString);
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
 
-    return {
-      selectedPhoto,
-      formatDate,
-      formatFileSize,
-      openPhoto,
-      closePhoto,
-    };
-  },
+const formatFileSize = (bytes?: number): string => {
+  if (!bytes) return "Unknown";
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+};
+
+const openPhoto = (photo: Photo): void => {
+  selectedPhoto.value = photo;
+};
+
+const closePhoto = (): void => {
+  selectedPhoto.value = null;
 };
 </script>
 

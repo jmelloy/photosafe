@@ -46,46 +46,39 @@
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
 import { ref } from "vue";
 import { login } from "../api/auth";
 
-export default {
-  name: "Login",
-  emits: ["login-success", "switch-to-register"],
-  setup(props, { emit }) {
-    const username = ref("");
-    const password = ref("");
-    const error = ref("");
-    const loading = ref(false);
+interface LoginEmits {
+  (e: "login-success"): void;
+  (e: "switch-to-register"): void;
+}
 
-    const handleLogin = async () => {
-      error.value = "";
-      loading.value = true;
+const emit = defineEmits<LoginEmits>();
 
-      try {
-        await login(username.value, password.value);
-        emit("login-success");
-      } catch (err) {
-        console.error("Login error:", err);
-        if (err.response?.status === 401) {
-          error.value = "Invalid username or password";
-        } else {
-          error.value = "An error occurred. Please try again.";
-        }
-      } finally {
-        loading.value = false;
-      }
-    };
+const username = ref<string>("");
+const password = ref<string>("");
+const error = ref<string>("");
+const loading = ref<boolean>(false);
 
-    return {
-      username,
-      password,
-      error,
-      loading,
-      handleLogin,
-    };
-  },
+const handleLogin = async () => {
+  error.value = "";
+  loading.value = true;
+
+  try {
+    await login(username.value, password.value);
+    emit("login-success");
+  } catch (err: any) {
+    console.error("Login error:", err);
+    if (err.response?.status === 401) {
+      error.value = "Invalid username or password";
+    } else {
+      error.value = "An error occurred. Please try again.";
+    }
+  } finally {
+    loading.value = false;
+  }
 };
 </script>
 

@@ -85,78 +85,67 @@
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
 import { ref } from "vue";
 import { register } from "../api/auth";
 
-export default {
-  name: "Register",
-  emits: ["register-success", "switch-to-login"],
-  setup(props, { emit }) {
-    const username = ref("");
-    const email = ref("");
-    const name = ref("");
-    const password = ref("");
-    const passwordConfirm = ref("");
-    const error = ref("");
-    const success = ref("");
-    const loading = ref(false);
+interface RegisterEmits {
+  (e: "register-success"): void;
+  (e: "switch-to-login"): void;
+}
 
-    const handleRegister = async () => {
-      error.value = "";
-      success.value = "";
+const emit = defineEmits<RegisterEmits>();
 
-      // Validate passwords match
-      if (password.value !== passwordConfirm.value) {
-        error.value = "Passwords do not match";
-        return;
-      }
+const username = ref<string>("");
+const email = ref<string>("");
+const name = ref<string>("");
+const password = ref<string>("");
+const passwordConfirm = ref<string>("");
+const error = ref<string>("");
+const success = ref<string>("");
+const loading = ref<boolean>(false);
 
-      // Validate password length
-      if (password.value.length < 8) {
-        error.value = "Password must be at least 8 characters long";
-        return;
-      }
+const handleRegister = async () => {
+  error.value = "";
+  success.value = "";
 
-      loading.value = true;
+  // Validate passwords match
+  if (password.value !== passwordConfirm.value) {
+    error.value = "Passwords do not match";
+    return;
+  }
 
-      try {
-        await register(
-          username.value,
-          email.value,
-          password.value,
-          name.value
-        );
-        success.value =
-          "Account created successfully! Redirecting to login...";
-        // Emit register-success after a brief moment to show the success message
-        setTimeout(() => {
-          emit("register-success");
-        }, 1000);
-      } catch (err) {
-        console.error("Registration error:", err);
-        if (err.response?.data?.detail) {
-          error.value = err.response.data.detail;
-        } else {
-          error.value = "An error occurred. Please try again.";
-        }
-      } finally {
-        loading.value = false;
-      }
-    };
+  // Validate password length
+  if (password.value.length < 8) {
+    error.value = "Password must be at least 8 characters long";
+    return;
+  }
 
-    return {
-      username,
-      email,
-      name,
-      password,
-      passwordConfirm,
-      error,
-      success,
-      loading,
-      handleRegister,
-    };
-  },
+  loading.value = true;
+
+  try {
+    await register(
+      username.value,
+      email.value,
+      password.value,
+      name.value
+    );
+    success.value =
+      "Account created successfully! Redirecting to login...";
+    // Emit register-success after a brief moment to show the success message
+    setTimeout(() => {
+      emit("register-success");
+    }, 1000);
+  } catch (err: any) {
+    console.error("Registration error:", err);
+    if (err.response?.data?.detail) {
+      error.value = err.response.data.detail;
+    } else {
+      error.value = "An error occurred. Please try again.";
+    }
+  } finally {
+    loading.value = false;
+  }
 };
 </script>
 
