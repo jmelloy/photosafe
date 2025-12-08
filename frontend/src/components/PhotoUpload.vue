@@ -46,65 +46,57 @@
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
 import { ref } from "vue";
 import { uploadPhoto } from "../api/photos";
 
-export default {
-  name: "PhotoUpload",
-  emits: ["photo-uploaded"],
-  setup(props, { emit }) {
-    const fileInput = ref(null);
-    const isDragging = ref(false);
-    const uploading = ref(false);
+interface PhotoUploadEmits {
+  (e: "photo-uploaded"): void;
+}
 
-    const triggerFileInput = () => {
-      fileInput.value.click();
-    };
+const emit = defineEmits<PhotoUploadEmits>();
 
-    const handleFileSelect = async (event) => {
-      const file = event.target.files[0];
-      if (file) {
-        await uploadFile(file);
-      }
-    };
+const fileInput = ref<HTMLInputElement | null>(null);
+const isDragging = ref<boolean>(false);
+const uploading = ref<boolean>(false);
 
-    const handleDrop = async (event) => {
-      isDragging.value = false;
-      const file = event.dataTransfer.files[0];
-      if (file && file.type.startsWith("image/")) {
-        await uploadFile(file);
-      } else {
-        alert("Please drop an image file");
-      }
-    };
+const triggerFileInput = (): void => {
+  fileInput.value?.click();
+};
 
-    const uploadFile = async (file) => {
-      uploading.value = true;
-      try {
-        await uploadPhoto(file);
-        emit("photo-uploaded");
-        // Reset file input
-        if (fileInput.value) {
-          fileInput.value.value = "";
-        }
-      } catch (error) {
-        console.error("Upload failed:", error);
-        alert("Upload failed. Please try again.");
-      } finally {
-        uploading.value = false;
-      }
-    };
+const handleFileSelect = async (event: Event): Promise<void> => {
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0];
+  if (file) {
+    await uploadFile(file);
+  }
+};
 
-    return {
-      fileInput,
-      isDragging,
-      uploading,
-      triggerFileInput,
-      handleFileSelect,
-      handleDrop,
-    };
-  },
+const handleDrop = async (event: DragEvent): Promise<void> => {
+  isDragging.value = false;
+  const file = event.dataTransfer?.files[0];
+  if (file && file.type.startsWith("image/")) {
+    await uploadFile(file);
+  } else {
+    alert("Please drop an image file");
+  }
+};
+
+const uploadFile = async (file: File): Promise<void> => {
+  uploading.value = true;
+  try {
+    await uploadPhoto(file);
+    emit("photo-uploaded");
+    // Reset file input
+    if (fileInput.value) {
+      fileInput.value.value = "";
+    }
+  } catch (error) {
+    console.error("Upload failed:", error);
+    alert("Upload failed. Please try again.");
+  } finally {
+    uploading.value = false;
+  }
 };
 </script>
 
