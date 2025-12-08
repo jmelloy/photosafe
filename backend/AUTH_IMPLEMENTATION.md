@@ -65,7 +65,7 @@ SECRET_KEY=your-secret-key-here
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 
 # Database
-DATABASE_URL=sqlite:///./photosafe.db
+DATABASE_URL=postgresql://photosafe:photosafe@localhost:5432/photosafe
 ```
 
 **Important**: Generate a secure SECRET_KEY:

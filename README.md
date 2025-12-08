@@ -9,7 +9,6 @@ A modern photo gallery application built with FastAPI and Vue 3.
 - 🔍 View photos in full-size modal
 - 🗑️ Delete photos
 - 💾 PostgreSQL database for production-ready metadata storage
-- 🔄 SQLite support for local development
 - 🐳 Docker support for easy deployment
 - 🔧 **CLI for bulk operations** - User management, library organization, and photo import
 - 📚 **Multiple libraries per user** - Organize photos into separate collections
@@ -22,7 +21,6 @@ A modern photo gallery application built with FastAPI and Vue 3.
 - **FastAPI**: Modern, fast web framework for building APIs
 - **SQLAlchemy**: SQL toolkit and ORM
 - **PostgreSQL**: Production-grade relational database
-- **SQLite**: Lightweight database for development
 - **Uvicorn**: ASGI server
 
 ### Frontend
@@ -34,6 +32,7 @@ A modern photo gallery application built with FastAPI and Vue 3.
 
 - Python 3.11+
 - Node.js 20+
+- PostgreSQL 12+ (or use Docker Compose)
 - Docker & Docker Compose (optional)
 
 ## Quick Start
@@ -79,22 +78,30 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. Configure environment variables (optional):
+4. Configure environment variables:
 ```bash
 cp .env.example .env
 # Edit .env and set your configuration:
 # - SECRET_KEY for JWT authentication (generate with: openssl rand -hex 32)
-# - DATABASE_URL for database connection
-#   - SQLite (development): sqlite:///./photosafe.db
-#   - PostgreSQL (production): postgresql://user:password@localhost:5432/dbname
+# - DATABASE_URL for PostgreSQL database connection
+#   Example: postgresql://user:password@localhost:5432/photosafe
 ```
 
-5. Initialize the database with migrations:
+5. Set up PostgreSQL database:
+```bash
+# Create a PostgreSQL database
+createdb photosafe
+
+# Or use the default Docker Compose database
+# PostgreSQL: localhost:5432 (user: photosafe, password: photosafe, database: photosafe)
+```
+
+6. Initialize the database with migrations:
 ```bash
 alembic upgrade head
 ```
 
-6. Run the server:
+7. Run the server:
 ```bash
 uvicorn app.main:app --reload
 ```
@@ -146,13 +153,13 @@ Full API documentation is available at http://localhost:8000/docs when the backe
 
 ## Database Configuration
 
-The application supports both PostgreSQL and SQLite databases:
+The application requires PostgreSQL for all environments.
 
-### PostgreSQL (Production - Recommended)
+### PostgreSQL Setup
 
 PostgreSQL provides better performance, scalability, and advanced features like JSONB and ARRAY types for structured data.
 
-**Using Docker Compose:**
+**Using Docker Compose (Recommended):**
 ```bash
 docker-compose up --build
 ```
@@ -166,19 +173,6 @@ The PostgreSQL database is automatically configured and started.
    export DATABASE_URL="postgresql://user:password@localhost:5432/photosafe"
    ```
 4. Run migrations: `alembic upgrade head`
-
-### SQLite (Development)
-
-SQLite is great for local development and testing.
-
-**Setup:**
-1. Set the `DATABASE_URL` environment variable (or omit to use default):
-   ```bash
-   export DATABASE_URL="sqlite:///./photosafe.db"
-   ```
-2. Run migrations: `alembic upgrade head`
-
-**Note:** When using SQLite, JSON fields are stored as text and parsed at runtime. PostgreSQL uses native JSONB and ARRAY types for better performance and querying capabilities.
 
 ## Database Migrations
 

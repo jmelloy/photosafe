@@ -281,9 +281,7 @@ alembic upgrade head
 The CLI uses the same database configuration as the main application. Configure via environment variables or `.env` file:
 
 ```bash
-DATABASE_URL=sqlite:///./photosafe.db
-# or for PostgreSQL:
-# DATABASE_URL=postgresql://user:pass@localhost/photosafe
+DATABASE_URL=postgresql://user:pass@localhost/photosafe
 ```
 
 ## Development

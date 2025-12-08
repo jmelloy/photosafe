@@ -49,9 +49,8 @@ Modified the photo import process to:
 ### 5. Database Storage
 
 - Standard fields stored in dedicated columns (title, description, keywords, etc.)
-- EXIF data stored as JSON in the `exif` column
-- Arbitrary metadata stored as JSON in the `fields` column
-- JSON fields automatically serialized for SQLite compatibility
+- EXIF data stored as JSON in the `exif` column using PostgreSQL JSONB
+- Arbitrary metadata stored as JSON in the `fields` column using PostgreSQL JSONB
 
 ## Version Compatibility
 
@@ -93,7 +92,7 @@ All tests pass successfully.
    - Import priority system
    - Usage examples
    - Database storage details
-   - Querying examples for PostgreSQL and SQLite
+   - Querying examples for PostgreSQL
 
 2. **demo_metadata_import.py** - Interactive demonstration script showing:
    - EXIF extraction in action
@@ -162,7 +161,6 @@ No schema changes were required. The implementation uses existing fields:
 - Pillow efficiently reads EXIF without loading full image data
 - JSON serialization overhead is minimal
 - PostgreSQL JSONB provides efficient storage and querying
-- SQLite stores JSON as text but remains queryable
 
 ## Future Enhancements
 

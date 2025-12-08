@@ -4,10 +4,10 @@ import pytest
 from click.testing import CliRunner
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 from pathlib import Path
 import tempfile
 import json
+import os
 from PIL import Image
 from datetime import datetime
 
@@ -16,13 +16,13 @@ from app.models import User, Library, Photo
 from cli.import_commands import import_photos, extract_exif_data, parse_meta_json
 
 
-# Test database setup
-SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
+# NOTE: These tests require a PostgreSQL test database
+# Test database setup - PostgreSQL connection required
+# For local testing, set up a test database: createdb photosafe_test
+# Set environment variable: export TEST_DATABASE_URL="postgresql://user:pass@localhost:5432/photosafe_test"
+# The default below is for Docker Compose development environment only
+SQLALCHEMY_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "postgresql://photosafe:photosafe@localhost:5432/photosafe_test")
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

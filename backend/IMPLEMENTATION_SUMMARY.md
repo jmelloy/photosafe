@@ -56,11 +56,11 @@ Created Version model to support multiple photo versions:
 - `DELETE /api/albums/{uuid}/` - Delete an album
 
 ### 5. Data Serialization
-Added JSON serialization/deserialization for:
-- Array fields (keywords, labels, albums, persons)
-- JSON fields (faces, place, exif, score, search_info, fields)
+The application uses PostgreSQL native types:
+- Array fields (keywords, labels, albums, persons) use ARRAY type
+- JSON fields (faces, place, exif, score, search_info, fields) use JSONB type
 
-This allows SQLite to store complex data while maintaining API compatibility with the Django backend.
+This provides full API compatibility with the Django backend.
 
 ### 6. Documentation
 Created `SYNC_PHOTOS_LINUX.md` documenting:
@@ -108,16 +108,14 @@ export BASE_URL="http://localhost:8000"  # Point to FastAPI backend
 export BUCKET="your-s3-bucket"
 ```
 
-## Database Schema Comparison
+## Database Schema
 
-| Feature | Django (PostgreSQL) | FastAPI (SQLite) |
-|---------|---------------------|------------------|
-| Array fields | Native ARRAY | JSON text |
-| JSON fields | Native JSONB | JSON text |
-| UUID field | Native UUID | String |
-| Performance | Better for large datasets | Suitable for small-medium datasets |
+The application uses PostgreSQL with native support for:
+- Array fields using ARRAY type
+- JSON fields using JSONB type
+- UUID field using String type (for compatibility)
 
-The API layer handles serialization/deserialization transparently.
+PostgreSQL provides excellent performance for datasets of all sizes.
 
 ## Security
 

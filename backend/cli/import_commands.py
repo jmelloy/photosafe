@@ -468,10 +468,4 @@ def create_photo_from_file(
         if key in metadata:
             photo_data[key] = metadata[key]
     
-    # Serialize JSON fields for SQLite compatibility
-    for field in ["keywords", "labels", "persons", "faces", "place", "exif", "score", "search_info", "fields"]:
-        if field in photo_data and photo_data[field] is not None:
-            if isinstance(photo_data[field], (list, dict)):
-                photo_data[field] = json.dumps(photo_data[field])
-    
     return photo_data

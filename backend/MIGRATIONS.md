@@ -29,10 +29,7 @@ cd backend
 
 2. Configure your database connection by setting the `DATABASE_URL` environment variable:
 ```bash
-# For SQLite (development):
-export DATABASE_URL="sqlite:///./photosafe.db"
-
-# For PostgreSQL (production):
+# For PostgreSQL:
 export DATABASE_URL="postgresql://user:password@localhost:5432/photosafe"
 ```
 
@@ -41,7 +38,7 @@ export DATABASE_URL="postgresql://user:password@localhost:5432/photosafe"
 alembic upgrade head
 ```
 
-This will create the database with all necessary tables. For SQLite, it creates `photosafe.db`. For PostgreSQL, it creates tables in the specified database.
+This will create the database with all necessary tables in the specified PostgreSQL database.
 
 ## Migration Commands
 
@@ -152,21 +149,14 @@ def downgrade():
 
 The database URL is configured via the `DATABASE_URL` environment variable in `app/database.py`:
 
-**SQLite (Development):**
-```python
-DATABASE_URL = "sqlite:///./photosafe.db"
-```
-
-**PostgreSQL (Production):**
+**PostgreSQL:**
 ```python
 DATABASE_URL = "postgresql://user:password@host:5432/database"
 ```
 
 This URL is automatically used by Alembic through the configuration in `alembic/env.py`.
 
-The application automatically adapts to use the appropriate database types:
-- **PostgreSQL**: Uses native `JSONB` and `ARRAY(String)` types for better performance and querying
-- **SQLite**: Uses `Text` columns and JSON serialization for compatibility
+The application uses PostgreSQL native `JSONB` and `ARRAY(String)` types for better performance and querying.
 
 ### Alembic Configuration
 
@@ -204,7 +194,9 @@ class Photo(Base):
 alembic revision --autogenerate -m "Add new_field to Photo model"
 ```
 
-3. Apply the migration:
+3. Review the generated migration file in `alembic/versions/`
+
+4. Apply the migration:
 ```bash
 alembic upgrade head
 ```
@@ -213,7 +205,7 @@ alembic upgrade head
 
 1. Modify the column in your model
 2. Generate migration: `alembic revision --autogenerate -m "Change column type"`
-3. Review and potentially modify the migration (SQLite has limitations on ALTER TABLE)
+3. Review the generated migration file
 4. Apply: `alembic upgrade head`
 
 ### Adding a New Table
@@ -242,12 +234,6 @@ This usually means the migration file is missing or the database version table i
 
 To completely reset the database:
 
-**SQLite:**
-```bash
-rm photosafe.db
-alembic upgrade head
-```
-
 **PostgreSQL:**
 ```bash
 # Drop and recreate the database
@@ -257,67 +243,6 @@ alembic upgrade head
 ```
 
 **Warning**: This will delete all data!
-
-## Database-Specific Migrations
-
-### PostgreSQL vs SQLite
-
-The application supports both PostgreSQL and SQLite. The models automatically adapt:
-
-- **PostgreSQL**: Uses `JSONB` for JSON fields and `ARRAY(String)` for array fields
-- **SQLite**: Uses `Text` for both, with JSON serialization/deserialization in the application layer
-
-The migration `a1b2c3d4e5f6_convert_to_postgresql_jsonb_array.py` handles the conversion from Text to PostgreSQL-specific types. This migration:
-- Detects the database dialect at runtime
-- Only applies PostgreSQL-specific changes when using PostgreSQL
-- Is a no-op when using SQLite
-
-### Migrating from SQLite to PostgreSQL
-
-If you need to migrate existing data from SQLite to PostgreSQL:
-
-1. **Export data from SQLite:**
-```bash
-# Using a Python script to export to JSON or CSV
-python export_sqlite_data.py
-```
-
-2. **Set up PostgreSQL database:**
-```bash
-createdb photosafe
-export DATABASE_URL="postgresql://user:password@localhost:5432/photosafe"
-```
-
-3. **Run migrations:**
-```bash
-alembic upgrade head
-```
-
-4. **Import data:**
-```bash
-python import_data.py
-```
-
-**Note**: When migrating data, JSON fields stored as strings in SQLite will be automatically converted to native JSONB in PostgreSQL by the migration.
-
-## Integration with Application
-
-The application no longer uses `Base.metadata.create_all()` for table creation. Instead:
-
-1. Database schema is managed entirely through Alembic migrations
-2. On first deployment, run `alembic upgrade head` to create tables
-3. For schema changes, create and apply migrations
-
-## Comparison with Django Migrations
-
-If you're familiar with Django migrations, here's a quick comparison:
-
-| Django | Alembic |
-|--------|---------|
-| `python manage.py makemigrations` | `alembic revision --autogenerate -m "message"` |
-| `python manage.py migrate` | `alembic upgrade head` |
-| `python manage.py showmigrations` | `alembic history` |
-| `python manage.py migrate app_name zero` | `alembic downgrade base` |
 
 ## Additional Resources
 

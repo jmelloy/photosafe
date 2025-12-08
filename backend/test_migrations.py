@@ -7,6 +7,8 @@ This script demonstrates:
 2. Running migrations
 3. Creating test data
 4. Verifying data persistence
+
+NOTE: Requires PostgreSQL database to be running.
 """
 import subprocess
 import sys
@@ -43,6 +45,13 @@ def main():
     print("=" * 60)
     print("Alembic Migration Demo for PhotoSafe FastAPI Backend")
     print("=" * 60)
+    
+    # Verify DATABASE_URL is set to PostgreSQL
+    db_url = os.getenv("DATABASE_URL", "")
+    if not db_url.startswith("postgresql"):
+        print("\n❌ ERROR: DATABASE_URL must be set to a PostgreSQL connection string")
+        print("Example: export DATABASE_URL='postgresql://user:pass@localhost:5432/photosafe'")
+        return 1
 
     # 1. Check current migration status
     if not run_command("alembic current", "Checking current migration status"):
@@ -56,8 +65,8 @@ def main():
     if not run_command("alembic upgrade head", "Applying migrations"):
         return 1
 
-    # 4. Verify database tables were created
-    if not run_command('sqlite3 photosafe.db ".tables"', "Verifying database tables"):
+    # 4. Verify database tables were created using psql
+    if not run_command("psql \"$DATABASE_URL\" -c '\\dt'", "Verifying database tables"):
         return 1
 
     # 5. Create test data using Python

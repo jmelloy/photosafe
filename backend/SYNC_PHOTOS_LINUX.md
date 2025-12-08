@@ -72,8 +72,8 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 ### Database Differences
 - Django uses PostgreSQL with native support for ARRAY and JSONB fields
-- FastAPI uses SQLite by default, storing arrays and JSON as TEXT
-- The serialization/deserialization is handled automatically in the endpoints
+- FastAPI uses PostgreSQL with native support for ARRAY and JSONB fields
+- Both backends provide full compatibility for photo metadata
 
 ### Configuration
 Set the `BASE_URL` environment variable to point to your FastAPI backend:
@@ -141,9 +141,9 @@ elif response.status_code == 400 and "already exists" in response.text:
 |---------|---------------|-----------------|-------|
 | Authentication | Token-based | Not implemented | Can be added if needed |
 | User/Owner | Required | Not implemented | Photos not tied to users yet |
-| Database | PostgreSQL | SQLite | PostgreSQL can be configured |
-| Array Fields | Native ARRAY | JSON text | Transparent to API users |
-| JSONB Fields | Native JSONB | JSON text | Transparent to API users |
+| Database | PostgreSQL | PostgreSQL | Full compatibility |
+| Array Fields | Native ARRAY | Native ARRAY | Full compatibility |
+| JSONB Fields | Native JSONB | Native JSONB | Full compatibility |
 
 ## Future Enhancements
 
