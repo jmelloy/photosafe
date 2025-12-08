@@ -33,7 +33,7 @@ watchgod  # https://github.com/samuelcolvin/watchgod
 # ------------------------------------------------------------------------------
 mypy  # https://github.com/python/mypy
 django-stubs  # https://github.com/typeddjango/django-stubs
-pytest==9.0.1  # https://github.com/pytest-dev/pytest
+pytest==9.0.2  # https://github.com/pytest-dev/pytest
 pytest-sugar==1.1.1  # https://github.com/Frozenball/pytest-sugar
 
 # Documentation
