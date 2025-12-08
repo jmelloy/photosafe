@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "photosafe"
+version = "1.0.0"
+description = "PhotoSafe Gallery - A modern photo gallery application"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "click>=8.0",
+    "fastapi>=0.115.5",
+    "sqlalchemy>=2.0.36",
+    "boto3>=1.34.0",
+    "uvicorn[standard]>=0.32.1",
+    "python-multipart>=0.0.18",
+    "pydantic>=2.10.3",
+    "aiofiles>=24.1.0",
+    "pillow>=11.0.0",
+    "python-jose[cryptography]>=3.4.0",
+    "bcrypt>=3.2.2",
+    "passlib[bcrypt]",
+    "pydantic-settings>=2.6.1",
+    "alembic>=1.17.2",
+    "psycopg2-binary>=2.9.10",
+]
+
+[project.scripts]
+photosafe = "cli.main:cli"
+
+[tool.setuptools]
+packages = ["app", "cli"]
+
+[tool.setuptools.package-dir]
+"" = "backend"
