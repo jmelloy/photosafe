@@ -1,7 +1,6 @@
 from django_filters import rest_framework as filters
 from rest_framework.mixins import (
     CreateModelMixin,
-    DestroyModelMixin,
     ListModelMixin,
     RetrieveModelMixin,
     UpdateModelMixin,
@@ -33,7 +32,6 @@ class PhotoViewSet(
     CreateModelMixin,
     RetrieveModelMixin,
     UpdateModelMixin,
-    DestroyModelMixin,
     GenericViewSet,
 ):
     def get_serializer_class(self):
@@ -66,7 +64,6 @@ class AlbumViewSet(
     ListModelMixin,
     CreateModelMixin,
     UpdateModelMixin,
-    DestroyModelMixin,
     GenericViewSet,
 ):
     serializer_class = AlbumSerializer

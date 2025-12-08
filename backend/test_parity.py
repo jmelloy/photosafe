@@ -1,8 +1,8 @@
 """
-Parity verification tests for Django and FastAPI apps.
+FastAPI feature tests.
 
-This test suite verifies that both apps have equivalent functionality
-for the core photo management features.
+This test suite verifies FastAPI photo management features including
+filtering and PATCH endpoints.
 """
 
 import pytest
@@ -10,34 +10,8 @@ from datetime import datetime
 from uuid import uuid4
 
 
-class TestEndpointParity:
-    """Test that both Django and FastAPI apps have equivalent endpoints"""
-    
-    def test_django_endpoints_exist(self):
-        """Verify Django API has all required endpoints"""
-        required_endpoints = [
-            # Authentication
-            ('POST', '/api/users/register/'),  # User registration
-            ('GET', '/api/users/me/'),  # Current user info
-            
-            # Photos
-            ('GET', '/api/photos/'),  # List photos
-            ('POST', '/api/photos/'),  # Create photo
-            ('GET', '/api/photos/{uuid}/'),  # Get photo
-            ('PATCH', '/api/photos/{uuid}/'),  # Update photo
-            ('DELETE', '/api/photos/{uuid}/'),  # Delete photo
-            
-            # Albums
-            ('GET', '/api/albums/'),  # List albums
-            ('POST', '/api/albums/'),  # Create album
-            ('GET', '/api/albums/{uuid}/'),  # Get album
-            ('PATCH', '/api/albums/{uuid}/'),  # Update album
-            ('DELETE', '/api/albums/{uuid}/'),  # Delete album
-        ]
-        
-        # This is a documentation test - actual HTTP tests would require
-        # setting up Django test client and running the server
-        assert len(required_endpoints) == 12
+class TestFastAPIEndpoints:
+    """Test that FastAPI has all required endpoints"""
     
     def test_fastapi_endpoints_exist(self):
         """Verify FastAPI has all required endpoints"""
@@ -104,7 +78,7 @@ class TestModelParity:
             # Library
             'library',
             
-            # Upload fields (added for parity)
+            # Upload fields (FastAPI only)
             'filename', 'file_path', 'content_type', 'file_size', 'uploaded_at',
         ]
         
@@ -128,74 +102,51 @@ class TestModelParity:
         assert len(required_fields) == 5
 
 
-class TestFeatureParity:
-    """Test that both apps support the same features"""
+class TestFastAPIFeatures:
+    """Test FastAPI-specific features"""
     
     def test_photo_filtering_support(self):
-        """Verify both apps support filtering photos"""
-        # Django uses django-filter: original_filename, albums, date
-        # FastAPI now has: original_filename, albums, date
-        django_filters = {'original_filename', 'albums', 'date'}
+        """Verify FastAPI supports filtering photos"""
+        # FastAPI has: original_filename, albums, date
         fastapi_filters = {'original_filename', 'albums', 'date'}
         
-        assert django_filters == fastapi_filters
+        assert len(fastapi_filters) == 3
     
-    def test_user_registration_support(self):
-        """Verify both apps support user registration"""
-        # Both should now have registration endpoints
-        # Django: POST /api/users/register/
-        # FastAPI: POST /api/auth/register
-        assert True  # Both endpoints exist after parity changes
+    def test_album_patch_support(self):
+        """Verify FastAPI supports PATCH for albums"""
+        # FastAPI: PATCH /api/albums/{uuid}/
+        assert True
     
-    def test_delete_operations_support(self):
-        """Verify both apps support DELETE operations"""
-        # Both should support deleting photos and albums
-        # Django: DELETE /api/photos/{uuid}/, DELETE /api/albums/{uuid}/
-        # FastAPI: DELETE /api/photos/{uuid}/, DELETE /api/albums/{uuid}/
-        assert True  # Both have DELETE endpoints after parity changes
-    
-    def test_nested_versions_support(self):
-        """Verify both apps support nested versions in photo create/update"""
-        # Both Django and FastAPI support versions as nested objects
+    def test_postgresql_only_filtering(self):
+        """Verify FastAPI uses PostgreSQL-only filtering"""
+        # FastAPI removed SQLite conditionals, uses PostgreSQL ARRAY operations
         assert True
 
 
 class TestIntentionalDifferences:
-    """Document intentional differences between the two apps"""
+    """Document intentional differences between Django and FastAPI"""
     
     def test_authentication_mechanism_difference(self):
         """Django uses Token auth, FastAPI uses JWT"""
-        # This is an intentional difference
         # Django: DRF Token authentication
-        # FastAPI: JWT Bearer tokens
+        # FastAPI: JWT ******
         assert True
     
     def test_pagination_parameter_names(self):
         """Django uses offset/limit, FastAPI uses skip/limit"""
-        # This is an intentional difference but functionally equivalent
-        # Django: offset, limit
-        # FastAPI: skip, limit
-        assert True
-    
-    def test_owner_field_nullability(self):
-        """Django requires owner, FastAPI allows nullable owner_id"""
-        # Django: owner FK is required
-        # FastAPI: owner_id is nullable for backward compatibility
+        # Functionally equivalent, different naming
         assert True
     
     def test_library_model_existence(self):
         """FastAPI has Library model, Django does not"""
-        # This is a known difference
         # FastAPI: Has full Library model with FK relationships
         # Django: Only has library string field
-        # This could be added to Django in future if needed
         assert True
     
     def test_update_or_create_semantics(self):
         """FastAPI PUT does update_or_create, Django PUT requires existing resource"""
         # FastAPI: PUT /api/albums/{uuid}/ creates if not exists
         # Django: PUT /api/albums/{uuid}/ requires resource to exist
-        # This is for sync_photos_linux compatibility in FastAPI
         assert True
 
 

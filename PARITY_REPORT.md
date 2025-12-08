@@ -24,7 +24,7 @@ Both applications now have functional parity for core photo management features,
 
 ## Feature Parity Matrix
 
-### ✅ Photo Management
+### Photo Management
 
 | Feature | Django | FastAPI | Notes |
 |---------|--------|---------|-------|
@@ -32,14 +32,14 @@ Both applications now have functional parity for core photo management features,
 | Create photo | ✅ | ✅ | Both support nested versions |
 | Retrieve photo | ✅ | ✅ | |
 | Update photo | ✅ | ✅ | Both PATCH supported |
-| Delete photo | ✅ | ✅ | Added to Django |
+| Delete photo | ❌ | ✅ | FastAPI only |
 | Filter by filename | ✅ | ✅ | Added to FastAPI |
 | Filter by albums | ✅ | ✅ | Added to FastAPI |
 | Filter by date | ✅ | ✅ | Added to FastAPI |
 | File upload | ❌ | ✅ | FastAPI has legacy upload endpoint |
 | Ownership enforcement | ✅ | ✅ | Both filter by user |
 
-### ✅ Album Management
+### Album Management
 
 | Feature | Django | FastAPI | Notes |
 |---------|--------|---------|-------|
@@ -48,14 +48,14 @@ Both applications now have functional parity for core photo management features,
 | Retrieve album | ✅ | ✅ | |
 | Update album (PATCH) | ✅ | ✅ | Added to FastAPI |
 | Update album (PUT) | ✅ | ✅ | |
-| Delete album | ✅ | ✅ | Added to Django |
+| Delete album | ❌ | ✅ | FastAPI only |
 | Update or create (PUT) | ❌ | ✅ | FastAPI only (for sync compatibility) |
 
-### ✅ User Management
+### User Management
 
 | Feature | Django | FastAPI | Notes |
 |---------|--------|---------|-------|
-| User registration | ✅ | ✅ | Added to Django at `/api/users/register/` |
+| User registration | ❌ | ✅ | FastAPI only |
 | User login | ✅ | ✅ | Different auth mechanisms |
 | Get current user | ✅ | ✅ | `/api/users/me/` vs `/api/auth/me` |
 | List users | ✅ | ❌ | Django only (filtered to current user) |
@@ -96,7 +96,7 @@ Both applications now have equivalent Photo models with these fields:
 - library (string field in both)
 - library_id (FK in FastAPI only)
 
-**Upload Fields:** (Added to Django for parity)
+**Upload Fields:** (FastAPI only)
 - filename, file_path, content_type, file_size, uploaded_at
 
 ### Version Model
@@ -145,7 +145,6 @@ Both have:
 - `GET /api/photos/{uuid}/` - Get photo
 - `PATCH /api/photos/{uuid}/` - Update photo
 - `PUT /api/photos/{uuid}/` - Update photo
-- `DELETE /api/photos/{uuid}/` - Delete photo (ADDED)
 
 #### FastAPI
 - `GET /api/photos/` - List photos (with filtering: original_filename, albums, date - ADDED)
@@ -163,7 +162,6 @@ Both have:
 - `GET /api/albums/{uuid}/` - Get album
 - `PATCH /api/albums/{uuid}/` - Update album
 - `PUT /api/albums/{uuid}/` - Update album
-- `DELETE /api/albums/{uuid}/` - Delete album (ADDED)
 
 #### FastAPI
 - `GET /api/albums/` - List albums
@@ -204,16 +202,10 @@ These differences are by design and do not represent gaps in functionality:
 
 ## Changes Made for Parity
 
-### Django Application
-1. ✅ Added `DestroyModelMixin` to PhotoViewSet and AlbumViewSet for DELETE support
-2. ✅ Added user registration endpoint (`POST /api/users/register/`)
-3. ✅ Added Photo model fields: filename, file_path, content_type, file_size, uploaded_at
-4. ✅ Created migration 0018_add_upload_fields.py for new fields
-
 ### FastAPI Application
 1. ✅ Added filtering support to `GET /api/photos/` (original_filename, albums, date)
 2. ✅ Added `PATCH /api/albums/{uuid}/` endpoint for partial updates
-3. ✅ Imported IS_POSTGRESQL for database-specific filtering logic
+3. ✅ Removed PostgreSQL/SQLite conditional checks (production is PostgreSQL-only)
 
 ## Testing
 
