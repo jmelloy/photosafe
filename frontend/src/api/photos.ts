@@ -2,7 +2,13 @@ import api from "./client";
 import type { Photo } from "../types/api";
 
 export const getPhotos = async (): Promise<Photo[]> => {
+  console.log("[photos.ts] getPhotos() called, making request to /photos/");
   const response = await api.get<Photo[]>("/photos/");
+  console.log(
+    "[photos.ts] getPhotos() response received:",
+    response.data?.length,
+    "photos"
+  );
   return response.data;
 };
 

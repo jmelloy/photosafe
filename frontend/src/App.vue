@@ -2,12 +2,12 @@
   <div class="app">
     <!-- Show auth screens if not authenticated -->
     <Login
-      v-if="!isAuthenticated && currentView === 'login'"
+      v-if="!isAuthenticatedRef && currentView === 'login'"
       @login-success="handleLoginSuccess"
       @switch-to-register="currentView = 'register'"
     />
     <Register
-      v-else-if="!isAuthenticated && currentView === 'register'"
+      v-else-if="!isAuthenticatedRef && currentView === 'register'"
       @register-success="currentView = 'login'"
       @switch-to-login="currentView = 'login'"
     />
@@ -102,9 +102,15 @@ const currentView = ref<"login" | "register">("login");
 const currentUser = ref<User | null>(null);
 
 const loadPhotos = async () => {
+  console.log(
+    "[App] loadPhotos called, isAuthenticated:",
+    isAuthenticatedRef.value
+  );
   loading.value = true;
   try {
+    console.log("[App] Calling getPhotos()...");
     photos.value = await getPhotos();
+    console.log("[App] getPhotos() returned", photos.value.length, "photos");
     extractAlbums();
   } catch (error: any) {
     console.error("Failed to load photos:", error);
@@ -131,18 +137,15 @@ const extractAlbums = () => {
   albums.value = [
     ...new Set(
       photos.value.flatMap((photo) =>
-        photo.albums && Array.isArray(photo.albums) ? photo.albums : [],
-      ),
+        photo.albums && Array.isArray(photo.albums) ? photo.albums : []
+      )
     ),
   ].sort();
 };
 
 const hasActiveFilters = computed(() => {
   return (
-    searchQuery.value ||
-    selectedAlbum.value ||
-    startDate.value ||
-    endDate.value
+    searchQuery.value || selectedAlbum.value || startDate.value || endDate.value
   );
 });
 
@@ -156,7 +159,7 @@ const filteredPhotos = computed(() => {
       (photo) =>
         photo.original_filename?.toLowerCase().includes(query) ||
         photo.title?.toLowerCase().includes(query) ||
-        photo.description?.toLowerCase().includes(query),
+        photo.description?.toLowerCase().includes(query)
     );
   }
 
@@ -166,7 +169,7 @@ const filteredPhotos = computed(() => {
       (photo) =>
         photo.albums &&
         Array.isArray(photo.albums) &&
-        photo.albums.includes(selectedAlbum.value),
+        photo.albums.includes(selectedAlbum.value)
     );
   }
 
@@ -211,7 +214,9 @@ const handleDeletePhoto = async (photoId: string) => {
 };
 
 const handleLoginSuccess = async () => {
+  console.log("[App] handleLoginSuccess called");
   isAuthenticatedRef.value = true;
+  console.log("[App] Token set, loading user and photos...");
   await loadCurrentUser();
   await loadPhotos();
 };
@@ -227,9 +232,24 @@ const handleLogout = () => {
 const isAuthenticatedRef = ref<boolean>(isAuthenticated());
 
 onMounted(() => {
+  console.log(
+    "[App] onMounted, isAuthenticatedRef.value:",
+    isAuthenticatedRef.value
+  );
+  console.log(
+    "[App] onMounted, isAuthenticated() function:",
+    isAuthenticated()
+  );
+  console.log("[App] onMounted, currentView:", currentView.value);
   if (isAuthenticatedRef.value) {
+    console.log("[App] User is authenticated, loading data...");
     loadCurrentUser();
     loadPhotos();
+  } else {
+    console.log("[App] User is not authenticated, showing login screen");
+    console.log(
+      "[App] Template should show Login component when isAuthenticatedRef is false"
+    );
   }
 });
 </script>

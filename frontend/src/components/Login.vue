@@ -67,14 +67,27 @@ const handleLogin = async () => {
   loading.value = true;
 
   try {
+    console.log("[Login] Attempting login for user:", username.value);
     await login(username.value, password.value);
+    console.log("[Login] Login successful");
     emit("login-success");
   } catch (err: any) {
     console.error("Login error:", err);
+    console.error("Login error details:", {
+      message: err.message,
+      response: err.response,
+      status: err.response?.status,
+      data: err.response?.data,
+    });
     if (err.response?.status === 401) {
       error.value = "Invalid username or password";
+    } else if (
+      err.code === "ECONNREFUSED" ||
+      err.message?.includes("Network Error")
+    ) {
+      error.value = "Cannot connect to server. Is the backend running?";
     } else {
-      error.value = "An error occurred. Please try again.";
+      error.value = `An error occurred: ${err.message || "Please try again."}`;
     }
   } finally {
     loading.value = false;

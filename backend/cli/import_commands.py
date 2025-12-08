@@ -4,13 +4,17 @@ import click
 import os
 import json
 import mimetypes
+import hashlib
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict, Any
 import uuid as uuid_module
+import dateutil
 from sqlalchemy.orm import Session
 from PIL import Image
 from PIL.ExifTags import TAGS, GPSTAGS
+from ulid import ULID
+
 
 from app.database import SessionLocal
 from app.models import User, Library, Photo, Version
@@ -34,9 +38,10 @@ from app.models import User, Library, Photo, Version
     default="json",
     help="Sidecar file format",
 )
-@click.option("--s3-bucket", help="S3 bucket name for uploads")
+@click.option(
+    "--s3-bucket", help="S3 bucket name for uploads (automatically enables S3 upload)"
+)
 @click.option("--s3-prefix", help="S3 key prefix (default: username/library_name)")
-@click.option("--upload-to-s3", is_flag=True, help="Upload photos to S3")
 @click.option("--dry-run", is_flag=True, help="Dry run - don't actually import")
 def import_photos(
     username: str,
@@ -46,7 +51,6 @@ def import_photos(
     sidecar_format: str,
     s3_bucket: Optional[str],
     s3_prefix: Optional[str],
-    upload_to_s3: bool,
     dry_run: bool,
 ):
     """Import photos from a folder with sidecar metadata"""
@@ -83,14 +87,9 @@ def import_photos(
                 db.refresh(library)
                 click.echo(f"✓ Created new library: {library_name} (ID: {library.id})")
 
-        # Setup S3 if needed
+        # Setup S3 if bucket is specified (automatically enables upload)
         s3_client = None
-        if upload_to_s3:
-            if not s3_bucket:
-                click.echo(
-                    "Error: --s3-bucket required when using --upload-to-s3", err=True
-                )
-                return
+        if s3_bucket:
             try:
                 import boto3
 
@@ -98,11 +97,23 @@ def import_photos(
                 if not s3_prefix:
                     s3_prefix = f"{username}/{library.name if library else 'default'}"
                 click.echo(f"✓ S3 uploads enabled: s3://{s3_bucket}/{s3_prefix}")
+
+                # Test S3 connection
+                try:
+                    s3_client.head_bucket(Bucket=s3_bucket)
+                except Exception as e:
+                    click.echo(
+                        f"Warning: Could not verify S3 bucket access: {str(e)}",
+                        err=True,
+                    )
             except ImportError:
                 click.echo(
                     "Error: boto3 not installed. Install with: pip install boto3",
                     err=True,
                 )
+                return
+            except Exception as e:
+                click.echo(f"Error: Failed to initialize S3 client: {str(e)}", err=True)
                 return
 
         # Import photos
@@ -147,21 +158,22 @@ def import_photos(
                     elif sidecar_format == "xmp":
                         sidecar_path = image_file.with_suffix(".xmp")
 
-                    # Also look for meta.json in the same directory
-                    meta_json_path = image_file.parent / "meta.json"
-
                     # Parse metadata from sidecar files
                     metadata = {}
                     if sidecar_path and sidecar_path.exists():
                         metadata = parse_sidecar(sidecar_path, sidecar_format)
 
-                    # Parse and merge meta.json if it exists
-                    if meta_json_path.exists():
-                        meta_json_data = parse_meta_json(meta_json_path)
-                        # Merge meta.json data, giving priority to sidecar data
-                        for key, value in meta_json_data.items():
-                            if key not in metadata:
-                                metadata[key] = value
+                    for meta_json_path in [
+                        image_file.parent / "meta.json",
+                        image_file.parent / "metadata.json",
+                    ]:
+                        # Parse and merge meta.json if it exists
+                        if meta_json_path.exists():
+                            meta_json_data = parse_meta_json(meta_json_path)
+                            # Merge meta.json data, giving priority to sidecar data
+                            for key, value in meta_json_data.items():
+                                if key not in metadata:
+                                    metadata[key] = value
 
                     # Add EXIF data to metadata
                     if exif_data:
@@ -183,6 +195,7 @@ def import_photos(
                         s3_client,
                         s3_bucket,
                         s3_prefix,
+                        dry_run,
                     )
 
                     if not dry_run:
@@ -199,6 +212,64 @@ def import_photos(
                         # Create photo
                         db_photo = Photo(**photo_data)
                         db.add(db_photo)
+                        db.flush()  # Flush to get the photo ID before creating version
+
+                        # Create version record if it doesn't exist
+                        try:
+                            existing_version = (
+                                db.query(Version)
+                                .filter(
+                                    Version.photo_uuid == db_photo.uuid,
+                                    Version.version == "original",
+                                )
+                                .first()
+                            )
+                            if not existing_version:
+                                # Determine version type
+                                content_type = photo_data.get("content_type", "")
+                                version_type = (
+                                    "photo"
+                                    if content_type.startswith("image/")
+                                    else "video"
+                                )
+
+                                # Get S3 path or use empty string if not uploaded to S3
+                                s3_path = (
+                                    photo_data.get("s3_key_path")
+                                    or photo_data.get("s3_original_path")
+                                    or ""
+                                )
+
+                                version_data = {
+                                    "photo_uuid": db_photo.uuid,
+                                    "version": "original",
+                                    "s3_path": s3_path,  # Required field, empty string if no S3
+                                    "filename": photo_data.get("original_filename"),
+                                    "width": photo_data.get("width"),
+                                    "height": photo_data.get("height"),
+                                    "size": photo_data.get("file_size"),
+                                    "type": version_type,
+                                }
+                                db_version = Version(**version_data)
+                                db.add(db_version)
+                                db.flush()  # Flush to ensure version is added
+                                click.echo(
+                                    f"✓ Created version for {photo_data.get('original_filename', 'photo')}"
+                                )
+                            else:
+                                click.echo(
+                                    f"⚠ Version already exists for {photo_data.get('original_filename', 'photo')}"
+                                )
+                        except Exception as e:
+                            click.echo(
+                                f"\nError creating version for {photo_data.get('original_filename', 'photo')}: {str(e)}",
+                                err=True,
+                            )
+                            # Print full traceback for debugging
+                            import traceback
+
+                            click.echo(traceback.format_exc(), err=True)
+
                         db.commit()
                         imported += 1
                     else:
@@ -454,6 +525,77 @@ def parse_meta_json(meta_json_path: Path) -> Dict[str, Any]:
         return {}
 
 
+def calculate_file_hash(file_path: Path) -> str:
+    """Calculate SHA256 hash of a file"""
+    sha256_hash = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        for byte_block in iter(lambda: f.read(4096), b""):
+            sha256_hash.update(byte_block)
+    return sha256_hash.hexdigest()
+
+
+def calculate_file_md5(file_path: Path) -> str:
+    """Calculate MD5 hash of a file (for S3 ETag comparison)"""
+    md5_hash = hashlib.md5()
+    with open(file_path, "rb") as f:
+        for byte_block in iter(lambda: f.read(4096), b""):
+            md5_hash.update(byte_block)
+    return md5_hash.hexdigest()
+
+
+def extract_date_from_timestamp(d):
+    if d:
+        dateutil.parse(d)
+
+
+def extract_date_from_exif(exif_data: Dict[str, Any]) -> Optional[datetime]:
+    """Extract date from EXIF data, trying DateTimeOriginal first, then DateTime"""
+    if not exif_data:
+        return None
+
+    # Check structured EXIF first
+    if isinstance(exif_data, dict):
+        # Try DateTimeOriginal first (most accurate)
+        if "DateTimeOriginal" in exif_data:
+            date_str = exif_data["DateTimeOriginal"]
+            if isinstance(date_str, str):
+                try:
+                    # EXIF DateTime format: "YYYY:MM:DD HH:MM:SS"
+                    return datetime.strptime(date_str, "%Y:%m:%d %H:%M:%S")
+                except ValueError:
+                    pass
+
+        # Fall back to DateTime
+        if "DateTime" in exif_data:
+            date_str = exif_data["DateTime"]
+            if isinstance(date_str, str):
+                try:
+                    return datetime.strptime(date_str, "%Y:%m:%d %H:%M:%S")
+                except ValueError:
+                    pass
+
+        # Check _raw EXIF data
+        if "_raw" in exif_data and isinstance(exif_data["_raw"], dict):
+            raw_exif = exif_data["_raw"]
+            if "DateTimeOriginal" in raw_exif:
+                date_str = raw_exif["DateTimeOriginal"]
+                if isinstance(date_str, str):
+                    try:
+                        return datetime.strptime(date_str, "%Y:%m:%d %H:%M:%S")
+                    except ValueError:
+                        pass
+
+            if "DateTime" in raw_exif:
+                date_str = raw_exif["DateTime"]
+                if isinstance(date_str, str):
+                    try:
+                        return datetime.strptime(date_str, "%Y:%m:%d %H:%M:%S")
+                    except ValueError:
+                        pass
+
+    return None
+
+
 def create_photo_from_file(
     file_path: Path,
     metadata: Dict[str, Any],
@@ -462,15 +604,34 @@ def create_photo_from_file(
     s3_client,
     s3_bucket: Optional[str],
     s3_prefix: Optional[str],
+    dry_run: bool = False,
 ) -> Dict[str, Any]:
     """Create photo data dictionary from file and metadata"""
-
-    # Generate UUID if not in metadata
-    photo_uuid = metadata.get("uuid", str(uuid_module.uuid4()))
 
     # Get file info
     file_stat = file_path.stat()
     file_size = file_stat.st_size
+
+    # Extract date for ULID generation (priority: EXIF -> filesystem)
+    date_for_ulid = None
+
+    # Try to get date from EXIF first
+    exif_data = metadata.get("exif")
+    if exif_data:
+        date_for_ulid = extract_date_from_exif(exif_data)
+
+    # Fall back to filesystem modification time
+    if not date_for_ulid:
+        for key in ("created_at", "createdAt"):
+            if dt := metadata.get(key):
+                date_for_ulid = extract_date_from_timestamp(dt)
+        date_for_ulid = datetime.fromtimestamp(file_stat.st_mtime)
+
+    # Generate UUID or ULID if not in metadata
+    photo_uuid = metadata.get("uuid")
+    if not photo_uuid:
+        # Generate ULID based on the date
+        photo_uuid = str(ULID.from_datetime(date_for_ulid))
 
     # Detect MIME type
     suffix = file_path.suffix.lower()
@@ -482,32 +643,82 @@ def create_photo_from_file(
 
     # Upload to S3 if configured
     s3_key_path = None
-    if s3_client and s3_bucket:
-        s3_key = f"{s3_prefix}/{photo_uuid}/{file_path.name}"
-        try:
-            s3_client.upload_file(
-                str(file_path),
-                s3_bucket,
-                s3_key,
-                ExtraArgs={"ContentType": content_type},
-            )
-            s3_key_path = s3_key
-        except Exception as e:
-            # If upload fails, continue without S3 path
-            click.echo(
-                f"\nWarning: S3 upload failed for {file_path.name}: {str(e)}", err=True
-            )
+    if s3_client and s3_bucket and not dry_run:
+        if not s3_prefix:
+            click.echo(f"\nError: S3 prefix not set for {file_path.name}", err=True)
+        else:
+            s3_key = f"{s3_prefix}/{photo_uuid}/{file_path.name}"
+            try:
+                # Ensure file exists before uploading
+                if not file_path.exists():
+                    click.echo(f"\nError: File does not exist: {file_path}", err=True)
+                else:
+                    # Check if file already exists in S3 and compare hash
+                    file_needs_upload = True
+                    try:
+                        # Check if object exists
+                        response = s3_client.head_object(Bucket=s3_bucket, Key=s3_key)
+                        s3_etag = response.get("ETag", "").strip('"')
 
-    # Parse date
+                        # Calculate local file MD5 (S3 ETag is MD5 for single-part uploads)
+                        local_md5 = calculate_file_md5(file_path)
+
+                        # Compare hashes
+                        if s3_etag == local_md5:
+                            file_needs_upload = False
+                            # File exists in S3, set s3_key_path even though we didn't upload
+                            s3_key_path = s3_key
+                            click.echo(
+                                f"✓ File already exists in S3 with matching hash: {file_path.name}"
+                            )
+                        else:
+                            click.echo(
+                                f"⚠ File exists in S3 but hash differs, re-uploading: {file_path.name}"
+                            )
+                    except Exception as e:
+                        # Check if it's a ClientError (file doesn't exist)
+                        error_code = None
+                        if hasattr(e, "response"):
+                            error_code = e.response.get("Error", {}).get("Code", "")
+
+                        if error_code == "404" or "Not Found" in str(e):
+                            # File doesn't exist, proceed with upload
+                            pass
+                        else:
+                            # Other error, log but proceed
+                            click.echo(
+                                f"Warning: Could not check S3 object: {str(e)}",
+                                err=True,
+                            )
+
+                    # Upload if needed
+                    if file_needs_upload:
+                        s3_client.upload_file(
+                            str(file_path),
+                            s3_bucket,
+                            s3_key,
+                            ExtraArgs={"ContentType": content_type},
+                        )
+                        click.echo(f"✓ Uploaded to S3: s3://{s3_bucket}/{s3_key}")
+                        # Set s3_key_path after successful upload
+                        s3_key_path = s3_key
+            except Exception as e:
+                # If upload fails, continue without S3 path but show error
+                click.echo(
+                    f"\nError: S3 upload failed for {file_path.name}: {str(e)}",
+                    err=True,
+                )
+
+    # Parse date (use the date we already extracted for ULID if available)
     photo_date = metadata.get("date")
     if photo_date and isinstance(photo_date, str):
         try:
             photo_date = datetime.fromisoformat(photo_date.replace("Z", "+00:00"))
         except (ValueError, TypeError):
-            photo_date = datetime.utcnow()
+            photo_date = date_for_ulid if date_for_ulid else datetime.utcnow()
     elif not photo_date:
-        # Use file modification time
-        photo_date = datetime.fromtimestamp(file_stat.st_mtime)
+        # Use the date we extracted for ULID (EXIF or filesystem)
+        photo_date = date_for_ulid
 
     # Build photo data
     photo_data = {
@@ -562,5 +773,9 @@ def create_photo_from_file(
     ]:
         if key in metadata:
             photo_data[key] = metadata[key]
+
+    # If masterFingerprint is null, use the hash of the file
+    if not photo_data.get("masterFingerprint"):
+        photo_data["masterFingerprint"] = calculate_file_hash(file_path)
 
     return photo_data

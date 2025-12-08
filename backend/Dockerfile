@@ -1,13 +1,16 @@
 FROM python:3.11-slim
 
 WORKDIR /app
+COPY --from=ghcr.io/astral-sh/uv:0.9.16 /uv /uvx /bin/
 
 # Install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY pyproject.toml .
+COPY app ./app
+COPY cli ./cli
+
+RUN uv pip install --system .
 
 # Copy application
-COPY app ./app
 COPY alembic ./alembic
 COPY alembic.ini .
 
