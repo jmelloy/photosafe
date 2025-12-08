@@ -4,7 +4,6 @@ import pytest
 from click.testing import CliRunner
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 from pathlib import Path
 import tempfile
 import json
