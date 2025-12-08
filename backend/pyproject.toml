@@ -33,4 +33,4 @@ photosafe = "cli.main:cli"
 packages = ["app", "cli"]
 
 [tool.setuptools.package-dir]
-"" = "backend"
+"" = "."
