@@ -7,9 +7,9 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
-    Login: typeof import('./src/components/Login.vue')['default']
-    PhotoGallery: typeof import('./src/components/PhotoGallery.vue')['default']
-    PhotoUpload: typeof import('./src/components/PhotoUpload.vue')['default']
-    Register: typeof import('./src/components/Register.vue')['default']
+    Login: typeof import('./components/Login.vue')['default']
+    PhotoGallery: typeof import('./components/PhotoGallery.vue')['default']
+    PhotoUpload: typeof import('./components/PhotoUpload.vue')['default']
+    Register: typeof import('./components/Register.vue')['default']
   }
 }
