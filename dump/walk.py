@@ -5,6 +5,7 @@ import tkinter as tk
 import shutil
 import json
 
+
 def search_metadata(data: dict):
     r = {}
     for k, v in data.items():
@@ -16,6 +17,7 @@ def search_metadata(data: dict):
             if k.startswith("created"):
                 r["created_at"] = v
     return r
+
 
 def get_metadata(file):
     data = {}
@@ -37,6 +39,7 @@ def get_metadata(file):
 
     return None
 
+
 def get_images(directory):
     supported_formats = (".png", ".jpg", ".jpeg", ".gif", ".bmp")
     file_response = []
@@ -44,13 +47,13 @@ def get_images(directory):
         for file in files:
             if file.lower().endswith(supported_formats):
                 metadata = get_metadata(os.path.join(root, file))
-                created_at = ''
-                prompt = ''
+                created_at = ""
+                prompt = ""
                 if metadata:
                     created_at = metadata["created_at"]
                     prompt = metadata["prompt"]
                 file_response.append((os.path.join(root, file), created_at, prompt))
-                    
+
     file_response.sort(key=lambda x: x[1])
     prev_prompt = None
     for file, dt, prompt in file_response:
@@ -86,7 +89,6 @@ def main(source_dir, dest_dir, log_file):
             image = next(image_iter)
             while image in shown_images:
                 image = next(image_iter)
-
 
             img = Image.open(image)
             img = img.resize((800, 800))

@@ -74,7 +74,9 @@ def list(username: str):
             owner_name = lib.owner.username if lib.owner else "N/A"
             photo_count = len(lib.photos)
             path_display = lib.path or ""
-            click.echo(f"{lib.id:<6} {lib.name:<30} {owner_name:<20} {photo_count:<10} {path_display}")
+            click.echo(
+                f"{lib.id:<6} {lib.name:<30} {owner_name:<20} {photo_count:<10} {path_display}"
+            )
         click.echo()
     finally:
         db.close()
@@ -94,7 +96,9 @@ def info(library_id: int):
         click.echo(f"\nLibrary Information:")
         click.echo(f"  ID:          {library.id}")
         click.echo(f"  Name:        {library.name}")
-        click.echo(f"  Owner:       {library.owner.username if library.owner else 'N/A'}")
+        click.echo(
+            f"  Owner:       {library.owner.username if library.owner else 'N/A'}"
+        )
         click.echo(f"  Path:        {library.path or 'N/A'}")
         click.echo(f"  Description: {library.description or 'N/A'}")
         click.echo(f"  Created:     {library.created_at}")

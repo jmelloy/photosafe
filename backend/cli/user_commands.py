@@ -16,7 +16,13 @@ def user():
 @user.command()
 @click.option("--username", prompt=True, help="Username for the new user")
 @click.option("--email", prompt=True, help="Email address")
-@click.option("--password", prompt=True, hide_input=True, confirmation_prompt=True, help="Password")
+@click.option(
+    "--password",
+    prompt=True,
+    hide_input=True,
+    confirmation_prompt=True,
+    help="Password",
+)
 @click.option("--name", help="Full name (optional)")
 @click.option("--superuser", is_flag=True, help="Create as superuser")
 def create(username: str, email: str, password: str, name: str, superuser: bool):
@@ -67,11 +73,15 @@ def list():
             click.echo("No users found")
             return
 
-        click.echo(f"\n{'ID':<6} {'Username':<20} {'Email':<30} {'Name':<25} {'Superuser'}")
+        click.echo(
+            f"\n{'ID':<6} {'Username':<20} {'Email':<30} {'Name':<25} {'Superuser'}"
+        )
         click.echo("-" * 95)
         for u in users:
             superuser_mark = "✓" if u.is_superuser else ""
-            click.echo(f"{u.id:<6} {u.username:<20} {u.email:<30} {(u.name or ''):<25} {superuser_mark}")
+            click.echo(
+                f"{u.id:<6} {u.username:<20} {u.email:<30} {(u.name or ''):<25} {superuser_mark}"
+            )
         click.echo()
     finally:
         db.close()

@@ -6,48 +6,48 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('photos', '0012_auto_20221126_0107'),
+        ("photos", "0012_auto_20221126_0107"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='photo',
-            name='hdr',
+            model_name="photo",
+            name="hdr",
             field=models.BooleanField(null=True),
         ),
         migrations.AddField(
-            model_name='photo',
-            name='ismovie',
+            model_name="photo",
+            name="ismovie",
             field=models.BooleanField(null=True),
         ),
         migrations.AddField(
-            model_name='photo',
-            name='isphoto',
+            model_name="photo",
+            name="isphoto",
             field=models.BooleanField(null=True),
         ),
         migrations.AddField(
-            model_name='photo',
-            name='panorama',
+            model_name="photo",
+            name="panorama",
             field=models.BooleanField(null=True),
         ),
         migrations.AddField(
-            model_name='photo',
-            name='screenshot',
+            model_name="photo",
+            name="screenshot",
             field=models.BooleanField(null=True),
         ),
         migrations.AddField(
-            model_name='photo',
-            name='selfie',
+            model_name="photo",
+            name="selfie",
             field=models.BooleanField(null=True),
         ),
         migrations.AddField(
-            model_name='photo',
-            name='slow_mo',
+            model_name="photo",
+            name="slow_mo",
             field=models.BooleanField(null=True),
         ),
         migrations.AddField(
-            model_name='photo',
-            name='time_lapse',
+            model_name="photo",
+            name="time_lapse",
             field=models.BooleanField(null=True),
         ),
     ]

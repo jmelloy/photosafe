@@ -45,12 +45,14 @@ def main():
     print("=" * 60)
     print("Alembic Migration Demo for PhotoSafe FastAPI Backend")
     print("=" * 60)
-    
+
     # Verify DATABASE_URL is set to PostgreSQL
     db_url = os.getenv("DATABASE_URL", "")
     if not db_url.startswith("postgresql"):
         print("\n❌ ERROR: DATABASE_URL must be set to a PostgreSQL connection string")
-        print("Example: export DATABASE_URL='postgresql://user:pass@localhost:5432/photosafe'")
+        print(
+            "Example: export DATABASE_URL='postgresql://user:pass@localhost:5432/photosafe'"
+        )
         return 1
 
     # 1. Check current migration status

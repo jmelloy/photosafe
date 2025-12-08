@@ -1,5 +1,16 @@
 """Database models"""
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Float, ForeignKey, Text, Table
+
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    DateTime,
+    Boolean,
+    Float,
+    ForeignKey,
+    Text,
+    Table,
+)
 from sqlalchemy.dialects.postgresql import JSONB, ARRAY
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -47,10 +58,10 @@ class Library(Base):
     description = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Owner relationship
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    
+
     # Relationships
     owner = relationship("User", back_populates="libraries")
     photos = relationship("Photo", back_populates="library_ref")
@@ -70,16 +81,16 @@ class Photo(Base):
     date = Column(DateTime, nullable=False)
     description = Column(Text, nullable=True)
     title = Column(Text, nullable=True)
-    
+
     # Arrays - PostgreSQL ARRAY type
     keywords = Column(ARRAY(String), nullable=True)
     labels = Column(ARRAY(String), nullable=True)
     albums = Column(ARRAY(String), nullable=True)
     persons = Column(ARRAY(String), nullable=True)
-    
+
     # JSON fields - PostgreSQL JSONB type
     faces = Column(JSONB, nullable=True)
-    
+
     # Boolean flags
     favorite = Column(Boolean, nullable=True)
     hidden = Column(Boolean, nullable=True)
@@ -105,14 +116,14 @@ class Photo(Base):
 
     # Dates
     date_modified = Column(DateTime, nullable=True)
-    
+
     # JSON fields - PostgreSQL JSONB type
     place = Column(JSONB, nullable=True)
     exif = Column(JSONB, nullable=True)
     score = Column(JSONB, nullable=True)
     search_info = Column(JSONB, nullable=True)
     fields = Column(JSONB, nullable=True)
-    
+
     # Dimensions and size
     height = Column(Integer, nullable=True)
     width = Column(Integer, nullable=True)

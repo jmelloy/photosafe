@@ -18,7 +18,10 @@ from app.models import User, Photo
 # For local testing, set up a test database: createdb photosafe_test
 # Set environment variable: export TEST_DATABASE_URL="postgresql://user:pass@localhost:5432/photosafe_test"
 # The default below is for Docker Compose development environment only
-SQLALCHEMY_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "postgresql://photosafe:photosafe@localhost:5432/photosafe_test")
+SQLALCHEMY_DATABASE_URL = os.getenv(
+    "TEST_DATABASE_URL",
+    "postgresql://photosafe:photosafe@localhost:5432/photosafe_test",
+)
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

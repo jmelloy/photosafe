@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('photos', '0014_photo_library'),
+        ("photos", "0014_photo_library"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='version',
-            name='type',
+            model_name="version",
+            name="type",
             field=models.TextField(blank=True, null=True),
         ),
     ]
