@@ -59,24 +59,15 @@
       </div>
     </div>
 
-    <!-- Modal for full-size photo view -->
-    <div v-if="selectedPhoto" class="modal" @click="closePhoto">
-      <div class="modal-content" @click.stop>
-        <button class="modal-close" @click="closePhoto">×</button>
-        <img :src="selectedPhoto.url" :alt="selectedPhoto.original_filename" />
-        <div class="modal-info">
-          <h3>{{ selectedPhoto.original_filename }}</h3>
-          <p>Uploaded: {{ formatDate(selectedPhoto.uploaded_at) }}</p>
-          <p>Size: {{ formatFileSize(selectedPhoto.file_size) }}</p>
-        </div>
-      </div>
-    </div>
+    <!-- Photo Detail Modal -->
+    <PhotoDetail :photo="selectedPhoto" @close="closePhoto" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from "vue";
 import type { Photo } from "../types/api";
+import PhotoDetail from "./PhotoDetail.vue";
 
 interface PhotoGalleryProps {
   photos: Photo[];
@@ -102,13 +93,6 @@ const formatDate = (dateString?: string): string => {
     hour: "2-digit",
     minute: "2-digit",
   });
-};
-
-const formatFileSize = (bytes?: number): string => {
-  if (!bytes) return "Unknown";
-  if (bytes < 1024) return bytes + " B";
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
 };
 
 const openPhoto = (photo: Photo): void => {
@@ -264,72 +248,5 @@ const closePhoto = (): void => {
 .photo-date {
   font-size: 0.875rem;
   color: #b0b0b0;
-}
-
-/* Modal styles */
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.9);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 2rem;
-}
-
-.modal-content {
-  position: relative;
-  max-width: 90vw;
-  max-height: 90vh;
-  background: #2a2a2a;
-  border-radius: 8px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.modal-content img {
-  max-width: 100%;
-  max-height: 70vh;
-  object-fit: contain;
-}
-
-.modal-close {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background: rgba(0, 0, 0, 0.5);
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  font-size: 2rem;
-  line-height: 1;
-  cursor: pointer;
-  z-index: 1;
-}
-
-.modal-close:hover {
-  background: rgba(0, 0, 0, 0.7);
-}
-
-.modal-info {
-  padding: 1.5rem;
-  background: #2a2a2a;
-}
-
-.modal-info h3 {
-  margin-bottom: 0.5rem;
-  color: #e0e0e0;
-}
-
-.modal-info p {
-  color: #b0b0b0;
-  margin-bottom: 0.25rem;
 }
 </style>
