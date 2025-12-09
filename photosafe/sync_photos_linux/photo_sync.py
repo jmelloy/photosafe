@@ -21,13 +21,16 @@ base_url = os.environ.get("BASE_URL", "https://api.photosafe.melloy.life")
 api_username = "jmelloy"  # os.environ.get("USERNAME")
 api_password = os.environ.get("PASSWORD")
 
+# Authenticate with FastAPI using OAuth2 password flow
 r = requests.post(
-    f"{base_url}/auth-token/", json={"username": api_username, "password": api_password}
+    f"{base_url}/api/auth/login",
+    data={"username": api_username, "password": api_password},  # OAuth2 uses form data
+    headers={"Content-Type": "application/x-www-form-urlencoded"}
 )
 r.raise_for_status()
-token = r.json()["token"]
+token = r.json()["access_token"]
 
-r = requests.get(f"{base_url}/users/me", headers={"Authorization": f"Token {token}"})
+r = requests.get(f"{base_url}/api/auth/me", headers={"Authorization": f"Bearer {token}"})
 r.raise_for_status()
 user = r.json()
 
@@ -154,7 +157,7 @@ def upload_albums():
             data=json.dumps(album_info, cls=DateTimeEncoder),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Token {token}",
+                "Authorization": f"Bearer {token}",
             },
         )
 
@@ -164,7 +167,7 @@ def upload_albums():
                 data=json.dumps(album_info, cls=DateTimeEncoder),
                 headers={
                     "Content-Type": "application/json",
-                    "Authorization": f"Token {token}",
+                    "Authorization": f"Bearer {token}",
                 },
             )
 
@@ -274,7 +277,7 @@ if __name__ == "__main__":
                 data=json.dumps(data, cls=DateTimeEncoder).replace("\\u0000", ""),
                 headers={
                     "Content-Type": "application/json",
-                    "Authorization": f"Token {token}",
+                    "Authorization": f"Bearer {token}",
                 },
             )
 
@@ -289,7 +292,7 @@ if __name__ == "__main__":
                     data=json.dumps(data, cls=DateTimeEncoder).replace("\\u0000", ""),
                     headers={
                         "Content-Type": "application/json",
-                        "Authorization": f"Token {token}",
+                        "Authorization": f"Bearer {token}",
                     },
                 )
 
