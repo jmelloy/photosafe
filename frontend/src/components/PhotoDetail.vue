@@ -103,7 +103,7 @@
           </div>
 
           <!-- Location -->
-          <div class="metadata-group" v-if="photo.latitude && photo.longitude">
+          <div class="metadata-group" v-if="photo.latitude != null && photo.longitude != null">
             <h3>Location</h3>
             <div class="metadata-item">
               <span class="label">Coordinates:</span>
@@ -161,7 +161,7 @@ interface PhotoDetailEmits {
 }
 
 const props = defineProps<PhotoDetailProps>();
-const emit = defineEmits<PhotoDetailEmits>();
+defineEmits<PhotoDetailEmits>();
 
 const formatDate = (dateString?: string): string => {
   if (!dateString) return "Unknown";
