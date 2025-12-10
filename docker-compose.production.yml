@@ -45,8 +45,8 @@ services:
       dockerfile: Dockerfile
     container_name: photosafe-backend
     # Remove port mapping in production - use reverse proxy (nginx/traefik)
-    # ports:
-    #   - "8000:8000"
+    ports:
+      - "8000:8000"
     volumes:
       - uploads_data:/app/uploads
     environment:
@@ -79,8 +79,8 @@ services:
       dockerfile: Dockerfile
     container_name: photosafe-frontend
     # Remove port mapping in production - use reverse proxy (nginx/traefik)
-    # ports:
-    #   - "5173:5173"
+    ports:
+      - "5000:5173"
     # No volumes in production - use built image
     environment:
       - VITE_API_URL=${VITE_API_URL:-http://backend:8000}

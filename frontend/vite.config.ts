@@ -5,6 +5,7 @@ export default defineConfig({
   plugins: [vue()],
   server: {
     port: 5173,
+    allowedHosts: ["localhost", "photosafe.melloy.life"],
     proxy: {
       "/api": {
         target: process.env.VITE_API_URL || "http://localhost:8000",
