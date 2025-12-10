@@ -30,53 +30,127 @@
       </header>
 
       <main class="main">
-        <div class="filters">
-          <div class="search-container">
+        <aside class="sidebar">
+          <div class="sidebar-header">
+            <h3>🔍 Filters</h3>
+            <button
+              v-if="hasActiveFilters"
+              @click="clearFilters"
+              class="clear-filters-btn"
+            >
+              Clear All
+            </button>
+          </div>
+
+          <!-- Search -->
+          <div class="filter-section">
+            <label class="filter-label">Search</label>
             <input
               v-model="searchQuery"
               type="text"
               placeholder="Search photos..."
-              class="search-input"
+              class="filter-input"
             />
           </div>
 
-          <div class="filter-group">
+          <!-- Albums -->
+          <div class="filter-section">
+            <label class="filter-label">Album</label>
             <select v-model="selectedAlbum" class="filter-select">
               <option value="">All Albums</option>
               <option v-for="album in albums" :key="album" :value="album">
                 {{ album }}
               </option>
             </select>
+          </div>
 
+          <!-- Keywords -->
+          <div class="filter-section" v-if="keywords.length > 0">
+            <label class="filter-label">Keywords</label>
+            <select v-model="selectedKeyword" class="filter-select">
+              <option value="">All Keywords</option>
+              <option v-for="keyword in keywords" :key="keyword" :value="keyword">
+                {{ keyword }}
+              </option>
+            </select>
+          </div>
+
+          <!-- People -->
+          <div class="filter-section" v-if="persons.length > 0">
+            <label class="filter-label">People</label>
+            <select v-model="selectedPerson" class="filter-select">
+              <option value="">All People</option>
+              <option v-for="person in persons" :key="person" :value="person">
+                {{ person }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Date Range -->
+          <div class="filter-section">
+            <label class="filter-label">Date Range</label>
             <input
               v-model="startDate"
               type="date"
               class="filter-input"
               placeholder="Start date"
             />
-
             <input
               v-model="endDate"
               type="date"
               class="filter-input"
               placeholder="End date"
             />
-
-            <button
-              v-if="hasActiveFilters"
-              @click="clearFilters"
-              class="clear-button"
-            >
-              Clear Filters
-            </button>
           </div>
-        </div>
 
-        <PhotoGallery
-          :photos="filteredPhotos"
-          :loading="loading"
-          @delete-photo="handleDeletePhoto"
-        />
+          <!-- Photo Type -->
+          <div class="filter-section">
+            <label class="filter-label">Photo Type</label>
+            <div class="checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="filterFavorites" />
+                <span>⭐ Favorites</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="filterPhotos" />
+                <span>📷 Photos</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="filterVideos" />
+                <span>🎬 Videos</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="filterScreenshots" />
+                <span>🖥️ Screenshots</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="filterPanoramas" />
+                <span>🏞️ Panoramas</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="filterPortraits" />
+                <span>👤 Portraits</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Location -->
+          <div class="filter-section">
+            <label class="filter-label">Location</label>
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="filterHasLocation" />
+              <span>📍 Has Location</span>
+            </label>
+          </div>
+        </aside>
+
+        <div class="content">
+          <PhotoGallery
+            :photos="filteredPhotos"
+            :loading="loading"
+            @delete-photo="handleDeletePhoto"
+          />
+        </div>
       </main>
     </div>
   </div>
@@ -95,9 +169,20 @@ const photos = ref<Photo[]>([]);
 const loading = ref<boolean>(false);
 const searchQuery = ref<string>("");
 const selectedAlbum = ref<string>("");
+const selectedKeyword = ref<string>("");
+const selectedPerson = ref<string>("");
 const startDate = ref<string>("");
 const endDate = ref<string>("");
+const filterFavorites = ref<boolean>(false);
+const filterPhotos = ref<boolean>(false);
+const filterVideos = ref<boolean>(false);
+const filterScreenshots = ref<boolean>(false);
+const filterPanoramas = ref<boolean>(false);
+const filterPortraits = ref<boolean>(false);
+const filterHasLocation = ref<boolean>(false);
 const albums = ref<string[]>([]);
+const keywords = ref<string[]>([]);
+const persons = ref<string[]>([]);
 const currentView = ref<"login" | "register">("login");
 const currentUser = ref<User | null>(null);
 
@@ -112,6 +197,8 @@ const loadPhotos = async () => {
     photos.value = await getPhotos();
     console.log("[App] getPhotos() returned", photos.value.length, "photos");
     extractAlbums();
+    extractKeywords();
+    extractPersons();
   } catch (error: any) {
     console.error("Failed to load photos:", error);
     // If unauthorized, logout and show login screen
@@ -143,9 +230,41 @@ const extractAlbums = () => {
   ].sort();
 };
 
+const extractKeywords = () => {
+  keywords.value = [
+    ...new Set(
+      photos.value.flatMap((photo) =>
+        photo.keywords && Array.isArray(photo.keywords) ? photo.keywords : []
+      )
+    ),
+  ].sort();
+};
+
+const extractPersons = () => {
+  persons.value = [
+    ...new Set(
+      photos.value.flatMap((photo) =>
+        photo.persons && Array.isArray(photo.persons) ? photo.persons : []
+      )
+    ),
+  ].sort();
+};
+
 const hasActiveFilters = computed(() => {
   return (
-    searchQuery.value || selectedAlbum.value || startDate.value || endDate.value
+    searchQuery.value ||
+    selectedAlbum.value ||
+    selectedKeyword.value ||
+    selectedPerson.value ||
+    startDate.value ||
+    endDate.value ||
+    filterFavorites.value ||
+    filterPhotos.value ||
+    filterVideos.value ||
+    filterScreenshots.value ||
+    filterPanoramas.value ||
+    filterPortraits.value ||
+    filterHasLocation.value
   );
 });
 
@@ -173,6 +292,26 @@ const filteredPhotos = computed(() => {
     );
   }
 
+  // Keyword filter
+  if (selectedKeyword.value) {
+    result = result.filter(
+      (photo) =>
+        photo.keywords &&
+        Array.isArray(photo.keywords) &&
+        photo.keywords.includes(selectedKeyword.value)
+    );
+  }
+
+  // Person filter
+  if (selectedPerson.value) {
+    result = result.filter(
+      (photo) =>
+        photo.persons &&
+        Array.isArray(photo.persons) &&
+        photo.persons.includes(selectedPerson.value)
+    );
+  }
+
   // Date range filter
   if (startDate.value) {
     const start = new Date(startDate.value);
@@ -191,14 +330,55 @@ const filteredPhotos = computed(() => {
     });
   }
 
+  // Photo type filters
+  if (filterFavorites.value) {
+    result = result.filter((photo) => photo.favorite === true);
+  }
+
+  if (filterPhotos.value) {
+    result = result.filter((photo) => photo.isphoto === true);
+  }
+
+  if (filterVideos.value) {
+    result = result.filter((photo) => photo.ismovie === true);
+  }
+
+  if (filterScreenshots.value) {
+    result = result.filter((photo) => photo.screenshot === true);
+  }
+
+  if (filterPanoramas.value) {
+    result = result.filter((photo) => photo.panorama === true);
+  }
+
+  if (filterPortraits.value) {
+    result = result.filter((photo) => photo.portrait === true);
+  }
+
+  // Location filter
+  if (filterHasLocation.value) {
+    result = result.filter(
+      (photo) => photo.latitude != null && photo.longitude != null
+    );
+  }
+
   return result;
 });
 
 const clearFilters = () => {
   searchQuery.value = "";
   selectedAlbum.value = "";
+  selectedKeyword.value = "";
+  selectedPerson.value = "";
   startDate.value = "";
   endDate.value = "";
+  filterFavorites.value = false;
+  filterPhotos.value = false;
+  filterVideos.value = false;
+  filterScreenshots.value = false;
+  filterPanoramas.value = false;
+  filterPortraits.value = false;
+  filterHasLocation.value = false;
 };
 
 const handleDeletePhoto = async (photoId: string) => {
@@ -318,63 +498,96 @@ onMounted(() => {
 }
 
 .main {
-  max-width: 1400px;
+  max-width: 1600px;
   margin: 0 auto;
   padding: 2rem;
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 2rem;
+  align-items: start;
 }
 
-.filters {
+@media (max-width: 1024px) {
+  .main {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static !important;
+  }
+}
+
+.sidebar {
   background: #1e1e1e;
   border-radius: 12px;
   padding: 1.5rem;
-  margin-bottom: 2rem;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  position: sticky;
+  top: 2rem;
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
 }
 
-.search-container {
-  margin-bottom: 1rem;
-}
-
-.search-input {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  background: #2a2a2a;
-  border: 1px solid #3a3a3a;
-  border-radius: 8px;
-  color: #e0e0e0;
-  font-size: 1rem;
-  transition: border-color 0.2s;
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: #667eea;
-}
-
-.search-input::placeholder {
-  color: #707070;
-}
-
-.filter-group {
+.sidebar-header {
   display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #3a3a3a;
 }
 
-.filter-select,
-.filter-input {
-  padding: 0.75rem 1rem;
+.sidebar-header h3 {
+  margin: 0;
+  color: #e0e0e0;
+  font-size: 1.2rem;
+}
+
+.clear-filters-btn {
+  padding: 0.4rem 0.8rem;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.clear-filters-btn:hover {
+  background: #5568d3;
+}
+
+.filter-section {
+  margin-bottom: 1.5rem;
+}
+
+.filter-label {
+  display: block;
+  color: #b0b0b0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.filter-input,
+.filter-select {
+  width: 100%;
+  padding: 0.65rem;
   background: #2a2a2a;
   border: 1px solid #3a3a3a;
-  border-radius: 8px;
+  border-radius: 6px;
   color: #e0e0e0;
   font-size: 0.95rem;
   transition: border-color 0.2s;
-  min-width: 150px;
+  margin-bottom: 0.5rem;
 }
 
-.filter-select:focus,
-.filter-input:focus {
+.filter-input:focus,
+.filter-select:focus {
   outline: none;
   border-color: #667eea;
 }
@@ -388,18 +601,52 @@ onMounted(() => {
   filter: invert(1);
 }
 
-.clear-button {
-  padding: 0.75rem 1.5rem;
-  background: #667eea;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.95rem;
-  transition: background 0.2s;
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
 }
 
-.clear-button:hover {
-  background: #5568d3;
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: #e0e0e0;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: color 0.2s;
+}
+
+.checkbox-label:hover {
+  color: #667eea;
+}
+
+.checkbox-label input[type="checkbox"] {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  accent-color: #667eea;
+}
+
+.content {
+  min-width: 0;
+}
+
+/* Sidebar scrollbar styling */
+.sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: #3a3a3a;
+  border-radius: 3px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: #4a4a4a;
 }
 </style>
