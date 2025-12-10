@@ -7,9 +7,12 @@ from json import JSONEncoder
 
 class DateTimeEncoder(JSONEncoder):
     """JSON encoder that handles datetime objects"""
+
     def default(self, obj):
         if isinstance(obj, (datetime.date, datetime.datetime)):
             return obj.isoformat()
+        if isinstance(obj, bytes):
+            return obj.decode("utf-8", errors="ignore")
         return super().default(obj)
 
 
@@ -33,7 +36,7 @@ def list_bucket(s3, bucket, prefix=""):
         rs = s3.list_objects(Bucket=bucket, Prefix=prefix, Marker=key)
         if not rs.get("Contents"):
             return
-        
+
         for row in rs.get("Contents", []):
             yield row["Key"], row.get("Size", 0), row["ETag"]
         else:
@@ -51,20 +54,20 @@ def sum_bucket(s3, bucket, print_every=1000):
         sz += size
         items += 1
         d[directory_name] = (sz, items)
-        
+
         if i % print_every == 0:
             print(" --", i, directory_name, d[directory_name])
-    
+
     for k, v in sorted(d.items(), key=lambda x: x[1][0], reverse=True):
         print(f"{k:15} {v[1]:,} {v[0] / 1024 ** 3:.3}")
-    
+
     return d
 
 
 def head(s3, key, bucket):
     """Get object metadata from S3"""
     import botocore.exceptions
-    
+
     try:
         return s3.head_object(Key=key, Bucket=bucket)
     except botocore.exceptions.ClientError as ce:

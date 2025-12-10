@@ -291,36 +291,36 @@ async def list_photos(
         page_size = 50
     if page_size > 100:
         page_size = 100
-    
+
     # Superusers can see all photos, regular users only see their own
     if current_user.is_superuser:
         query = db.query(Photo)
     else:
         query = db.query(Photo).filter(Photo.owner_id == current_user.id)
-    
+
     # Apply filters
     if original_filename:
         query = query.filter(Photo.original_filename == original_filename)
-    
+
     if albums:
         # Check if albums array contains the value (PostgreSQL)
         query = query.filter(Photo.albums.contains([albums]))
-    
+
     if date:
         query = query.filter(Photo.date == date)
-    
+
     # Get total count before pagination
     total = query.count()
-    
+
     # Calculate offset
     skip = (page - 1) * page_size
-    
+
     # Get photos with pagination
     photos = query.order_by(Photo.date.desc()).offset(skip).limit(page_size).all()
-    
+
     # Check if there are more pages
     has_more = (skip + page_size) < total
-    
+
     return PaginatedPhotosResponse(
         items=[create_photo_response(photo) for photo in photos],
         total=total,
@@ -398,61 +398,53 @@ async def get_photo_blocks(
     # For PostgreSQL production, we can use array functions
     # For SQLite testing, we'll filter in Python
     from .database import SQLALCHEMY_DATABASE_URL
-    
+
     is_sqlite = SQLALCHEMY_DATABASE_URL.startswith("sqlite")
-    
+
     if is_sqlite:
         # SQLite: Get all photos and filter in Python
         query = db.query(
-            func.extract('year', Photo.date).label('year'),
-            func.extract('month', Photo.date).label('month'),
-            func.extract('day', Photo.date).label('day'),
-            func.count().label('count'),
-            func.max(func.coalesce(Photo.date_modified, Photo.date)).label('max_date')
+            func.extract("year", Photo.date).label("year"),
+            func.extract("month", Photo.date).label("month"),
+            func.extract("day", Photo.date).label("day"),
+            func.count().label("count"),
+            func.max(func.coalesce(Photo.date_modified, Photo.date)).label("max_date"),
         ).filter(Photo.labels == None)
     else:
         # PostgreSQL: Use array_length function
         query = db.query(
-            func.extract('year', Photo.date).label('year'),
-            func.extract('month', Photo.date).label('month'),
-            func.extract('day', Photo.date).label('day'),
-            func.count().label('count'),
-            func.max(func.coalesce(Photo.date_modified, Photo.date)).label('max_date')
-        ).filter(
-            or_(
-                Photo.labels == None,
-                func.array_length(Photo.labels, 1) == None
-            )
-        )
-    
+            func.extract("year", Photo.date).label("year"),
+            func.extract("month", Photo.date).label("month"),
+            func.extract("day", Photo.date).label("day"),
+            func.count().label("count"),
+            func.max(func.coalesce(Photo.date_modified, Photo.date)).label("max_date"),
+        ).filter(or_(Photo.labels == None, func.array_length(Photo.labels, 1) == None))
+
     # Filter by owner if not superuser
     if not current_user.is_superuser:
         query = query.filter(Photo.owner_id == current_user.id)
-    
+
     results = query.group_by(
-        func.extract('year', Photo.date),
-        func.extract('month', Photo.date),
-        func.extract('day', Photo.date)
+        func.extract("year", Photo.date),
+        func.extract("month", Photo.date),
+        func.extract("day", Photo.date),
     ).all()
-    
+
     # Build nested dictionary structure
     response = {}
     for row in results:
         year = int(row.year)
         month = int(row.month)
         day = int(row.day)
-        
+
         if year not in response:
             response[year] = {}
-        
+
         if month not in response[year]:
             response[year][month] = {}
-        
-        response[year][month][day] = {
-            "count": int(row.count),
-            "max_date": row.max_date
-        }
-    
+
+        response[year][month][day] = {"count": int(row.count), "max_date": row.max_date}
+
     return response
 
 

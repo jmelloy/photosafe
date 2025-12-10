@@ -284,4 +284,3 @@ class PaginatedPhotosResponse(BaseModel):
 
     class Config:
         from_attributes = True
-

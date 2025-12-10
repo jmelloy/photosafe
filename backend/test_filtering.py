@@ -55,36 +55,36 @@ def test_filter_photos_by_original_filename():
     # Register and login
     client.post(
         "/api/auth/register",
-        json={"username": "testuser", "email": "test@test.com", "password": "testpass123"}
+        json={
+            "username": "testuser",
+            "email": "test@test.com",
+            "password": "testpass123",
+        },
     )
     login_response = client.post(
-        "/api/auth/login",
-        data={"username": "testuser", "password": "testpass123"}
+        "/api/auth/login", data={"username": "testuser", "password": "testpass123"}
     )
     token = login_response.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
-    
+
     # Create photos with different filenames
     photo1_data = {
         "uuid": str(uuid4()),
         "original_filename": "test1.jpg",
-        "date": "2024-01-01T00:00:00"
+        "date": "2024-01-01T00:00:00",
     }
     photo2_data = {
         "uuid": str(uuid4()),
         "original_filename": "test2.jpg",
-        "date": "2024-01-02T00:00:00"
+        "date": "2024-01-02T00:00:00",
     }
-    
+
     client.post("/api/photos/", json=photo1_data, headers=headers)
     client.post("/api/photos/", json=photo2_data, headers=headers)
-    
+
     # Filter by original_filename
-    response = client.get(
-        "/api/photos/?original_filename=test1.jpg",
-        headers=headers
-    )
-    
+    response = client.get("/api/photos/?original_filename=test1.jpg", headers=headers)
+
     assert response.status_code == 200
     photos = response.json()
     assert len(photos) == 1
@@ -96,39 +96,39 @@ def test_filter_photos_by_date():
     # Register and login
     client.post(
         "/api/auth/register",
-        json={"username": "testuser2", "email": "test2@test.com", "password": "testpass123"}
+        json={
+            "username": "testuser2",
+            "email": "test2@test.com",
+            "password": "testpass123",
+        },
     )
     login_response = client.post(
-        "/api/auth/login",
-        data={"username": "testuser2", "password": "testpass123"}
+        "/api/auth/login", data={"username": "testuser2", "password": "testpass123"}
     )
     token = login_response.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
-    
+
     # Create photos with different dates
     date1 = "2024-01-01T12:00:00"
     date2 = "2024-01-02T12:00:00"
-    
+
     photo1_data = {
         "uuid": str(uuid4()),
         "original_filename": "photo1.jpg",
-        "date": date1
+        "date": date1,
     }
     photo2_data = {
         "uuid": str(uuid4()),
         "original_filename": "photo2.jpg",
-        "date": date2
+        "date": date2,
     }
-    
+
     client.post("/api/photos/", json=photo1_data, headers=headers)
     client.post("/api/photos/", json=photo2_data, headers=headers)
-    
+
     # Filter by date
-    response = client.get(
-        f"/api/photos/?date={date1}",
-        headers=headers
-    )
-    
+    response = client.get(f"/api/photos/?date={date1}", headers=headers)
+
     assert response.status_code == 200
     photos = response.json()
     assert len(photos) == 1
@@ -138,38 +138,41 @@ def test_filter_photos_by_date():
 def test_album_patch_endpoint():
     """Test PATCH endpoint for albums"""
     from app.models import Album
-    
+
     # Register and login
     client.post(
         "/api/auth/register",
-        json={"username": "testuser3", "email": "test3@test.com", "password": "testpass123"}
+        json={
+            "username": "testuser3",
+            "email": "test3@test.com",
+            "password": "testpass123",
+        },
     )
     login_response = client.post(
-        "/api/auth/login",
-        data={"username": "testuser3", "password": "testpass123"}
+        "/api/auth/login", data={"username": "testuser3", "password": "testpass123"}
     )
     token = login_response.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
-    
+
     # Create an album
     album_uuid = str(uuid4())
     album_data = {
         "uuid": album_uuid,
         "title": "Original Title",
-        "creation_date": "2024-01-01T00:00:00"
+        "creation_date": "2024-01-01T00:00:00",
     }
-    
+
     response = client.post("/api/albums/", json=album_data, headers=headers)
     assert response.status_code == 201
-    
+
     # Patch the album (partial update)
-    patch_data = {
-        "title": "Updated Title"
-    }
-    
-    response = client.patch(f"/api/albums/{album_uuid}/", json=patch_data, headers=headers)
+    patch_data = {"title": "Updated Title"}
+
+    response = client.patch(
+        f"/api/albums/{album_uuid}/", json=patch_data, headers=headers
+    )
     assert response.status_code == 200
-    
+
     updated_album = response.json()
     assert updated_album["title"] == "Updated Title"
     assert updated_album["uuid"] == album_uuid
@@ -177,5 +180,5 @@ def test_album_patch_endpoint():
     assert updated_album["creation_date"] == "2024-01-01T00:00:00"
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

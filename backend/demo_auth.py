@@ -92,7 +92,7 @@ def demo_photo_management(token):
         if isinstance(photos_response, list):
             photos = photos_response
         else:
-            photos = photos_response.get('items', [])
+            photos = photos_response.get("items", [])
         print(f"✓ Found {len(photos)} photo(s)")
         for photo in photos:
             print(f"  - {photo['uuid']}: {photo.get('title', 'Untitled')}")
