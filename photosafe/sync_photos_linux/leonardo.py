@@ -73,19 +73,19 @@ password = os.environ.get("PASSWORD")
 KEY = "7b66ba15-e896-4368-b25c-0570bef4abaa"
 
 r = requests.post(
-    f"{base_url}/auth-token/", json={"username": username, "password": password}
+    f"{base_url}/api/auth/login", data={"username": username, "password": password}
 )
 r.raise_for_status()
-token = r.json()["token"]
+token = r.json()["access_token"]
 
-r = requests.get(f"{base_url}/users/me", headers={"Authorization": f"Token {token}"})
+r = requests.get(f"{base_url}/api/auth/me", headers={"Authorization": f"Bearer {token}"})
 r.raise_for_status()
 user = r.json()
 
 leonardo_key = os.environ.get("LEONARDO_KEY") or input("Key: ")
 
 session = requests.Session()
-session.headers.update({"Authorization": f"Token {token}"})
+session.headers.update({"Authorization": f"Bearer {token}"})
 session.headers.update({"Content-Type": f"application/json"})
 
 leonardo_session = requests.Session()

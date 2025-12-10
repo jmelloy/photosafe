@@ -19,12 +19,12 @@ username = os.environ.get("USERNAME")
 password = os.environ.get("PASSWORD")
 
 r = requests.post(
-    f"{base_url}/auth-token/", json={"username": username, "password": password}
+    f"{base_url}/api/auth/login", data={"username": username, "password": password}
 )
 r.raise_for_status()
-token = r.json()["token"]
+token = r.json()["access_token"]
 
-r = requests.get(f"{base_url}/users/me", headers={"Authorization": f"Token {token}"})
+r = requests.get(f"{base_url}/api/auth/me", headers={"Authorization": f"Bearer {token}"})
 r.raise_for_status()
 user = r.json()
 
@@ -77,7 +77,7 @@ def build_album_list():
 
 def get_server_blocks():
     r = requests.get(
-        f"{base_url}/photos/blocks", headers={"Authorization": f"Token {token}"}
+        f"{base_url}/photos/blocks", headers={"Authorization": f"Bearer {token}"}
     )
     r.raise_for_status()
     return r.json()
@@ -148,7 +148,7 @@ def sync_photo(photo):
     r = requests.patch(
         f"{base_url}/api/photos/{p['uuid']}/",
         data=json.dumps(p, cls=DateTimeEncoder),
-        headers={"Content-Type": "application/json", "Authorization": f"Token {token}"},
+        headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"},
     )
 
     if r.status_code == 404:
@@ -242,7 +242,7 @@ def upload_albums():
             data=json.dumps(album, cls=DateTimeEncoder),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Token {token}",
+                "Authorization": f"Bearer {token}",
             },
         )
 
@@ -252,7 +252,7 @@ def upload_albums():
                 data=json.dumps(album, cls=DateTimeEncoder),
                 headers={
                     "Content-Type": "application/json",
-                    "Authorization": f"Token {token}",
+                    "Authorization": f"Bearer {token}",
                 },
             )
 
@@ -317,7 +317,7 @@ def cleanup(username):
                 r = requests.patch(
                     f"{base_url}/api/photos/{uuid}/",
                     {k: None},
-                    headers={"Authorization": f"Token {token}"},
+                    headers={"Authorization": f"Bearer {token}"},
                 )
                 r.raise_for_status()
 
