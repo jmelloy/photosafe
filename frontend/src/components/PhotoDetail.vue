@@ -195,6 +195,113 @@ const formatPlace = (place: Record<string, any>): string => {
   return parts.join(", ") || JSON.stringify(place);
 };
 
+const formatExifValue = (key: string, value: any): string => {
+  if (value === null || value === undefined || value === "") {
+    return "";
+  }
+
+  // Format exposure time (shutter speed)
+  if (key === "ExposureTime" || key === "ShutterSpeedValue") {
+    const num = parseFloat(value);
+    if (num < 1) {
+      // Convert to fraction for fast shutter speeds
+      const denominator = Math.round(1 / num);
+      return `1/${denominator}s`;
+    }
+    return `${num}s`;
+  }
+
+  // Format aperture
+  if (key === "FNumber" || key === "ApertureValue") {
+    const num = parseFloat(value);
+    return `f/${num.toFixed(1)}`;
+  }
+
+  // Format focal length
+  if (key === "FocalLength") {
+    const num = parseFloat(value);
+    return `${num.toFixed(0)}mm`;
+  }
+
+  // Format ISO
+  if (key === "ISO" || key === "ISOSpeedRatings" || key === "PhotographicSensitivity") {
+    return `ISO ${value}`;
+  }
+
+  // Format flash
+  if (key === "Flash") {
+    const flashValue = parseInt(value);
+    if (flashValue === 0) return "No Flash";
+    if (flashValue === 1) return "Fired";
+    if (flashValue === 5) return "Fired, Return not detected";
+    if (flashValue === 7) return "Fired, Return detected";
+    if (flashValue === 9) return "On, Fired";
+    if (flashValue === 13) return "On, Return not detected";
+    if (flashValue === 15) return "On, Return detected";
+    if (flashValue === 16) return "Off, Did not fire";
+    if (flashValue === 24) return "Auto, Did not fire";
+    if (flashValue === 25) return "Auto, Fired";
+    if (flashValue === 29) return "Auto, Fired, Return not detected";
+    if (flashValue === 31) return "Auto, Fired, Return detected";
+    return `Flash ${value}`;
+  }
+
+  // Format white balance
+  if (key === "WhiteBalance") {
+    if (value === 0) return "Auto";
+    if (value === 1) return "Manual";
+    return String(value);
+  }
+
+  // Format exposure program
+  if (key === "ExposureProgram") {
+    const programs: Record<number, string> = {
+      0: "Not defined",
+      1: "Manual",
+      2: "Normal program",
+      3: "Aperture priority",
+      4: "Shutter priority",
+      5: "Creative program",
+      6: "Action program",
+      7: "Portrait mode",
+      8: "Landscape mode",
+    };
+    return programs[parseInt(value)] || String(value);
+  }
+
+  // Format metering mode
+  if (key === "MeteringMode") {
+    const modes: Record<number, string> = {
+      0: "Unknown",
+      1: "Average",
+      2: "Center-weighted average",
+      3: "Spot",
+      4: "Multi-spot",
+      5: "Pattern",
+      6: "Partial",
+      255: "Other",
+    };
+    return modes[parseInt(value)] || String(value);
+  }
+
+  // Format orientation
+  if (key === "Orientation") {
+    const orientations: Record<number, string> = {
+      1: "Normal",
+      2: "Mirrored horizontal",
+      3: "Rotated 180°",
+      4: "Mirrored vertical",
+      5: "Mirrored horizontal then rotated 270° CW",
+      6: "Rotated 90° CW",
+      7: "Mirrored horizontal then rotated 90° CW",
+      8: "Rotated 270° CW",
+    };
+    return orientations[parseInt(value)] || String(value);
+  }
+
+  return String(value);
+};
+
 const formatExif = (exif: Record<string, any>): Record<string, string> => {
   const formatted: Record<string, string> = {};
   
@@ -202,22 +309,63 @@ const formatExif = (exif: Record<string, any>): Record<string, string> => {
   const fieldMappings: Record<string, string> = {
     Make: "Camera Make",
     Model: "Camera Model",
-    LensModel: "Lens",
+    LensModel: "Lens Model",
+    LensMake: "Lens Make",
     FNumber: "Aperture",
+    ApertureValue: "Aperture",
     ExposureTime: "Shutter Speed",
+    ShutterSpeedValue: "Shutter Speed",
     ISO: "ISO",
+    ISOSpeedRatings: "ISO",
+    PhotographicSensitivity: "ISO",
     FocalLength: "Focal Length",
+    FocalLengthIn35mmFilm: "Focal Length (35mm equiv)",
     DateTimeOriginal: "Date Taken",
+    DateTime: "Modified",
     Flash: "Flash",
     WhiteBalance: "White Balance",
-    ExposureProgram: "Exposure Program",
+    ExposureProgram: "Exposure Mode",
     MeteringMode: "Metering Mode",
+    ExposureBiasValue: "Exposure Compensation",
+    ExposureMode: "Exposure Mode",
+    ColorSpace: "Color Space",
+    Software: "Software",
+    Artist: "Artist",
+    Copyright: "Copyright",
+    Orientation: "Orientation",
+    ResolutionUnit: "Resolution Unit",
+    XResolution: "X Resolution",
+    YResolution: "Y Resolution",
   };
 
+  // Process EXIF data with priority on more important fields
+  const priorityOrder = [
+    "Make", "Model", "LensModel", "FocalLength", "FocalLengthIn35mmFilm",
+    "FNumber", "ApertureValue", "ExposureTime", "ShutterSpeedValue",
+    "ISO", "ISOSpeedRatings", "PhotographicSensitivity",
+    "ExposureProgram", "ExposureMode", "MeteringMode", "ExposureBiasValue",
+    "Flash", "WhiteBalance", "DateTimeOriginal"
+  ];
+
+  // Add priority fields first
+  for (const key of priorityOrder) {
+    if (exif[key] !== null && exif[key] !== undefined && exif[key] !== "") {
+      const displayKey = fieldMappings[key] || key;
+      const formattedValue = formatExifValue(key, exif[key]);
+      if (formattedValue && !formatted[displayKey]) {
+        formatted[displayKey] = formattedValue;
+      }
+    }
+  }
+
+  // Add remaining fields
   for (const [key, value] of Object.entries(exif)) {
     if (value !== null && value !== undefined && value !== "") {
       const displayKey = fieldMappings[key] || key;
-      formatted[displayKey] = String(value);
+      if (!formatted[displayKey]) {
+        const formattedValue = formatExifValue(key, value);
+        formatted[displayKey] = formattedValue;
+      }
     }
   }
 
@@ -292,7 +440,7 @@ const hasPhotoProperties = computed(() => {
 
 .detail-container {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 2fr 1fr;
   gap: 0;
   min-height: 600px;
 }
