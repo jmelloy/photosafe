@@ -25,12 +25,14 @@ api_password = os.environ.get("PASSWORD")
 r = requests.post(
     f"{base_url}/api/auth/login",
     data={"username": api_username, "password": api_password},  # OAuth2 uses form data
-    headers={"Content-Type": "application/x-www-form-urlencoded"}
+    headers={"Content-Type": "application/x-www-form-urlencoded"},
 )
 r.raise_for_status()
 token = r.json()["access_token"]
 
-r = requests.get(f"{base_url}/api/auth/me", headers={"Authorization": f"Bearer {token}"})
+r = requests.get(
+    f"{base_url}/api/auth/me", headers={"Authorization": f"Bearer {token}"}
+)
 r.raise_for_status()
 user = r.json()
 
@@ -214,6 +216,16 @@ if __name__ == "__main__":
             if metadata:
                 exif = metadata.get("{Exif}")
 
+            lat, long = None, None
+            try:
+                lat = photo.latitude
+            except Exception:
+                print(f"{photo=} has no latitude")
+            try:
+                long = photo.longitude
+            except Exception:
+                print(f"{photo=} has no longitude")
+
             data = {
                 "uuid": photo._asset_record["recordName"],  # cloudAssetGUID
                 "masterFingerprint": photo.id,
@@ -228,8 +240,8 @@ if __name__ == "__main__":
                 "favorite": photo.isFavorite,
                 "title": photo.caption,
                 "description": photo.description,
-                "latitude": photo.latitude,
-                "longitude": photo.longitude,
+                "latitude": lat,
+                "longitude": long,
                 "exif": exif,
                 "live_photo": "live" in photo.versions,
                 "isphoto": photo.item_type == "image",
