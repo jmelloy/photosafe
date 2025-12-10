@@ -319,7 +319,7 @@ async def list_photos(
     photos = query.order_by(Photo.date.desc()).offset(skip).limit(page_size).all()
     
     # Check if there are more pages
-    has_more = (skip + len(photos)) < total
+    has_more = (skip + page_size) < total
     
     return PaginatedPhotosResponse(
         items=[create_photo_response(photo) for photo in photos],

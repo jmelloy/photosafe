@@ -71,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, onMounted, onBeforeUnmount, watch } from "vue";
 import type { Photo } from "../types/api";
 import PhotoDetail from "./PhotoDetail.vue";
 
@@ -115,6 +115,11 @@ const closePhoto = (): void => {
 };
 
 const setupIntersectionObserver = () => {
+  // Disconnect any existing observer first
+  if (observer) {
+    observer.disconnect();
+  }
+
   if (!loadMoreTrigger.value || !props.hasMore) {
     return;
   }
@@ -123,7 +128,6 @@ const setupIntersectionObserver = () => {
     (entries) => {
       const [entry] = entries;
       if (entry.isIntersecting && props.hasMore && !props.loadingMore) {
-        console.log("[PhotoGallery] Load more trigger intersected, emitting load-more");
         emit("load-more");
       }
     },
@@ -138,8 +142,12 @@ const setupIntersectionObserver = () => {
 };
 
 onMounted(() => {
-  // Set up intersection observer after a brief delay to ensure DOM is ready
-  setTimeout(setupIntersectionObserver, 100);
+  setupIntersectionObserver();
+});
+
+// Re-setup observer when hasMore changes
+watch(() => props.hasMore, () => {
+  setupIntersectionObserver();
 });
 
 onBeforeUnmount(() => {
