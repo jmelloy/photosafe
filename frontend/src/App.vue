@@ -194,13 +194,6 @@ const currentView = ref<"login" | "register">("login");
 const currentUser = ref<User | null>(null);
 
 const loadPhotos = async (reset: boolean = true) => {
-  console.log(
-    "[App] loadPhotos called, isAuthenticated:",
-    isAuthenticatedRef.value,
-    "reset:",
-    reset
-  );
-  
   if (reset) {
     loading.value = true;
     currentPage.value = 1;
@@ -210,16 +203,7 @@ const loadPhotos = async (reset: boolean = true) => {
   }
   
   try {
-    console.log("[App] Calling getPhotos() with page:", currentPage.value);
     const response = await getPhotos(currentPage.value, 50);
-    console.log(
-      "[App] getPhotos() returned",
-      response.items.length,
-      "photos, total:",
-      response.total,
-      "has_more:",
-      response.has_more
-    );
     
     if (reset) {
       photos.value = response.items;
@@ -440,9 +424,7 @@ const handleDeletePhoto = async (photoId: string) => {
 };
 
 const handleLoginSuccess = async () => {
-  console.log("[App] handleLoginSuccess called");
   isAuthenticatedRef.value = true;
-  console.log("[App] Token set, loading user and photos...");
   await loadCurrentUser();
   await loadPhotos();
 };
@@ -458,24 +440,9 @@ const handleLogout = () => {
 const isAuthenticatedRef = ref<boolean>(isAuthenticated());
 
 onMounted(() => {
-  console.log(
-    "[App] onMounted, isAuthenticatedRef.value:",
-    isAuthenticatedRef.value
-  );
-  console.log(
-    "[App] onMounted, isAuthenticated() function:",
-    isAuthenticated()
-  );
-  console.log("[App] onMounted, currentView:", currentView.value);
   if (isAuthenticatedRef.value) {
-    console.log("[App] User is authenticated, loading data...");
     loadCurrentUser();
     loadPhotos();
-  } else {
-    console.log("[App] User is not authenticated, showing login screen");
-    console.log(
-      "[App] Template should show Login component when isAuthenticatedRef is false"
-    );
   }
 });
 </script>
