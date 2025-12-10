@@ -25,13 +25,26 @@ dependencies = [
     "alembic>=1.17.2",
     "psycopg2-binary>=2.9.10",
     "python-ulid>=2.3.0",
+    "requests>=2.31",
+    "python-dateutil>=2.8.0",
+    "tqdm>=4.66",
+    "pytz>=2024.1",
+]
+
+[project.optional-dependencies]
+macos = [
+    "osxphotos>=0.60",
+]
+icloud = [
+    "pyicloud @ git+https://github.com/jmelloy/pyicloud.git",
 ]
 
 [project.scripts]
 photosafe = "cli.main:cli"
 
 [tool.setuptools]
-packages = ["app", "cli"]
+packages = { find = {} }
+include-package-data = true
 
 [tool.setuptools.package-dir]
 "" = "."
