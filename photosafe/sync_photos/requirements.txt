@@ -1,3 +1,3 @@
-requests
-osxphotos
-boto3
+requests>=2.31
+osxphotos>=0.60
+boto3>=1.34
