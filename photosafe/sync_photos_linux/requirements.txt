@@ -1,6 +1,6 @@
 git+https://github.com/jmelloy/pyicloud.git
-boto3
-requests
-pytz
-tqdm
-Pillow
+boto3>=1.34
+requests>=2.31
+pytz>=2024.1
+tqdm>=4.66
+Pillow>=11.0

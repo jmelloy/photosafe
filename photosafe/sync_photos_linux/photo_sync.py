@@ -21,8 +21,11 @@ base_url = os.environ.get("BASE_URL", "https://api.photosafe.melloy.life")
 api_username = "jmelloy"  # os.environ.get("USERNAME")
 api_password = os.environ.get("PASSWORD")
 
+# Authenticate with FastAPI using OAuth2 password flow
 r = requests.post(
-    f"{base_url}/api/auth/login", data={"username": api_username, "password": api_password}
+    f"{base_url}/api/auth/login",
+    data={"username": api_username, "password": api_password},  # OAuth2 uses form data
+    headers={"Content-Type": "application/x-www-form-urlencoded"}
 )
 r.raise_for_status()
 token = r.json()["access_token"]
