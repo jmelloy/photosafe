@@ -87,7 +87,12 @@ def demo_photo_management(token):
     print("\n2. Listing user's photos...")
     response = requests.get(f"{BASE_URL}/api/photos/", headers=headers)
     if response.status_code == 200:
-        photos = response.json()
+        photos_response = response.json()
+        # Handle both old (list) and new (paginated) response formats
+        if isinstance(photos_response, list):
+            photos = photos_response
+        else:
+            photos = photos_response.get('items', [])
         print(f"✓ Found {len(photos)} photo(s)")
         for photo in photos:
             print(f"  - {photo['uuid']}: {photo.get('title', 'Untitled')}")
