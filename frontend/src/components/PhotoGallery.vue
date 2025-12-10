@@ -145,9 +145,14 @@ onMounted(() => {
   setupIntersectionObserver();
 });
 
-// Re-setup observer when hasMore changes
-watch(() => props.hasMore, () => {
-  setupIntersectionObserver();
+// Re-setup observer when hasMore changes from false to true
+watch(() => props.hasMore, (newHasMore, oldHasMore) => {
+  if (newHasMore && !oldHasMore) {
+    setupIntersectionObserver();
+  } else if (!newHasMore && observer) {
+    // Disconnect observer when hasMore becomes false
+    observer.disconnect();
+  }
 });
 
 onBeforeUnmount(() => {
