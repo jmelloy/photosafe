@@ -268,3 +268,20 @@ class TokenData(BaseModel):
     """Token data schema"""
 
     username: Optional[str] = None
+
+
+# ============= PAGINATION SCHEMAS =============
+
+
+class PaginatedPhotosResponse(BaseModel):
+    """Paginated photos response schema"""
+
+    items: List[PhotoResponse]
+    total: int
+    page: int
+    page_size: int
+    has_more: bool
+
+    class Config:
+        from_attributes = True
+

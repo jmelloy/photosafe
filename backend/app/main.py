@@ -24,6 +24,7 @@ from .schemas import (
     UserCreate,
     UserResponse,
     Token,
+    PaginatedPhotosResponse,
 )
 from .auth import (
     authenticate_user,
@@ -272,17 +273,25 @@ async def update_photo(
     return create_photo_response(db_photo)
 
 
-@app.get("/api/photos/", response_model=List[PhotoResponse])
+@app.get("/api/photos/", response_model=PaginatedPhotosResponse)
 async def list_photos(
-    skip: int = 0,
-    limit: int = 100,
+    page: int = 1,
+    page_size: int = 50,
     original_filename: Optional[str] = None,
     albums: Optional[str] = None,
     date: Optional[datetime] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """List all photos owned by the current user with optional filtering"""
+    """List all photos owned by the current user with pagination and optional filtering"""
+    # Validate pagination parameters
+    if page < 1:
+        page = 1
+    if page_size < 1:
+        page_size = 50
+    if page_size > 100:
+        page_size = 100
+    
     # Superusers can see all photos, regular users only see their own
     if current_user.is_superuser:
         query = db.query(Photo)
@@ -300,8 +309,25 @@ async def list_photos(
     if date:
         query = query.filter(Photo.date == date)
     
-    photos = query.order_by(Photo.date.desc()).offset(skip).limit(limit).all()
-    return [create_photo_response(photo) for photo in photos]
+    # Get total count before pagination
+    total = query.count()
+    
+    # Calculate offset
+    skip = (page - 1) * page_size
+    
+    # Get photos with pagination
+    photos = query.order_by(Photo.date.desc()).offset(skip).limit(page_size).all()
+    
+    # Check if there are more pages
+    has_more = (skip + len(photos)) < total
+    
+    return PaginatedPhotosResponse(
+        items=[create_photo_response(photo) for photo in photos],
+        total=total,
+        page=page,
+        page_size=page_size,
+        has_more=has_more,
+    )
 
 
 @app.get("/api/photos/{uuid}/", response_model=PhotoResponse)

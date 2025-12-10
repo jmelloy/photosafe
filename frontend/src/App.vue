@@ -148,7 +148,10 @@
           <PhotoGallery
             :photos="filteredPhotos"
             :loading="loading"
+            :loading-more="loadingMore"
+            :has-more="hasMore"
             @delete-photo="handleDeletePhoto"
+            @load-more="loadMorePhotos"
           />
         </div>
       </main>
@@ -167,6 +170,10 @@ import type { Photo, User } from "./types/api";
 
 const photos = ref<Photo[]>([]);
 const loading = ref<boolean>(false);
+const loadingMore = ref<boolean>(false);
+const currentPage = ref<number>(1);
+const hasMore = ref<boolean>(true);
+const totalPhotos = ref<number>(0);
 const searchQuery = ref<string>("");
 const selectedAlbum = ref<string>("");
 const selectedKeyword = ref<string>("");
@@ -186,19 +193,48 @@ const persons = ref<string[]>([]);
 const currentView = ref<"login" | "register">("login");
 const currentUser = ref<User | null>(null);
 
-const loadPhotos = async () => {
+const loadPhotos = async (reset: boolean = true) => {
   console.log(
     "[App] loadPhotos called, isAuthenticated:",
-    isAuthenticatedRef.value
+    isAuthenticatedRef.value,
+    "reset:",
+    reset
   );
-  loading.value = true;
+  
+  if (reset) {
+    loading.value = true;
+    currentPage.value = 1;
+    photos.value = [];
+  } else {
+    loadingMore.value = true;
+  }
+  
   try {
-    console.log("[App] Calling getPhotos()...");
-    photos.value = await getPhotos();
-    console.log("[App] getPhotos() returned", photos.value.length, "photos");
-    extractAlbums();
-    extractKeywords();
-    extractPersons();
+    console.log("[App] Calling getPhotos() with page:", currentPage.value);
+    const response = await getPhotos(currentPage.value, 50);
+    console.log(
+      "[App] getPhotos() returned",
+      response.items.length,
+      "photos, total:",
+      response.total,
+      "has_more:",
+      response.has_more
+    );
+    
+    if (reset) {
+      photos.value = response.items;
+    } else {
+      photos.value = [...photos.value, ...response.items];
+    }
+    
+    hasMore.value = response.has_more;
+    totalPhotos.value = response.total;
+    
+    if (reset) {
+      extractAlbums();
+      extractKeywords();
+      extractPersons();
+    }
   } catch (error: any) {
     console.error("Failed to load photos:", error);
     // If unauthorized, logout and show login screen
@@ -209,7 +245,17 @@ const loadPhotos = async () => {
     }
   } finally {
     loading.value = false;
+    loadingMore.value = false;
   }
+};
+
+const loadMorePhotos = async () => {
+  if (!hasMore.value || loadingMore.value) {
+    return;
+  }
+  
+  currentPage.value += 1;
+  await loadPhotos(false);
 };
 
 const loadCurrentUser = async () => {
