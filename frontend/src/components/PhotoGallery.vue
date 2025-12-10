@@ -1,6 +1,11 @@
 <template>
   <div class="gallery-container">
-    <h2>Photo Gallery</h2>
+    <div class="gallery-header">
+      <h2>Photo Gallery</h2>
+      <p class="photo-count" v-if="!loading && photos.length > 0">
+        Showing {{ photos.length }} photos
+      </p>
+    </div>
 
     <div v-if="loading" class="loading">
       <div class="spinner"></div>
@@ -24,22 +29,39 @@
       <p>No photos yet. Upload your first photo!</p>
     </div>
 
-    <div v-else class="photo-grid">
-      <div v-for="photo in photos" :key="photo.uuid" class="photo-card">
-        <div class="photo-wrapper">
-          <img
-            :src="photo.url"
-            :alt="photo.original_filename"
-            class="photo-image"
-            @click="openPhoto(photo)"
-          />
+    <div v-else>
+      <div class="photo-grid">
+        <div v-for="photo in photos" :key="photo.uuid" class="photo-card">
+          <div class="photo-wrapper">
+            <img
+              :src="photo.url"
+              :alt="photo.original_filename"
+              class="photo-image"
+              @click="openPhoto(photo)"
+            />
+          </div>
+          <div class="photo-info">
+            <p class="photo-name" :title="photo.original_filename">
+              {{ photo.original_filename }}
+            </p>
+            <p class="photo-date">{{ formatDate(photo.uploaded_at) }}</p>
+          </div>
         </div>
-        <div class="photo-info">
-          <p class="photo-name" :title="photo.original_filename">
-            {{ photo.original_filename }}
-          </p>
-          <p class="photo-date">{{ formatDate(photo.uploaded_at) }}</p>
+      </div>
+
+      <!-- Infinite scroll trigger -->
+      <div ref="loadMoreTrigger" class="load-more-trigger" v-if="hasMore">
+        <div v-if="loadingMore" class="loading-more">
+          <div class="spinner-small"></div>
+          <p>Loading more photos...</p>
         </div>
+      </div>
+
+      <!-- Load more button fallback -->
+      <div v-if="hasMore && !loadingMore" class="load-more-section">
+        <button @click="$emit('load-more')" class="load-more-button">
+          Load More Photos
+        </button>
       </div>
     </div>
 
@@ -49,23 +71,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted, onBeforeUnmount, watch } from "vue";
 import type { Photo } from "../types/api";
 import PhotoDetail from "./PhotoDetail.vue";
 
 interface PhotoGalleryProps {
   photos: Photo[];
   loading?: boolean;
+  loadingMore?: boolean;
+  hasMore?: boolean;
 }
 
 interface PhotoGalleryEmits {
   (e: "delete-photo", id: string): void;
+  (e: "load-more"): void;
 }
 
-defineProps<PhotoGalleryProps>();
+const props = defineProps<PhotoGalleryProps>();
 const emit = defineEmits<PhotoGalleryEmits>();
 
 const selectedPhoto = ref<Photo | null>(null);
+const loadMoreTrigger = ref<HTMLElement | null>(null);
+let observer: IntersectionObserver | null = null;
 
 const formatDate = (dateString?: string): string => {
   if (!dateString) return "Unknown";
@@ -86,6 +113,53 @@ const openPhoto = (photo: Photo): void => {
 const closePhoto = (): void => {
   selectedPhoto.value = null;
 };
+
+const setupIntersectionObserver = () => {
+  // Disconnect any existing observer first
+  if (observer) {
+    observer.disconnect();
+  }
+
+  if (!loadMoreTrigger.value || !props.hasMore) {
+    return;
+  }
+
+  observer = new IntersectionObserver(
+    (entries) => {
+      const [entry] = entries;
+      if (entry.isIntersecting && props.hasMore && !props.loadingMore) {
+        emit("load-more");
+      }
+    },
+    {
+      root: null,
+      rootMargin: "200px", // Load more when within 200px of trigger
+      threshold: 0.1,
+    }
+  );
+
+  observer.observe(loadMoreTrigger.value);
+};
+
+onMounted(() => {
+  setupIntersectionObserver();
+});
+
+// Re-setup observer when hasMore changes from false to true
+watch(() => props.hasMore, (newHasMore, oldHasMore) => {
+  if (newHasMore && !oldHasMore) {
+    setupIntersectionObserver();
+  } else if (!newHasMore && observer) {
+    // Disconnect observer when hasMore becomes false
+    observer.disconnect();
+  }
+});
+
+onBeforeUnmount(() => {
+  if (observer) {
+    observer.disconnect();
+  }
+});
 </script>
 
 <style scoped>
@@ -96,9 +170,22 @@ const closePhoto = (): void => {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
-.gallery-container h2 {
+.gallery-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 1.5rem;
+}
+
+.gallery-header h2 {
+  margin: 0;
   color: #e0e0e0;
+}
+
+.photo-count {
+  color: #b0b0b0;
+  font-size: 0.95rem;
+  margin: 0;
 }
 
 .loading,
@@ -232,5 +319,59 @@ const closePhoto = (): void => {
 .photo-date {
   font-size: 0.875rem;
   color: #b0b0b0;
+}
+
+.load-more-trigger {
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.loading-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  color: #b0b0b0;
+}
+
+.spinner-small {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #3a3a3a;
+  border-top: 3px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.load-more-section {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid #3a3a3a;
+}
+
+.load-more-button {
+  padding: 0.75rem 2rem;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.load-more-button:hover {
+  background: #5568d3;
+}
+
+.load-more-button:disabled {
+  background: #3a3a3a;
+  cursor: not-allowed;
 }
 </style>

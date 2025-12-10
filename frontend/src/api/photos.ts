@@ -1,14 +1,21 @@
 import api from "./client";
 import type { Photo } from "../types/api";
 
-export const getPhotos = async (): Promise<Photo[]> => {
-  console.log("[photos.ts] getPhotos() called, making request to /photos/");
-  const response = await api.get<Photo[]>("/photos/");
-  console.log(
-    "[photos.ts] getPhotos() response received:",
-    response.data?.length,
-    "photos"
-  );
+export interface PaginatedPhotosResponse {
+  items: Photo[];
+  total: number;
+  page: number;
+  page_size: number;
+  has_more: boolean;
+}
+
+export const getPhotos = async (
+  page: number = 1,
+  pageSize: number = 50
+): Promise<PaginatedPhotosResponse> => {
+  const response = await api.get<PaginatedPhotosResponse>("/photos/", {
+    params: { page, page_size: pageSize },
+  });
   return response.data;
 };
 
