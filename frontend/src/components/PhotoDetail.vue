@@ -151,6 +151,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { Photo } from "../types/api";
+import { S3_BASE_URL } from "../config";
 
 interface PhotoDetailProps {
   photo: Photo | null;
@@ -167,9 +168,6 @@ defineEmits<PhotoDetailEmits>();
 const detailImageUrl = computed(() => {
   if (!props.photo) return "";
   
-  // Use environment variable or default to production URL
-  const S3_BASE_URL = import.meta.env.VITE_S3_BASE_URL || "https://photos.melloy.life";
-  
   const buildS3Url = (s3Path: string | undefined): string | null => {
     if (!s3Path) return null;
     // If already a full URL, return as-is
@@ -183,13 +181,14 @@ const detailImageUrl = computed(() => {
   
   // Prioritize medium (s3_key_path), then original, then edited, then thumbnail
   // This is different from the backend's url property which prioritizes thumbnail first
-  const url = 
-    buildS3Url(props.photo.s3_key_path) ||
-    buildS3Url(props.photo.s3_original_path) ||
-    buildS3Url(props.photo.s3_edited_path) ||
-    buildS3Url(props.photo.s3_thumbnail_path) ||
-    props.photo.url || // Fallback to the computed url from backend
-    "";
+  const candidates = [
+    props.photo.s3_key_path,
+    props.photo.s3_original_path,
+    props.photo.s3_edited_path,
+    props.photo.s3_thumbnail_path,
+  ];
+  
+  const url = candidates.map(buildS3Url).find(Boolean) || props.photo.url || "";
   
   return url;
 });
