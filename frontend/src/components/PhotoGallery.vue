@@ -57,16 +57,13 @@
         </div>
       </div>
     </div>
-
-    <!-- Photo Detail Modal -->
-    <PhotoDetail :photo="selectedPhoto" @close="closePhoto" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch } from "vue";
+import { useRouter } from "vue-router";
 import type { Photo } from "../types/api";
-import PhotoDetail from "./PhotoDetail.vue";
 
 interface PhotoGalleryProps {
   photos: Photo[];
@@ -82,8 +79,8 @@ interface PhotoGalleryEmits {
 
 const props = defineProps<PhotoGalleryProps>();
 const emit = defineEmits<PhotoGalleryEmits>();
+const router = useRouter();
 
-const selectedPhoto = ref<Photo | null>(null);
 const loadMoreTrigger = ref<HTMLElement | null>(null);
 let observer: IntersectionObserver | null = null;
 
@@ -100,11 +97,8 @@ const formatDate = (dateString?: string): string => {
 };
 
 const openPhoto = (photo: Photo): void => {
-  selectedPhoto.value = photo;
-};
-
-const closePhoto = (): void => {
-  selectedPhoto.value = null;
+  // Navigate to photo detail page
+  router.push(`/photos/${photo.uuid}`);
 };
 
 const setupIntersectionObserver = () => {
