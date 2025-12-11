@@ -98,7 +98,28 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 30s
+      start_period: 60s
+    networks:
+      - photosafe-network
+  
+  cli:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: photosafe-cli
+    volumes:
+      - uploads_data:/app/uploads
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-photosafe}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-photosafe}
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles:
+      - cli
+    stdin_open: true
+    tty: true
+    entrypoint: /bin/bash
     networks:
       - photosafe-network
 
