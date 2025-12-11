@@ -110,7 +110,20 @@ def serialize_photo_json_fields(photo_dict):
 def handle_library_upsert(library_name: str, current_user: User, db: Session) -> int:
     """Handle library name by upserting into libraries table.
     
-    Returns the library_id for the given library name and user.
+    Looks up or creates a library with the given name for the current user.
+    If the library doesn't exist, it will be created and flushed to the database.
+    
+    Args:
+        library_name: The name of the library (should not be None or empty)
+        current_user: The user who owns the library
+        db: Database session
+        
+    Returns:
+        The library_id for the given library name and user.
+        
+    Note:
+        This function assumes library_name is not None or empty.
+        Caller should validate before calling.
     """
     library = (
         db.query(Library)
