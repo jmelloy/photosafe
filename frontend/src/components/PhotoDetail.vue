@@ -6,7 +6,7 @@
       <div class="detail-container">
         <!-- Left side: Image -->
         <div class="image-section">
-          <img :src="photo.url" :alt="photo.original_filename" />
+          <img :src="detailImageUrl" :alt="photo.original_filename" />
         </div>
 
         <!-- Right side: Metadata -->
@@ -162,6 +162,36 @@ interface PhotoDetailEmits {
 
 const props = defineProps<PhotoDetailProps>();
 defineEmits<PhotoDetailEmits>();
+
+// Compute detail image URL - prioritize medium or original over thumbnail
+const detailImageUrl = computed(() => {
+  if (!props.photo) return "";
+  
+  const S3_BASE_URL = "https://photos.melloy.life";
+  
+  const buildS3Url = (s3Path: string | undefined): string | null => {
+    if (!s3Path) return null;
+    // If already a full URL, return as-is
+    if (s3Path.startsWith("http://") || s3Path.startsWith("https://")) {
+      return s3Path;
+    }
+    // Otherwise, construct URL with base domain
+    const cleanPath = s3Path.startsWith("/") ? s3Path.substring(1) : s3Path;
+    return `${S3_BASE_URL}/${cleanPath}`;
+  };
+  
+  // Prioritize medium (s3_key_path), then original, then edited, then thumbnail
+  // This is different from the backend's url property which prioritizes thumbnail first
+  const url = 
+    buildS3Url(props.photo.s3_key_path) ||
+    buildS3Url(props.photo.s3_original_path) ||
+    buildS3Url(props.photo.s3_edited_path) ||
+    buildS3Url(props.photo.s3_thumbnail_path) ||
+    props.photo.url || // Fallback to the computed url from backend
+    "";
+  
+  return url;
+});
 
 const formatDate = (dateString?: string): string => {
   if (!dateString) return "Unknown";
