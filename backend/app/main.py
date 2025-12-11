@@ -301,9 +301,19 @@ async def update_photo(
 async def list_photos(
     page: int = 1,
     page_size: int = 50,
-    original_filename: Optional[str] = None,
-    albums: Optional[str] = None,
-    date: Optional[datetime] = None,
+    search: Optional[str] = None,
+    album: Optional[str] = None,
+    keyword: Optional[str] = None,
+    person: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    favorite: Optional[bool] = None,
+    isphoto: Optional[bool] = None,
+    ismovie: Optional[bool] = None,
+    screenshot: Optional[bool] = None,
+    panorama: Optional[bool] = None,
+    portrait: Optional[bool] = None,
+    has_location: Optional[bool] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
@@ -322,16 +332,72 @@ async def list_photos(
     else:
         query = db.query(Photo).filter(Photo.owner_id == current_user.id)
 
-    # Apply filters
-    if original_filename:
-        query = query.filter(Photo.original_filename == original_filename)
+    # Apply search filter - search in original_filename, title, and description
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(
+            or_(
+                Photo.original_filename.ilike(search_pattern),
+                Photo.title.ilike(search_pattern),
+                Photo.description.ilike(search_pattern),
+            )
+        )
 
-    if albums:
+    # Apply album filter
+    if album:
         # Check if albums array contains the value (PostgreSQL)
-        query = query.filter(Photo.albums.contains([albums]))
+        query = query.filter(Photo.albums.contains([album]))
 
-    if date:
-        query = query.filter(Photo.date == date)
+    # Apply keyword filter
+    if keyword:
+        query = query.filter(Photo.keywords.contains([keyword]))
+
+    # Apply person filter
+    if person:
+        query = query.filter(Photo.persons.contains([person]))
+
+    # Apply date range filters
+    if start_date:
+        try:
+            start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+            query = query.filter(Photo.date >= start_dt)
+        except ValueError:
+            pass  # Skip invalid date format
+
+    if end_date:
+        try:
+            end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+            # Include the entire end date
+            end_dt = end_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
+            query = query.filter(Photo.date <= end_dt)
+        except ValueError:
+            pass  # Skip invalid date format
+
+    # Apply photo type filters
+    if favorite is not None:
+        query = query.filter(Photo.favorite == favorite)
+
+    if isphoto is not None:
+        query = query.filter(Photo.isphoto == isphoto)
+
+    if ismovie is not None:
+        query = query.filter(Photo.ismovie == ismovie)
+
+    if screenshot is not None:
+        query = query.filter(Photo.screenshot == screenshot)
+
+    if panorama is not None:
+        query = query.filter(Photo.panorama == panorama)
+
+    if portrait is not None:
+        query = query.filter(Photo.portrait == portrait)
+
+    # Apply location filter
+    if has_location is not None:
+        if has_location:
+            query = query.filter(Photo.latitude.isnot(None), Photo.longitude.isnot(None))
+        else:
+            query = query.filter(or_(Photo.latitude.is_(None), Photo.longitude.is_(None)))
 
     # Get total count before pagination
     total = query.count()
@@ -352,6 +418,43 @@ async def list_photos(
         page_size=page_size,
         has_more=has_more,
     )
+
+
+@app.get("/api/photos/filters/")
+async def get_photo_filters(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Get available filter values for albums, keywords, and persons"""
+    from sqlalchemy import func
+    
+    # Superusers can see all photos, regular users only see their own
+    if current_user.is_superuser:
+        query = db.query(Photo)
+    else:
+        query = db.query(Photo).filter(Photo.owner_id == current_user.id)
+    
+    # Get all photos for this user
+    photos = query.all()
+    
+    # Extract unique values from arrays
+    albums = set()
+    keywords = set()
+    persons = set()
+    
+    for photo in photos:
+        if photo.albums:
+            albums.update(photo.albums)
+        if photo.keywords:
+            keywords.update(photo.keywords)
+        if photo.persons:
+            persons.update(photo.persons)
+    
+    return {
+        "albums": sorted(list(albums)),
+        "keywords": sorted(list(keywords)),
+        "persons": sorted(list(persons)),
+    }
 
 
 @app.get("/api/photos/{uuid}/", response_model=PhotoRead)
