@@ -56,13 +56,6 @@
           <p>Loading more photos...</p>
         </div>
       </div>
-
-      <!-- Load more button fallback -->
-      <div v-if="hasMore && !loadingMore" class="load-more-section">
-        <button @click="$emit('load-more')" class="load-more-button">
-          Load More Photos
-        </button>
-      </div>
     </div>
 
     <!-- Photo Detail Modal -->
@@ -344,34 +337,5 @@ onBeforeUnmount(() => {
   border-top: 3px solid #667eea;
   border-radius: 50%;
   animation: spin 1s linear infinite;
-}
-
-.load-more-section {
-  display: flex;
-  justify-content: center;
-  margin-top: 2rem;
-  padding-top: 2rem;
-  border-top: 1px solid #3a3a3a;
-}
-
-.load-more-button {
-  padding: 0.75rem 2rem;
-  background: #667eea;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 1rem;
-  font-weight: 600;
-  transition: background 0.2s;
-}
-
-.load-more-button:hover {
-  background: #5568d3;
-}
-
-.load-more-button:disabled {
-  background: #3a3a3a;
-  cursor: not-allowed;
 }
 </style>
