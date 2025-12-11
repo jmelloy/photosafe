@@ -11,7 +11,7 @@ import shutil
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
-from .database import engine, Base, get_db
+from .database import engine, get_db
 from .models import Photo, Album, Version, User
 from .schemas import (
     PhotoResponse,
