@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordRequestForm
-from typing import List, Optional
+from typing import List, Optional, Dict
 import os
 import shutil
 import json
@@ -424,10 +424,8 @@ async def list_photos(
 async def get_photo_filters(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> Dict[str, List[str]]:
     """Get available filter values for albums, keywords, and persons"""
-    from sqlalchemy import func
-    
     # Superusers can see all photos, regular users only see their own
     if current_user.is_superuser:
         query = db.query(Photo)

@@ -338,6 +338,7 @@ const handleDeletePhoto = async (photoId: string) => {
     try {
       await deletePhoto(photoId);
       await loadPhotos();
+      // Reload filters to update dropdowns in case deleted photo had unique filter values
       await loadAvailableFilters();
     } catch (error) {
       console.error("Failed to delete photo:", error);
