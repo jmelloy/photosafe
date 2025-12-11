@@ -349,13 +349,18 @@ def icloud(
 
     s3_keys = {}
     os.makedirs(username, exist_ok=True)
+    
+    # Track totals across all libraries
+    total_photos = 0
+    total_created_all = 0
+    total_updated_all = 0
 
     for library_name, library in api.photos.libraries.items():
         click.echo(f"Library: {library_name}")
         photo_batch = []  # Collect photos for batching
         total_created = 0
         total_updated = 0
-        photo_count = 0  # Track total photos processed
+        photo_count = 0  # Track total photos processed in this library
 
         def send_batch():
             """Send accumulated batch of photos to the API"""
@@ -502,7 +507,12 @@ def icloud(
 
         # Send any remaining photos in the final batch
         send_batch()
+        
+        # Accumulate totals from this library
+        total_photos += photo_count
+        total_created_all += total_created
+        total_updated_all += total_updated
 
     shutil.rmtree(username)
-    click.echo(f"{photo_count} photos processed, {total_created} created, {total_updated} updated")
+    click.echo(f"{total_photos} photos processed, {total_created_all} created, {total_updated_all} updated")
     upload_albums()
