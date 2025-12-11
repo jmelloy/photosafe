@@ -352,14 +352,14 @@ def icloud(
 
     for library_name, library in api.photos.libraries.items():
         click.echo(f"Library: {library_name}")
-        existing = 0
         photo_batch = []  # Collect photos for batching
         total_created = 0
         total_updated = 0
+        photo_count = 0  # Track total photos processed
 
         def send_batch():
             """Send accumulated batch of photos to the API"""
-            nonlocal total_created, total_updated, existing
+            nonlocal total_created, total_updated
             
             if not photo_batch:
                 return
@@ -379,9 +379,6 @@ def icloud(
                 result = r.json()
                 total_created += result["created"]
                 total_updated += result["updated"]
-                # Track the number of photos that already existed (were updated)
-                # This is used for the stop condition
-                existing = total_updated
                 click.echo(
                     f"Batch processed: {result['created']} created, "
                     f"{result['updated']} updated, {result['errors']} errors"
@@ -400,6 +397,7 @@ def icloud(
             photo_batch.clear()
 
         for i, photo in enumerate(library.all.fetch_records(offset)):
+            photo_count = i + 1  # Track photo count
             click.echo(f"{photo}, {photo.created}")
             dt = (photo.asset_date or photo.created).strftime("%Y/%m/%d")
 
@@ -499,12 +497,12 @@ def icloud(
                 send_batch()
                 
                 # Check stop condition after sending batch
-                if existing > stop_after:
+                if total_updated > stop_after:
                     break
 
         # Send any remaining photos in the final batch
         send_batch()
 
     shutil.rmtree(username)
-    click.echo(f"{i + 1} photos processed, {total_created} created, {total_updated} updated")
+    click.echo(f"{photo_count} photos processed, {total_created} created, {total_updated} updated")
     upload_albums()
