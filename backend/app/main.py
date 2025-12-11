@@ -29,6 +29,9 @@ from .models import (
     UserRead,
     Token,
     PaginatedPhotosResponse,
+    BatchPhotoRequest,
+    BatchPhotoResult,
+    BatchPhotoResponse,
 )
 from .auth import (
     authenticate_user,
@@ -295,6 +298,181 @@ async def update_photo(
     db.refresh(db_photo)
 
     return create_photo_response(db_photo)
+
+
+@app.post("/api/photos/batch/", response_model=BatchPhotoResponse, status_code=200)
+async def batch_create_or_update_photos(
+    batch_data: BatchPhotoRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Create or update multiple photos in a single request"""
+    results = []
+    created_count = 0
+    updated_count = 0
+    error_count = 0
+
+    for photo_data in batch_data.photos:
+        try:
+            # Check if photo already exists
+            existing = db.query(Photo).filter(Photo.uuid == photo_data.uuid).first()
+
+            if existing:
+                # Update existing photo
+                # Verify ownership
+                if (
+                    existing.owner_id
+                    and existing.owner_id != current_user.id
+                    and not current_user.is_superuser
+                ):
+                    results.append(
+                        BatchPhotoResult(
+                            uuid=photo_data.uuid,
+                            success=False,
+                            action="error",
+                            error="Not authorized to update this photo",
+                        )
+                    )
+                    error_count += 1
+                    continue
+
+                # Extract versions data
+                versions_data = photo_data.versions or []
+                update_dict = photo_data.model_dump(
+                    exclude={"versions"}, exclude_unset=True
+                )
+
+                # Handle library name - upsert into libraries table
+                if "library" in update_dict and update_dict["library"]:
+                    library_name = update_dict["library"]
+                    library = (
+                        db.query(Library)
+                        .filter(
+                            Library.owner_id == current_user.id,
+                            Library.name == library_name,
+                        )
+                        .first()
+                    )
+                    if not library:
+                        library = Library(
+                            name=library_name,
+                            owner_id=current_user.id,
+                        )
+                        db.add(library)
+                        db.flush()
+                    update_dict["library_id"] = library.id
+
+                # Serialize JSON fields
+                for field in [
+                    "keywords",
+                    "labels",
+                    "albums",
+                    "persons",
+                    "faces",
+                    "place",
+                    "exif",
+                    "score",
+                    "search_info",
+                    "fields",
+                ]:
+                    if field in update_dict and update_dict[field] is not None:
+                        update_dict[field] = serialize_json_field(update_dict[field])
+
+                # Update photo fields
+                for key, value in update_dict.items():
+                    setattr(existing, key, value)
+
+                # Update or create versions
+                if versions_data:
+                    for version_data in versions_data:
+                        existing_version = (
+                            db.query(Version)
+                            .filter(
+                                Version.photo_uuid == photo_data.uuid,
+                                Version.version == version_data.version,
+                            )
+                            .first()
+                        )
+
+                        if existing_version:
+                            for key, value in version_data.model_dump().items():
+                                setattr(existing_version, key, value)
+                        else:
+                            db_version = Version(
+                                photo_uuid=photo_data.uuid, **version_data.model_dump()
+                            )
+                            db.add(db_version)
+
+                db.flush()
+                results.append(
+                    BatchPhotoResult(
+                        uuid=photo_data.uuid, success=True, action="updated"
+                    )
+                )
+                updated_count += 1
+
+            else:
+                # Create new photo
+                # Extract versions data
+                versions_data = photo_data.versions or []
+                photo_dict = photo_data.model_dump(exclude={"versions"})
+
+                # Serialize JSON fields
+                for field in [
+                    "keywords",
+                    "labels",
+                    "albums",
+                    "persons",
+                    "faces",
+                    "place",
+                    "exif",
+                    "score",
+                    "search_info",
+                    "fields",
+                ]:
+                    if field in photo_dict and photo_dict[field] is not None:
+                        photo_dict[field] = serialize_json_field(photo_dict[field])
+
+                # Create photo with owner
+                db_photo = Photo(**photo_dict, owner_id=current_user.id)
+                db.add(db_photo)
+                db.flush()
+
+                # Create versions
+                for version_data in versions_data:
+                    db_version = Version(
+                        photo_uuid=db_photo.uuid, **version_data.model_dump()
+                    )
+                    db.add(db_version)
+
+                db.flush()
+                results.append(
+                    BatchPhotoResult(uuid=photo_data.uuid, success=True, action="created")
+                )
+                created_count += 1
+
+        except Exception as e:
+            results.append(
+                BatchPhotoResult(
+                    uuid=photo_data.uuid,
+                    success=False,
+                    action="error",
+                    error=str(e),
+                )
+            )
+            error_count += 1
+            # Continue processing other photos instead of failing the entire batch
+
+    # Commit all changes at once
+    db.commit()
+
+    return BatchPhotoResponse(
+        results=results,
+        total=len(batch_data.photos),
+        created=created_count,
+        updated=updated_count,
+        errors=error_count,
+    )
 
 
 @app.get("/api/photos/", response_model=PaginatedPhotosResponse)
