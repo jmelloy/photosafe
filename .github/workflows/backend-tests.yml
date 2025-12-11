@@ -92,24 +92,60 @@ jobs:
         id: increment
         working-directory: backend
         run: |
-          # Read current version
-          CURRENT_VERSION=$(grep '^version = ' pyproject.toml | \
-            sed 's/version = "\(.*\)"/\1/')
-          echo "Current version: $CURRENT_VERSION"
+          # Use Python to safely read and update the TOML file
+          python << 'EOF'
+          import re
+          import sys
 
-          # Split version into major.minor.patch
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+          # Read pyproject.toml
+          with open('pyproject.toml', 'r') as f:
+              content = f.read()
 
-          # Increment patch version
-          NEW_PATCH=$((PATCH + 1))
-          NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+          # Extract version using regex
+          version_match = re.search(r'^version\s*=\s*"([^"]+)"', content, re.MULTILINE)
+          if not version_match:
+              print("Error: Could not find version in pyproject.toml")
+              sys.exit(1)
 
-          echo "New version: $NEW_VERSION"
+          current_version = version_match.group(1)
+          print(f"Current version: {current_version}")
+
+          # Validate semantic version format
+          if not re.match(r'^\d+\.\d+\.\d+$', current_version):
+              print(f"Error: Version '{current_version}' is not in semantic version format (major.minor.patch)")
+              sys.exit(1)
+
+          # Parse and increment patch version
+          major, minor, patch = current_version.split('.')
+          new_patch = int(patch) + 1
+          new_version = f"{major}.{minor}.{new_patch}"
+
+          print(f"New version: {new_version}")
+
+          # Update version in content
+          new_content = re.sub(
+              r'^version\s*=\s*"[^"]+"',
+              f'version = "{new_version}"',
+              content,
+              count=1,
+              flags=re.MULTILINE
+          )
+
+          # Write updated content
+          with open('pyproject.toml', 'w') as f:
+              f.write(new_content)
+
+          # Write outputs for GitHub Actions
+          with open('version_output.txt', 'w') as f:
+              f.write(f"{new_version}\n")
+
+          print("Version updated successfully")
+          EOF
+
+          # Set GitHub Action outputs
+          NEW_VERSION=$(cat version_output.txt)
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-
-          # Update version in pyproject.toml
-          sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" \
-            pyproject.toml
+          rm version_output.txt
 
           # Check if there are changes
           if git diff --quiet pyproject.toml; then
