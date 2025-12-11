@@ -60,6 +60,7 @@ jobs:
         uses: codecov/codecov-action@v4
         if: github.event_name == 'push'
         with:
+          # token: ${{ secrets.CODECOV_TOKEN }}  # Uncomment for private repos
           files: ./backend/coverage.xml
           flags: backend
           fail_ci_if_error: false
@@ -75,6 +76,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          # GITHUB_TOKEN has write permissions by default
+          # For production, consider using a PAT with minimal permissions
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
