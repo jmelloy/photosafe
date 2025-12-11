@@ -5,11 +5,12 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+from sqlmodel import Session, SQLModel
 from datetime import datetime
 from uuid import uuid4
 
 from app.main import app
-from app.database import Base, get_db
+from app.database import get_db
 from app.models import User, Photo
 from app.auth import get_password_hash
 
@@ -21,9 +22,9 @@ engine = create_engine(
     connect_args={"check_same_thread": False},
     poolclass=StaticPool,
 )
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, class_=Session)
 
-Base.metadata.create_all(bind=engine)
+SQLModel.metadata.create_all(bind=engine)
 
 
 def override_get_db():

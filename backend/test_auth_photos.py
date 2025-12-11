@@ -4,12 +4,13 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlmodel import Session, SQLModel
 from datetime import datetime
 import os
 import tempfile
 
 from app.main import app
-from app.database import Base, get_db
+from app.database import get_db
 from app.models import User, Photo
 
 
@@ -23,10 +24,10 @@ SQLALCHEMY_DATABASE_URL = os.getenv(
     "postgresql://photosafe:photosafe@localhost:5432/photosafe_test",
 )
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, class_=Session)
 
 # Create all tables once
-Base.metadata.create_all(bind=engine)
+SQLModel.metadata.create_all(bind=engine)
 
 
 def override_get_db():

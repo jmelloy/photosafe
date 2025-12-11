@@ -4,12 +4,13 @@ import pytest
 from click.testing import CliRunner
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlmodel import Session, SQLModel
 from pathlib import Path
 import tempfile
 import json
 import os
 
-from app.database import Base, get_db
+from app.database import get_db
 from app.models import User, Library, Photo
 from cli.user_commands import user
 from cli.library_commands import library
@@ -26,13 +27,13 @@ SQLALCHEMY_DATABASE_URL = os.getenv(
     "postgresql://photosafe:photosafe@localhost:5432/photosafe_test",
 )
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, class_=Session)
 
 
 @pytest.fixture(scope="function")
 def setup_database():
     """Setup test database"""
-    Base.metadata.create_all(bind=engine)
+    SQLModel.metadata.create_all(bind=engine)
 
     # Override get_db for CLI commands
     from cli import user_commands, library_commands, import_commands

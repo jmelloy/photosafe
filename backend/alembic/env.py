@@ -11,8 +11,9 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from app.database import SQLALCHEMY_DATABASE_URL, Base
-from app.models import User, Photo, Album, Version  # Import all models
+from app.database import SQLALCHEMY_DATABASE_URL
+from sqlmodel import SQLModel
+from app.models import User, Photo, Album, Version, Library  # Import all models
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -30,7 +31,7 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata = Base.metadata
+target_metadata = SQLModel.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

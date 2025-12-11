@@ -4,6 +4,7 @@ import pytest
 from click.testing import CliRunner
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlmodel import Session, SQLModel
 from pathlib import Path
 import tempfile
 import json
@@ -11,7 +12,6 @@ import os
 from PIL import Image
 from datetime import datetime
 
-from app.database import Base
 from app.models import User, Library, Photo
 from cli.import_commands import import_photos, extract_exif_data, parse_meta_json
 
@@ -26,13 +26,13 @@ SQLALCHEMY_DATABASE_URL = os.getenv(
     "postgresql://photosafe:photosafe@localhost:5432/photosafe_test",
 )
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, class_=Session)
 
 
 @pytest.fixture(scope="function")
 def setup_database():
     """Setup test database"""
-    Base.metadata.create_all(bind=engine)
+    SQLModel.metadata.create_all(bind=engine)
 
     # Override SessionLocal in import_commands
     from cli import import_commands

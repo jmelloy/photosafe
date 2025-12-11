@@ -5,6 +5,11 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any
 
 
+# For SQLModel, we'll use the models directly where possible
+# These schemas are kept for backward compatibility and cases where we need
+# additional computed fields (like url) that aren't in the database
+
+
 class VersionBase(BaseModel):
     """Version base schema"""
 
