@@ -3,7 +3,6 @@
 from sqlmodel import SQLModel, Field, Relationship, Column
 from sqlalchemy import String, Text, DateTime, Integer, Boolean, Float, ForeignKey, Table
 from sqlalchemy.dialects.postgresql import JSONB, ARRAY
-from sqlalchemy.orm import relationship
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 import uuid
@@ -48,7 +47,10 @@ class Library(SQLModel, table=True):
     path: Optional[str] = Field(default=None, sa_type=Text)
     description: Optional[str] = Field(default=None, sa_type=Text)
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    )
 
     # Owner relationship
     owner_id: int = Field(foreign_key="users.id")
@@ -206,12 +208,11 @@ class Album(SQLModel, table=True):
     end_date: Optional[datetime] = None
 
     # Many-to-many relationship with photos
-    # SQLModel doesn't have native many-to-many support, so we use SQLAlchemy's relationship
+    # SQLModel doesn't have native many-to-many support, so we use sa_relationship_kwargs
     photos: List["Photo"] = Relationship(
-        sa_relationship=relationship(
-            "Photo",
-            secondary=album_photos,
-            backref="photo_albums"
-        )
+        sa_relationship_kwargs={
+            "secondary": album_photos,
+            "backref": "photo_albums"
+        }
     )
 
