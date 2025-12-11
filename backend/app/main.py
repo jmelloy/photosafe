@@ -87,6 +87,49 @@ def deserialize_json_field(value):
     return value
 
 
+def serialize_photo_json_fields(photo_dict):
+    """Serialize JSON fields in a photo dictionary for database storage"""
+    json_fields = [
+        "keywords",
+        "labels",
+        "albums",
+        "persons",
+        "faces",
+        "place",
+        "exif",
+        "score",
+        "search_info",
+        "fields",
+    ]
+    for field in json_fields:
+        if field in photo_dict and photo_dict[field] is not None:
+            photo_dict[field] = serialize_json_field(photo_dict[field])
+    return photo_dict
+
+
+def handle_library_upsert(library_name: str, current_user: User, db: Session) -> int:
+    """Handle library name by upserting into libraries table.
+    
+    Returns the library_id for the given library name and user.
+    """
+    library = (
+        db.query(Library)
+        .filter(
+            Library.owner_id == current_user.id,
+            Library.name == library_name,
+        )
+        .first()
+    )
+    if not library:
+        library = Library(
+            name=library_name,
+            owner_id=current_user.id,
+        )
+        db.add(library)
+        db.flush()
+    return library.id
+
+
 @app.get("/")
 async def root():
     """Root endpoint"""
@@ -179,20 +222,7 @@ async def create_photo(
     photo_dict = photo_data.model_dump(exclude={"versions"})
 
     # Serialize JSON fields
-    for field in [
-        "keywords",
-        "labels",
-        "albums",
-        "persons",
-        "faces",
-        "place",
-        "exif",
-        "score",
-        "search_info",
-        "fields",
-    ]:
-        if field in photo_dict and photo_dict[field] is not None:
-            photo_dict[field] = serialize_json_field(photo_dict[field])
+    photo_dict = serialize_photo_json_fields(photo_dict)
 
     # Create photo with owner
     db_photo = Photo(**photo_dict, owner_id=current_user.id)
@@ -239,38 +269,10 @@ async def update_photo(
     # Handle library name - upsert into libraries table
     if "library" in update_dict and update_dict["library"]:
         library_name = update_dict["library"]
-        # Look for existing library with this name for the current user
-        library = (
-            db.query(Library)
-            .filter(Library.owner_id == current_user.id, Library.name == library_name)
-            .first()
-        )
-        # Create library if it doesn't exist
-        if not library:
-            library = Library(
-                name=library_name,
-                owner_id=current_user.id,
-            )
-            db.add(library)
-            db.flush()  # Flush to get the library ID
-        # Set the library_id on the photo
-        update_dict["library_id"] = library.id
+        update_dict["library_id"] = handle_library_upsert(library_name, current_user, db)
 
     # Serialize JSON fields
-    for field in [
-        "keywords",
-        "labels",
-        "albums",
-        "persons",
-        "faces",
-        "place",
-        "exif",
-        "score",
-        "search_info",
-        "fields",
-    ]:
-        if field in update_dict and update_dict[field] is not None:
-            update_dict[field] = serialize_json_field(update_dict[field])
+    update_dict = serialize_photo_json_fields(update_dict)
 
     # Update photo fields
     for key, value in update_dict.items():
@@ -345,38 +347,12 @@ async def batch_create_or_update_photos(
                 # Handle library name - upsert into libraries table
                 if "library" in update_dict and update_dict["library"]:
                     library_name = update_dict["library"]
-                    library = (
-                        db.query(Library)
-                        .filter(
-                            Library.owner_id == current_user.id,
-                            Library.name == library_name,
-                        )
-                        .first()
+                    update_dict["library_id"] = handle_library_upsert(
+                        library_name, current_user, db
                     )
-                    if not library:
-                        library = Library(
-                            name=library_name,
-                            owner_id=current_user.id,
-                        )
-                        db.add(library)
-                        db.flush()
-                    update_dict["library_id"] = library.id
 
                 # Serialize JSON fields
-                for field in [
-                    "keywords",
-                    "labels",
-                    "albums",
-                    "persons",
-                    "faces",
-                    "place",
-                    "exif",
-                    "score",
-                    "search_info",
-                    "fields",
-                ]:
-                    if field in update_dict and update_dict[field] is not None:
-                        update_dict[field] = serialize_json_field(update_dict[field])
+                update_dict = serialize_photo_json_fields(update_dict)
 
                 # Update photo fields
                 for key, value in update_dict.items():
@@ -418,20 +394,7 @@ async def batch_create_or_update_photos(
                 photo_dict = photo_data.model_dump(exclude={"versions"})
 
                 # Serialize JSON fields
-                for field in [
-                    "keywords",
-                    "labels",
-                    "albums",
-                    "persons",
-                    "faces",
-                    "place",
-                    "exif",
-                    "score",
-                    "search_info",
-                    "fields",
-                ]:
-                    if field in photo_dict and photo_dict[field] is not None:
-                        photo_dict[field] = serialize_json_field(photo_dict[field])
+                photo_dict = serialize_photo_json_fields(photo_dict)
 
                 # Create photo with owner
                 db_photo = Photo(**photo_dict, owner_id=current_user.id)

@@ -379,7 +379,9 @@ def icloud(
                 result = r.json()
                 total_created += result["created"]
                 total_updated += result["updated"]
-                existing += total_updated
+                # Track the number of photos that already existed (were updated)
+                # This is used for the stop condition
+                existing = total_updated
                 click.echo(
                     f"Batch processed: {result['created']} created, "
                     f"{result['updated']} updated, {result['errors']} errors"
@@ -495,12 +497,10 @@ def icloud(
             # Send batch when it reaches the batch size
             if len(photo_batch) >= batch_size:
                 send_batch()
-            
-            # Check stop condition
-            if existing > stop_after:
-                # Send remaining photos in batch before breaking
-                send_batch()
-                break
+                
+                # Check stop condition after sending batch
+                if existing > stop_after:
+                    break
 
         # Send any remaining photos in the final batch
         send_batch()
