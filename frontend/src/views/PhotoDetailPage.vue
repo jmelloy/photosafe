@@ -184,11 +184,12 @@ const loadPhoto = async () => {
   
   try {
     photo.value = await getPhoto(props.uuid);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Failed to load photo:", err);
-    if (err.response?.status === 404) {
+    const axiosError = err as { response?: { status?: number } };
+    if (axiosError.response?.status === 404) {
       error.value = "The photo you're looking for doesn't exist.";
-    } else if (err.response?.status === 403) {
+    } else if (axiosError.response?.status === 403) {
       error.value = "You don't have permission to view this photo.";
     } else {
       error.value = "Failed to load photo. Please try again.";
@@ -210,7 +211,7 @@ const copyLink = async () => {
     setTimeout(() => {
       copyLinkText.value = "🔗 Share Link";
     }, 2000);
-  } catch (err) {
+  } catch (err: unknown) {
     console.error("Failed to copy link:", err);
     copyLinkText.value = "✗ Copy Failed";
     setTimeout(() => {
@@ -237,7 +238,7 @@ const formatFileSize = (bytes?: number): string => {
   return `${mb.toFixed(2)} MB`;
 };
 
-const formatPlace = (place: any): string => {
+const formatPlace = (place: unknown): string => {
   if (typeof place === "string") return place;
   if (place && typeof place === "object") {
     return JSON.stringify(place);
