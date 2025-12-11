@@ -84,7 +84,7 @@ def macos(bucket, base_url, username, password):
 
     # Get server blocks
     r = requests.get(
-        f"{base_url}/photos/blocks", headers={"Authorization": f"Bearer {token}"}
+        f"{base_url}/api/photos/blocks", headers={"Authorization": f"Bearer {token}"}
     )
     r.raise_for_status()
     server_blocks = r.json()
@@ -101,10 +101,7 @@ def macos(bucket, base_url, username, password):
                     .get(str(month), {})
                     .get(str(day), {})
                 )
-                if vals and (
-                    vals["count"] != count
-                    or abs(parser.parse(vals["max_date"]) - date) > timedelta(seconds=3)
-                ):
+                if vals and (vals["count"] != count):
                     click.echo(
                         f"Discrepancy {year}/{month}/{day}, {vals} vs {count}/{date}"
                     )

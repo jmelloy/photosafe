@@ -12,7 +12,7 @@ import json
 from datetime import datetime, timedelta
 from pathlib import Path
 from .database import engine, Base, get_db
-from .models import Photo, Album, Version, User
+from .models import Photo, Album, Version, User, Library
 from .schemas import (
     PhotoResponse,
     PhotoCreate,
@@ -228,6 +228,26 @@ async def update_photo(
     # Extract versions data
     versions_data = photo_data.versions or []
     update_dict = photo_data.model_dump(exclude={"versions"}, exclude_unset=True)
+
+    # Handle library name - upsert into libraries table
+    if "library" in update_dict and update_dict["library"]:
+        library_name = update_dict["library"]
+        # Look for existing library with this name for the current user
+        library = (
+            db.query(Library)
+            .filter(Library.owner_id == current_user.id, Library.name == library_name)
+            .first()
+        )
+        # Create library if it doesn't exist
+        if not library:
+            library = Library(
+                name=library_name,
+                owner_id=current_user.id,
+            )
+            db.add(library)
+            db.flush()  # Flush to get the library ID
+        # Set the library_id on the photo
+        update_dict["library_id"] = library.id
 
     # Serialize JSON fields
     for field in [

@@ -10,7 +10,7 @@ import tempfile
 
 from app.main import app
 from app.database import Base, get_db
-from app.models import User, Photo
+from app.models import User, Photo, Library
 
 
 # NOTE: These tests require a PostgreSQL test database
