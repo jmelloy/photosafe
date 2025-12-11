@@ -16,6 +16,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+
     services:
       postgres:
         image: postgres:14
@@ -71,6 +74,9 @@ jobs:
     if: |
       github.event_name == 'push' &&
       (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+
+    permissions:
+      contents: write  # Required to push version bump commits
 
     steps:
       - name: Checkout code
