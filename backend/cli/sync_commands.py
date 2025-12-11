@@ -110,7 +110,7 @@ def macos(bucket, base_url, username, password):
     click.echo(f"Total: {total}, to process: {len(photos_to_process)}")
 
     # Sync photos
-    def sync_photo(photo):
+    def sync_photo(photo: osxphotos.PhotoInfo):
         p = photo.asdict()
         p["masterFingerprint"] = photo._info["masterFingerprint"]
         if not photo._info["cloudAssetGUID"]:
@@ -121,18 +121,25 @@ def macos(bucket, base_url, username, password):
             if v and type(v) is str and base_path in v:
                 p[k] = v.replace(base_path, "")
 
-        r = requests.patch(
-            f"{base_url}/api/photos/{p['uuid']}/",
-            data=json.dumps(p, cls=DateTimeEncoder),
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {token}",
-            },
-        )
+        try:
+            r = requests.patch(
+                f"{base_url}/api/photos/{p['uuid']}/",
+                data=json.dumps(p, cls=DateTimeEncoder),
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {token}",
+                },
+            )
 
-        if r.status_code == 404:
+            if r.status_code == 404:
+                return
+            click.echo(
+                f"Synced {photo.uuid} {photo.original_filename} ({r.status_code})..."
+            )
+            r.raise_for_status()
+        except Exception as e:
+            click.echo(f"Error syncing photo {photo.uuid}: {str(e)}", err=True)
             return
-        r.raise_for_status()
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         futures = executor.map(sync_photo, photos_to_process)

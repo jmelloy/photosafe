@@ -419,30 +419,14 @@ async def get_photo_blocks(
     Get photos grouped by year/month/day with counts and max dates.
     This endpoint groups photos without labels by date and returns a nested structure.
     """
-    # For PostgreSQL production, we can use array functions
-    # For SQLite testing, we'll filter in Python
-    from .database import SQLALCHEMY_DATABASE_URL
 
-    is_sqlite = SQLALCHEMY_DATABASE_URL.startswith("sqlite")
-
-    if is_sqlite:
-        # SQLite: Get all photos and filter in Python
-        query = db.query(
-            func.extract("year", Photo.date).label("year"),
-            func.extract("month", Photo.date).label("month"),
-            func.extract("day", Photo.date).label("day"),
-            func.count().label("count"),
-            func.max(func.coalesce(Photo.date_modified, Photo.date)).label("max_date"),
-        ).filter(Photo.labels == None)
-    else:
-        # PostgreSQL: Use array_length function
-        query = db.query(
-            func.extract("year", Photo.date).label("year"),
-            func.extract("month", Photo.date).label("month"),
-            func.extract("day", Photo.date).label("day"),
-            func.count().label("count"),
-            func.max(func.coalesce(Photo.date_modified, Photo.date)).label("max_date"),
-        ).filter(or_(Photo.labels == None, func.array_length(Photo.labels, 1) == None))
+    query = db.query(
+        func.extract("year", Photo.date).label("year"),
+        func.extract("month", Photo.date).label("month"),
+        func.extract("day", Photo.date).label("day"),
+        func.count().label("count"),
+        func.max(func.coalesce(Photo.date_modified, Photo.date)).label("max_date"),
+    ).filter(or_(Photo.labels == None, func.array_length(Photo.labels, 1) == None))
 
     # Filter by owner if not superuser
     if not current_user.is_superuser:

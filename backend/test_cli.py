@@ -27,7 +27,9 @@ SQLALCHEMY_DATABASE_URL = os.getenv(
     "postgresql://photosafe:photosafe@localhost:5432/photosafe_test",
 )
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, class_=Session)
+TestingSessionLocal = sessionmaker(
+    autocommit=False, autoflush=False, bind=engine, class_=Session
+)
 
 
 @pytest.fixture(scope="function")

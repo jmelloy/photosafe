@@ -1,7 +1,16 @@
 """Database models using SQLModel"""
 
 from sqlmodel import SQLModel, Field, Relationship, Column
-from sqlalchemy import String, Text, DateTime, Integer, Boolean, Float, ForeignKey, Table
+from sqlalchemy import (
+    String,
+    Text,
+    DateTime,
+    Integer,
+    Boolean,
+    Float,
+    ForeignKey,
+    Table,
+)
 from sqlalchemy.dialects.postgresql import JSONB, ARRAY
 from datetime import datetime
 from typing import Optional, List, Dict, Any
@@ -54,7 +63,7 @@ class Library(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(
         default_factory=datetime.utcnow,
-        sa_column=Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+        sa_column=Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow),
     )
 
     # Owner relationship
@@ -183,6 +192,7 @@ class Photo(SQLModel, table=True):
     @property
     def url(self) -> Optional[str]:
         """Compute URL for frontend display - prioritize S3 paths, then local file_path"""
+
         def build_s3_url(s3_path: str) -> Optional[str]:
             """Build full S3 URL from S3 path/key"""
             if not s3_path:
@@ -262,10 +272,7 @@ class Album(SQLModel, table=True):
     # Many-to-many relationship with photos
     # SQLModel doesn't have native many-to-many support, so we use sa_relationship_kwargs
     photos: List["Photo"] = Relationship(
-        sa_relationship_kwargs={
-            "secondary": album_photos,
-            "backref": "photo_albums"
-        }
+        sa_relationship_kwargs={"secondary": album_photos, "backref": "photo_albums"}
     )
 
 
@@ -276,6 +283,7 @@ class Album(SQLModel, table=True):
 
 class UserRead(SQLModel):
     """User read schema - for API responses"""
+
     id: int
     username: str
     email: str
@@ -288,6 +296,7 @@ class UserRead(SQLModel):
 
 class UserCreate(SQLModel):
     """User create schema - for API requests"""
+
     username: str
     email: str
     password: str
@@ -296,6 +305,7 @@ class UserCreate(SQLModel):
 
 class LibraryRead(SQLModel):
     """Library read schema - for API responses"""
+
     id: int
     name: str
     path: Optional[str] = None
@@ -307,6 +317,7 @@ class LibraryRead(SQLModel):
 
 class LibraryCreate(SQLModel):
     """Library create schema - for API requests"""
+
     name: str
     path: Optional[str] = None
     description: Optional[str] = None
@@ -314,6 +325,7 @@ class LibraryCreate(SQLModel):
 
 class LibraryUpdate(SQLModel):
     """Library update schema - for API requests"""
+
     name: Optional[str] = None
     path: Optional[str] = None
     description: Optional[str] = None
@@ -321,6 +333,7 @@ class LibraryUpdate(SQLModel):
 
 class VersionRead(SQLModel):
     """Version read schema - for API responses"""
+
     id: int
     photo_uuid: Optional[str] = None
     version: str
@@ -334,6 +347,7 @@ class VersionRead(SQLModel):
 
 class VersionCreate(SQLModel):
     """Version create schema - for API requests"""
+
     version: str
     s3_path: str
     filename: Optional[str] = None
@@ -345,6 +359,7 @@ class VersionCreate(SQLModel):
 
 class PhotoRead(SQLModel):
     """Photo read schema - for API responses"""
+
     uuid: str
     masterFingerprint: Optional[str] = None
     original_filename: str
@@ -403,6 +418,7 @@ class PhotoRead(SQLModel):
 
 class PhotoCreate(SQLModel):
     """Photo create schema - for API requests"""
+
     uuid: str
     masterFingerprint: Optional[str] = None
     original_filename: str
@@ -452,6 +468,7 @@ class PhotoCreate(SQLModel):
 
 class PhotoUpdate(SQLModel):
     """Photo update schema - for API requests (all fields optional)"""
+
     masterFingerprint: Optional[str] = None
     original_filename: Optional[str] = None
     date: Optional[datetime] = None
@@ -500,6 +517,7 @@ class PhotoUpdate(SQLModel):
 
 class AlbumRead(SQLModel):
     """Album read schema - for API responses"""
+
     uuid: str
     title: str
     creation_date: Optional[datetime] = None
@@ -512,6 +530,7 @@ class AlbumRead(SQLModel):
 
 class AlbumCreate(SQLModel):
     """Album create schema - for API requests"""
+
     uuid: str
     title: str = ""
     creation_date: Optional[datetime] = None
@@ -522,6 +541,7 @@ class AlbumCreate(SQLModel):
 
 class AlbumUpdate(SQLModel):
     """Album update schema - for API requests"""
+
     title: Optional[str] = None
     creation_date: Optional[datetime] = None
     start_date: Optional[datetime] = None
@@ -534,21 +554,22 @@ class AlbumUpdate(SQLModel):
 
 class Token(SQLModel):
     """Token response schema"""
+
     access_token: str
     token_type: str
 
 
 class TokenData(SQLModel):
     """Token data schema"""
+
     username: Optional[str] = None
 
 
 class PaginatedPhotosResponse(SQLModel):
     """Paginated photos response schema"""
+
     items: List[PhotoRead]
     total: int
     page: int
     page_size: int
     has_more: bool
-
-
