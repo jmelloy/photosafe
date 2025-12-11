@@ -175,6 +175,56 @@ class Photo(SQLModel, table=True):
         back_populates="photo", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
 
+    @property
+    def url(self) -> Optional[str]:
+        """Compute URL for frontend display - prioritize S3 paths, then local file_path"""
+        S3_BASE_URL = "https://photos.melloy.life"
+
+        def build_s3_url(s3_path: str) -> Optional[str]:
+            """Build full S3 URL from S3 path/key"""
+            if not s3_path:
+                return None
+            # If already a full URL, return as-is
+            if s3_path.startswith("http://") or s3_path.startswith("https://"):
+                return s3_path
+            # Otherwise, construct URL with base domain
+            s3_path = s3_path.lstrip("/")
+            return f"{S3_BASE_URL}/{s3_path}"
+
+        # Check for S3 paths - prioritize thumbnail, then key path, then edited, then original
+        if self.s3_thumbnail_path:
+            return build_s3_url(self.s3_thumbnail_path)
+        elif self.s3_key_path:
+            return build_s3_url(self.s3_key_path)
+        elif self.s3_edited_path:
+            return build_s3_url(self.s3_edited_path)
+        elif self.s3_original_path:
+            return build_s3_url(self.s3_original_path)
+        elif self.file_path:
+            # Fallback to local file_path
+            from pathlib import Path
+            file_path_str = str(self.file_path).replace("\\", "/")
+
+            # If file_path contains "uploads", extract the path from there
+            if "uploads" in file_path_str:
+                uploads_index = file_path_str.find("uploads")
+                if uploads_index != -1:
+                    return "/" + file_path_str[uploads_index:]
+                else:
+                    return f"/uploads/{Path(self.file_path).name}"
+            else:
+                # If no uploads in path, assume it's relative to uploads directory
+                file_path = Path(self.file_path)
+                if file_path.is_absolute():
+                    return f"/uploads/{file_path.name}"
+                else:
+                    # Relative path - prepend /uploads if not already there
+                    if not file_path_str.startswith("/"):
+                        return f"/uploads/{file_path_str}"
+                    else:
+                        return file_path_str
+        return None
+
 
 class Version(SQLModel, table=True):
     """Photo version model"""
@@ -215,4 +265,288 @@ class Album(SQLModel, table=True):
             "backref": "photo_albums"
         }
     )
+
+
+# ============= READ/WRITE SCHEMA VARIANTS =============
+# These classes are used for API request/response validation
+# They exclude database-internal fields like relationships
+
+
+class UserRead(SQLModel):
+    """User read schema - for API responses"""
+    id: int
+    username: str
+    email: str
+    name: Optional[str] = None
+    is_active: bool
+    is_superuser: bool
+    date_joined: datetime
+    last_login: Optional[datetime] = None
+
+
+class UserCreate(SQLModel):
+    """User create schema - for API requests"""
+    username: str
+    email: str
+    password: str
+    name: Optional[str] = None
+
+
+class LibraryRead(SQLModel):
+    """Library read schema - for API responses"""
+    id: int
+    name: str
+    path: Optional[str] = None
+    description: Optional[str] = None
+    owner_id: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class LibraryCreate(SQLModel):
+    """Library create schema - for API requests"""
+    name: str
+    path: Optional[str] = None
+    description: Optional[str] = None
+
+
+class LibraryUpdate(SQLModel):
+    """Library update schema - for API requests"""
+    name: Optional[str] = None
+    path: Optional[str] = None
+    description: Optional[str] = None
+
+
+class VersionRead(SQLModel):
+    """Version read schema - for API responses"""
+    id: int
+    photo_uuid: Optional[str] = None
+    version: str
+    s3_path: str
+    filename: Optional[str] = None
+    width: Optional[int] = None
+    height: Optional[int] = None
+    size: Optional[int] = None
+    type: Optional[str] = None
+
+
+class VersionCreate(SQLModel):
+    """Version create schema - for API requests"""
+    version: str
+    s3_path: str
+    filename: Optional[str] = None
+    width: Optional[int] = None
+    height: Optional[int] = None
+    size: Optional[int] = None
+    type: Optional[str] = None
+
+
+class PhotoRead(SQLModel):
+    """Photo read schema - for API responses"""
+    uuid: str
+    masterFingerprint: Optional[str] = None
+    original_filename: str
+    date: datetime
+    description: Optional[str] = None
+    title: Optional[str] = None
+    keywords: Optional[List[str]] = None
+    labels: Optional[List[str]] = None
+    albums: Optional[List[str]] = None
+    persons: Optional[List[str]] = None
+    faces: Optional[Dict[str, Any]] = None
+    favorite: Optional[bool] = None
+    hidden: Optional[bool] = None
+    isphoto: Optional[bool] = None
+    ismovie: Optional[bool] = None
+    burst: Optional[bool] = None
+    live_photo: Optional[bool] = None
+    portrait: Optional[bool] = None
+    screenshot: Optional[bool] = None
+    slow_mo: Optional[bool] = None
+    time_lapse: Optional[bool] = None
+    hdr: Optional[bool] = None
+    selfie: Optional[bool] = None
+    panorama: Optional[bool] = None
+    intrash: Optional[bool] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    uti: Optional[str] = None
+    date_modified: Optional[datetime] = None
+    place: Optional[Dict[str, Any]] = None
+    exif: Optional[Dict[str, Any]] = None
+    score: Optional[Dict[str, Any]] = None
+    search_info: Optional[Dict[str, Any]] = None
+    fields: Optional[Dict[str, Any]] = None
+    height: Optional[int] = None
+    width: Optional[int] = None
+    size: Optional[int] = None
+    orientation: Optional[int] = None
+    s3_key_path: Optional[str] = None
+    s3_thumbnail_path: Optional[str] = None
+    s3_edited_path: Optional[str] = None
+    s3_original_path: Optional[str] = None
+    s3_live_path: Optional[str] = None
+    library: Optional[str] = None
+    filename: Optional[str] = None
+    file_path: Optional[str] = None
+    content_type: Optional[str] = None
+    file_size: Optional[int] = None
+    uploaded_at: datetime
+    url: Optional[str] = None  # Computed property
+    versions: Optional[List[VersionRead]] = None
+
+    class Config:
+        from_attributes = True
+
+
+class PhotoCreate(SQLModel):
+    """Photo create schema - for API requests"""
+    uuid: str
+    masterFingerprint: Optional[str] = None
+    original_filename: str
+    date: datetime
+    description: Optional[str] = None
+    title: Optional[str] = None
+    keywords: Optional[List[str]] = None
+    labels: Optional[List[str]] = None
+    albums: Optional[List[str]] = None
+    persons: Optional[List[str]] = None
+    faces: Optional[Dict[str, Any]] = None
+    favorite: Optional[bool] = None
+    hidden: Optional[bool] = None
+    isphoto: Optional[bool] = None
+    ismovie: Optional[bool] = None
+    burst: Optional[bool] = None
+    live_photo: Optional[bool] = None
+    portrait: Optional[bool] = None
+    screenshot: Optional[bool] = None
+    slow_mo: Optional[bool] = None
+    time_lapse: Optional[bool] = None
+    hdr: Optional[bool] = None
+    selfie: Optional[bool] = None
+    panorama: Optional[bool] = None
+    intrash: Optional[bool] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    uti: Optional[str] = None
+    date_modified: Optional[datetime] = None
+    place: Optional[Dict[str, Any]] = None
+    exif: Optional[Dict[str, Any]] = None
+    score: Optional[Dict[str, Any]] = None
+    search_info: Optional[Dict[str, Any]] = None
+    fields: Optional[Dict[str, Any]] = None
+    height: Optional[int] = None
+    width: Optional[int] = None
+    size: Optional[int] = None
+    orientation: Optional[int] = None
+    s3_key_path: Optional[str] = None
+    s3_thumbnail_path: Optional[str] = None
+    s3_edited_path: Optional[str] = None
+    s3_original_path: Optional[str] = None
+    s3_live_path: Optional[str] = None
+    library: Optional[str] = None
+    versions: Optional[List[VersionCreate]] = None
+
+
+class PhotoUpdate(SQLModel):
+    """Photo update schema - for API requests (all fields optional)"""
+    masterFingerprint: Optional[str] = None
+    original_filename: Optional[str] = None
+    date: Optional[datetime] = None
+    description: Optional[str] = None
+    title: Optional[str] = None
+    keywords: Optional[List[str]] = None
+    labels: Optional[List[str]] = None
+    albums: Optional[List[str]] = None
+    persons: Optional[List[str]] = None
+    faces: Optional[Dict[str, Any]] = None
+    favorite: Optional[bool] = None
+    hidden: Optional[bool] = None
+    isphoto: Optional[bool] = None
+    ismovie: Optional[bool] = None
+    burst: Optional[bool] = None
+    live_photo: Optional[bool] = None
+    portrait: Optional[bool] = None
+    screenshot: Optional[bool] = None
+    slow_mo: Optional[bool] = None
+    time_lapse: Optional[bool] = None
+    hdr: Optional[bool] = None
+    selfie: Optional[bool] = None
+    panorama: Optional[bool] = None
+    intrash: Optional[bool] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    uti: Optional[str] = None
+    date_modified: Optional[datetime] = None
+    place: Optional[Dict[str, Any]] = None
+    exif: Optional[Dict[str, Any]] = None
+    score: Optional[Dict[str, Any]] = None
+    search_info: Optional[Dict[str, Any]] = None
+    fields: Optional[Dict[str, Any]] = None
+    height: Optional[int] = None
+    width: Optional[int] = None
+    size: Optional[int] = None
+    orientation: Optional[int] = None
+    s3_key_path: Optional[str] = None
+    s3_thumbnail_path: Optional[str] = None
+    s3_edited_path: Optional[str] = None
+    s3_original_path: Optional[str] = None
+    s3_live_path: Optional[str] = None
+    library: Optional[str] = None
+    versions: Optional[List[VersionCreate]] = None
+
+
+class AlbumRead(SQLModel):
+    """Album read schema - for API responses"""
+    uuid: str
+    title: str
+    creation_date: Optional[datetime] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AlbumCreate(SQLModel):
+    """Album create schema - for API requests"""
+    uuid: str
+    title: str = ""
+    creation_date: Optional[datetime] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    photos: Optional[List[str]] = None  # List of photo UUIDs
+
+
+class AlbumUpdate(SQLModel):
+    """Album update schema - for API requests"""
+    title: Optional[str] = None
+    creation_date: Optional[datetime] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    photos: Optional[List[str]] = None  # List of photo UUIDs
+
+
+# ============= ADDITIONAL SCHEMAS =============
+
+
+class Token(SQLModel):
+    """Token response schema"""
+    access_token: str
+    token_type: str
+
+
+class TokenData(SQLModel):
+    """Token data schema"""
+    username: Optional[str] = None
+
+
+class PaginatedPhotosResponse(SQLModel):
+    """Paginated photos response schema"""
+    items: List[PhotoRead]
+    total: int
+    page: int
+    page_size: int
+    has_more: bool
+
 
