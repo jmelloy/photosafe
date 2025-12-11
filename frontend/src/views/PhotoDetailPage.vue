@@ -178,6 +178,21 @@ const loading = ref<boolean>(true);
 const error = ref<string>("");
 const copyLinkText = ref<string>("🔗 Share Link");
 
+// Type guard for Axios-like error responses
+interface AxiosLikeError {
+  response?: {
+    status?: number;
+  };
+}
+
+function isAxiosLikeError(error: unknown): error is AxiosLikeError {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error
+  );
+}
+
 const loadPhoto = async () => {
   loading.value = true;
   error.value = "";
@@ -186,11 +201,14 @@ const loadPhoto = async () => {
     photo.value = await getPhoto(props.uuid);
   } catch (err: unknown) {
     console.error("Failed to load photo:", err);
-    const axiosError = err as { response?: { status?: number } };
-    if (axiosError.response?.status === 404) {
-      error.value = "The photo you're looking for doesn't exist.";
-    } else if (axiosError.response?.status === 403) {
-      error.value = "You don't have permission to view this photo.";
+    if (isAxiosLikeError(err)) {
+      if (err.response?.status === 404) {
+        error.value = "The photo you're looking for doesn't exist.";
+      } else if (err.response?.status === 403) {
+        error.value = "You don't have permission to view this photo.";
+      } else {
+        error.value = "Failed to load photo. Please try again.";
+      }
     } else {
       error.value = "Failed to load photo. Please try again.";
     }

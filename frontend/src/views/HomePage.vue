@@ -182,7 +182,7 @@ const loadPhotos = async (reset: boolean = true) => {
       extractKeywords();
       extractPersons();
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Failed to load photos:", error);
     alert("Failed to load photos. Please try again.");
   } finally {
