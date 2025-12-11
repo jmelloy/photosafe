@@ -1,194 +1,554 @@
-"""Database models"""
+"""Database models using SQLModel"""
 
-from sqlalchemy import (
-    Column,
-    Integer,
-    String,
-    DateTime,
-    Boolean,
-    Float,
-    ForeignKey,
-    Text,
-    Table,
-)
+from sqlmodel import SQLModel, Field, Relationship, Column
+from sqlalchemy import String, Text, DateTime, Integer, Boolean, Float, ForeignKey, Table
 from sqlalchemy.dialects.postgresql import JSONB, ARRAY
-from sqlalchemy.orm import relationship
 from datetime import datetime
+from typing import Optional, List, Dict, Any
+from pathlib import Path
 import uuid
-from .database import Base
+import os
+
+# S3 base URL from environment or default
+S3_BASE_URL = os.getenv("S3_BASE_URL", "https://photos.melloy.life")
 
 
 # Association table for many-to-many relationship between albums and photos
 album_photos = Table(
     "album_photos",
-    Base.metadata,
+    SQLModel.metadata,
     Column("album_uuid", String, ForeignKey("albums.uuid")),
     Column("photo_uuid", String, ForeignKey("photos.uuid")),
 )
 
 
-class User(Base):
+class User(SQLModel, table=True):
     """User model matching Django User model"""
 
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True, nullable=False)
-    email = Column(String, unique=True, index=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
-    name = Column(String, nullable=True)
-    is_active = Column(Boolean, default=True)
-    is_superuser = Column(Boolean, default=False)
-    date_joined = Column(DateTime, default=datetime.utcnow)
-    last_login = Column(DateTime, nullable=True)
+    id: Optional[int] = Field(default=None, primary_key=True, index=True)
+    username: str = Field(unique=True, index=True, sa_type=String)
+    email: str = Field(unique=True, index=True, sa_type=String)
+    hashed_password: str = Field(sa_type=String)
+    name: Optional[str] = Field(default=None, sa_type=String)
+    is_active: bool = Field(default=True)
+    is_superuser: bool = Field(default=False)
+    date_joined: datetime = Field(default_factory=datetime.utcnow)
+    last_login: Optional[datetime] = None
 
     # Relationships
-    photos = relationship("Photo", back_populates="owner")
-    libraries = relationship("Library", back_populates="owner")
+    photos: List["Photo"] = Relationship(back_populates="owner")
+    libraries: List["Library"] = Relationship(back_populates="owner")
 
 
-class Library(Base):
+class Library(SQLModel, table=True):
     """Library model for managing multiple photo libraries per user"""
 
     __tablename__ = "libraries"
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False)
-    path = Column(Text, nullable=True)
-    description = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    id: Optional[int] = Field(default=None, primary_key=True, index=True)
+    name: str = Field(sa_type=String)
+    path: Optional[str] = Field(default=None, sa_type=Text)
+    description: Optional[str] = Field(default=None, sa_type=Text)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    )
 
     # Owner relationship
-    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    owner_id: int = Field(foreign_key="users.id")
 
     # Relationships
-    owner = relationship("User", back_populates="libraries")
-    photos = relationship("Photo", back_populates="library_ref")
+    owner: Optional["User"] = Relationship(back_populates="libraries")
+    photos: List["Photo"] = Relationship(back_populates="library_ref")
 
 
-class Photo(Base):
+class Photo(SQLModel, table=True):
     """Photo model matching Django Photo model"""
 
     __tablename__ = "photos"
 
     # Primary identifier
-    uuid = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    masterFingerprint = Column(Text, nullable=True)
+    uuid: str = Field(
+        default_factory=lambda: str(uuid.uuid4()),
+        primary_key=True,
+        sa_type=String,
+    )
+    masterFingerprint: Optional[str] = Field(default=None, sa_type=Text)
 
     # File information
-    original_filename = Column(Text, nullable=False)
-    date = Column(DateTime, nullable=False)
-    description = Column(Text, nullable=True)
-    title = Column(Text, nullable=True)
+    original_filename: str = Field(sa_type=Text)
+    date: datetime
+    description: Optional[str] = Field(default=None, sa_type=Text)
+    title: Optional[str] = Field(default=None, sa_type=Text)
 
     # Arrays - PostgreSQL ARRAY type
-    keywords = Column(ARRAY(String), nullable=True)
-    labels = Column(ARRAY(String), nullable=True)
-    albums = Column(ARRAY(String), nullable=True)
-    persons = Column(ARRAY(String), nullable=True)
-
-    # JSON fields - PostgreSQL JSONB type
-    faces = Column(JSONB, nullable=True)
-
-    # Boolean flags
-    favorite = Column(Boolean, nullable=True)
-    hidden = Column(Boolean, nullable=True)
-    isphoto = Column(Boolean, nullable=True)
-    ismovie = Column(Boolean, nullable=True)
-    burst = Column(Boolean, nullable=True)
-    live_photo = Column(Boolean, nullable=True)
-    portrait = Column(Boolean, nullable=True)
-    screenshot = Column(Boolean, nullable=True)
-    slow_mo = Column(Boolean, nullable=True)
-    time_lapse = Column(Boolean, nullable=True)
-    hdr = Column(Boolean, nullable=True)
-    selfie = Column(Boolean, nullable=True)
-    panorama = Column(Boolean, nullable=True)
-    intrash = Column(Boolean, nullable=True)
-
-    # Location
-    latitude = Column(Float, nullable=True)
-    longitude = Column(Float, nullable=True)
-
-    # Media type
-    uti = Column(Text, nullable=True)
-
-    # Dates
-    date_modified = Column(DateTime, nullable=True)
-
-    # JSON fields - PostgreSQL JSONB type
-    place = Column(JSONB, nullable=True)
-    exif = Column(JSONB, nullable=True)
-    score = Column(JSONB, nullable=True)
-    search_info = Column(JSONB, nullable=True)
-    fields = Column(JSONB, nullable=True)
-
-    # Dimensions and size
-    height = Column(Integer, nullable=True)
-    width = Column(Integer, nullable=True)
-    size = Column(Integer, nullable=True)
-    orientation = Column(Integer, nullable=True)
-
-    # S3 paths
-    s3_key_path = Column(Text, nullable=True)
-    s3_thumbnail_path = Column(Text, nullable=True)
-    s3_edited_path = Column(Text, nullable=True)
-    s3_original_path = Column(Text, nullable=True)
-    s3_live_path = Column(Text, nullable=True)
-
-    # Library support - keep library string for backwards compatibility
-    library = Column(Text, nullable=True)
-    library_id = Column(Integer, ForeignKey("libraries.id"), nullable=True)
-
-    # For backwards compatibility with existing upload functionality
-    filename = Column(String, nullable=True)
-    file_path = Column(String, nullable=True)
-    content_type = Column(String, nullable=True)
-    file_size = Column(Integer, nullable=True)
-    uploaded_at = Column(DateTime, default=datetime.utcnow)
-
-    # Owner relationship - matching Django Photo model
-    owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-
-    # Relationships
-    owner = relationship("User", back_populates="photos")
-    library_ref = relationship("Library", back_populates="photos")
-    versions = relationship(
-        "Version", back_populates="photo", cascade="all, delete-orphan"
+    keywords: Optional[List[str]] = Field(
+        default=None, sa_column=Column(ARRAY(String), nullable=True)
+    )
+    labels: Optional[List[str]] = Field(
+        default=None, sa_column=Column(ARRAY(String), nullable=True)
+    )
+    albums: Optional[List[str]] = Field(
+        default=None, sa_column=Column(ARRAY(String), nullable=True)
+    )
+    persons: Optional[List[str]] = Field(
+        default=None, sa_column=Column(ARRAY(String), nullable=True)
     )
 
+    # JSON fields - PostgreSQL JSONB type
+    faces: Optional[Dict[str, Any]] = Field(
+        default=None, sa_column=Column(JSONB, nullable=True)
+    )
 
-class Version(Base):
+    # Boolean flags
+    favorite: Optional[bool] = None
+    hidden: Optional[bool] = None
+    isphoto: Optional[bool] = None
+    ismovie: Optional[bool] = None
+    burst: Optional[bool] = None
+    live_photo: Optional[bool] = None
+    portrait: Optional[bool] = None
+    screenshot: Optional[bool] = None
+    slow_mo: Optional[bool] = None
+    time_lapse: Optional[bool] = None
+    hdr: Optional[bool] = None
+    selfie: Optional[bool] = None
+    panorama: Optional[bool] = None
+    intrash: Optional[bool] = None
+
+    # Location
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+    # Media type
+    uti: Optional[str] = Field(default=None, sa_type=Text)
+
+    # Dates
+    date_modified: Optional[datetime] = None
+
+    # JSON fields - PostgreSQL JSONB type
+    place: Optional[Dict[str, Any]] = Field(
+        default=None, sa_column=Column(JSONB, nullable=True)
+    )
+    exif: Optional[Dict[str, Any]] = Field(
+        default=None, sa_column=Column(JSONB, nullable=True)
+    )
+    score: Optional[Dict[str, Any]] = Field(
+        default=None, sa_column=Column(JSONB, nullable=True)
+    )
+    search_info: Optional[Dict[str, Any]] = Field(
+        default=None, sa_column=Column(JSONB, nullable=True)
+    )
+    fields: Optional[Dict[str, Any]] = Field(
+        default=None, sa_column=Column(JSONB, nullable=True)
+    )
+
+    # Dimensions and size
+    height: Optional[int] = None
+    width: Optional[int] = None
+    size: Optional[int] = None
+    orientation: Optional[int] = None
+
+    # S3 paths
+    s3_key_path: Optional[str] = Field(default=None, sa_type=Text)
+    s3_thumbnail_path: Optional[str] = Field(default=None, sa_type=Text)
+    s3_edited_path: Optional[str] = Field(default=None, sa_type=Text)
+    s3_original_path: Optional[str] = Field(default=None, sa_type=Text)
+    s3_live_path: Optional[str] = Field(default=None, sa_type=Text)
+
+    # Library support - keep library string for backwards compatibility
+    library: Optional[str] = Field(default=None, sa_type=Text)
+    library_id: Optional[int] = Field(default=None, foreign_key="libraries.id")
+
+    # For backwards compatibility with existing upload functionality
+    filename: Optional[str] = Field(default=None, sa_type=String)
+    file_path: Optional[str] = Field(default=None, sa_type=String)
+    content_type: Optional[str] = Field(default=None, sa_type=String)
+    file_size: Optional[int] = None
+    uploaded_at: datetime = Field(default_factory=datetime.utcnow)
+
+    # Owner relationship - matching Django Photo model
+    owner_id: Optional[int] = Field(default=None, foreign_key="users.id")
+
+    # Relationships
+    owner: Optional["User"] = Relationship(back_populates="photos")
+    library_ref: Optional["Library"] = Relationship(back_populates="photos")
+    versions: List["Version"] = Relationship(
+        back_populates="photo", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+
+    @property
+    def url(self) -> Optional[str]:
+        """Compute URL for frontend display - prioritize S3 paths, then local file_path"""
+        def build_s3_url(s3_path: str) -> Optional[str]:
+            """Build full S3 URL from S3 path/key"""
+            if not s3_path:
+                return None
+            # If already a full URL, return as-is
+            if s3_path.startswith("http://") or s3_path.startswith("https://"):
+                return s3_path
+            # Otherwise, construct URL with base domain
+            s3_path = s3_path.lstrip("/")
+            return f"{S3_BASE_URL}/{s3_path}"
+
+        # Check for S3 paths - prioritize thumbnail, then key path, then edited, then original
+        if self.s3_thumbnail_path:
+            return build_s3_url(self.s3_thumbnail_path)
+        elif self.s3_key_path:
+            return build_s3_url(self.s3_key_path)
+        elif self.s3_edited_path:
+            return build_s3_url(self.s3_edited_path)
+        elif self.s3_original_path:
+            return build_s3_url(self.s3_original_path)
+        elif self.file_path:
+            # Fallback to local file_path
+            file_path_str = str(self.file_path).replace("\\", "/")
+
+            # If file_path contains "uploads", extract the path from there
+            if "uploads" in file_path_str:
+                uploads_index = file_path_str.find("uploads")
+                if uploads_index != -1:
+                    return "/" + file_path_str[uploads_index:]
+                else:
+                    return f"/uploads/{Path(self.file_path).name}"
+            else:
+                # If no uploads in path, assume it's relative to uploads directory
+                file_path = Path(self.file_path)
+                if file_path.is_absolute():
+                    return f"/uploads/{file_path.name}"
+                else:
+                    # Relative path - prepend /uploads if not already there
+                    if not file_path_str.startswith("/"):
+                        return f"/uploads/{file_path_str}"
+                    else:
+                        return file_path_str
+        return None
+
+
+class Version(SQLModel, table=True):
     """Photo version model"""
 
     __tablename__ = "versions"
 
-    id = Column(Integer, primary_key=True, index=True)
-    photo_uuid = Column(String, ForeignKey("photos.uuid"), nullable=True)
+    id: Optional[int] = Field(default=None, primary_key=True, index=True)
+    photo_uuid: Optional[str] = Field(default=None, foreign_key="photos.uuid")
 
-    version = Column(Text, nullable=False)
-    s3_path = Column(Text, nullable=False)
-    filename = Column(Text, nullable=True)
-    width = Column(Integer, nullable=True)
-    height = Column(Integer, nullable=True)
-    size = Column(Integer, nullable=True)
-    type = Column(Text, nullable=True)
+    version: str = Field(sa_type=Text)
+    s3_path: str = Field(sa_type=Text)
+    filename: Optional[str] = Field(default=None, sa_type=Text)
+    width: Optional[int] = None
+    height: Optional[int] = None
+    size: Optional[int] = None
+    type: Optional[str] = Field(default=None, sa_type=Text)
 
     # Relationship
-    photo = relationship("Photo", back_populates="versions")
+    photo: Optional["Photo"] = Relationship(back_populates="versions")
 
 
-class Album(Base):
+class Album(SQLModel, table=True):
     """Album model"""
 
     __tablename__ = "albums"
 
-    uuid = Column(String, primary_key=True)
-    title = Column(Text, nullable=False, default="")
-    creation_date = Column(DateTime, nullable=True)
-    start_date = Column(DateTime, nullable=True)
-    end_date = Column(DateTime, nullable=True)
+    uuid: str = Field(primary_key=True, sa_type=String)
+    title: str = Field(default="", sa_type=Text)
+    creation_date: Optional[datetime] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
 
     # Many-to-many relationship with photos
-    photos = relationship("Photo", secondary=album_photos, backref="photo_albums")
+    # SQLModel doesn't have native many-to-many support, so we use sa_relationship_kwargs
+    photos: List["Photo"] = Relationship(
+        sa_relationship_kwargs={
+            "secondary": album_photos,
+            "backref": "photo_albums"
+        }
+    )
+
+
+# ============= READ/WRITE SCHEMA VARIANTS =============
+# These classes are used for API request/response validation
+# They exclude database-internal fields like relationships
+
+
+class UserRead(SQLModel):
+    """User read schema - for API responses"""
+    id: int
+    username: str
+    email: str
+    name: Optional[str] = None
+    is_active: bool
+    is_superuser: bool
+    date_joined: datetime
+    last_login: Optional[datetime] = None
+
+
+class UserCreate(SQLModel):
+    """User create schema - for API requests"""
+    username: str
+    email: str
+    password: str
+    name: Optional[str] = None
+
+
+class LibraryRead(SQLModel):
+    """Library read schema - for API responses"""
+    id: int
+    name: str
+    path: Optional[str] = None
+    description: Optional[str] = None
+    owner_id: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class LibraryCreate(SQLModel):
+    """Library create schema - for API requests"""
+    name: str
+    path: Optional[str] = None
+    description: Optional[str] = None
+
+
+class LibraryUpdate(SQLModel):
+    """Library update schema - for API requests"""
+    name: Optional[str] = None
+    path: Optional[str] = None
+    description: Optional[str] = None
+
+
+class VersionRead(SQLModel):
+    """Version read schema - for API responses"""
+    id: int
+    photo_uuid: Optional[str] = None
+    version: str
+    s3_path: str
+    filename: Optional[str] = None
+    width: Optional[int] = None
+    height: Optional[int] = None
+    size: Optional[int] = None
+    type: Optional[str] = None
+
+
+class VersionCreate(SQLModel):
+    """Version create schema - for API requests"""
+    version: str
+    s3_path: str
+    filename: Optional[str] = None
+    width: Optional[int] = None
+    height: Optional[int] = None
+    size: Optional[int] = None
+    type: Optional[str] = None
+
+
+class PhotoRead(SQLModel):
+    """Photo read schema - for API responses"""
+    uuid: str
+    masterFingerprint: Optional[str] = None
+    original_filename: str
+    date: datetime
+    description: Optional[str] = None
+    title: Optional[str] = None
+    keywords: Optional[List[str]] = None
+    labels: Optional[List[str]] = None
+    albums: Optional[List[str]] = None
+    persons: Optional[List[str]] = None
+    faces: Optional[Dict[str, Any]] = None
+    favorite: Optional[bool] = None
+    hidden: Optional[bool] = None
+    isphoto: Optional[bool] = None
+    ismovie: Optional[bool] = None
+    burst: Optional[bool] = None
+    live_photo: Optional[bool] = None
+    portrait: Optional[bool] = None
+    screenshot: Optional[bool] = None
+    slow_mo: Optional[bool] = None
+    time_lapse: Optional[bool] = None
+    hdr: Optional[bool] = None
+    selfie: Optional[bool] = None
+    panorama: Optional[bool] = None
+    intrash: Optional[bool] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    uti: Optional[str] = None
+    date_modified: Optional[datetime] = None
+    place: Optional[Dict[str, Any]] = None
+    exif: Optional[Dict[str, Any]] = None
+    score: Optional[Dict[str, Any]] = None
+    search_info: Optional[Dict[str, Any]] = None
+    fields: Optional[Dict[str, Any]] = None
+    height: Optional[int] = None
+    width: Optional[int] = None
+    size: Optional[int] = None
+    orientation: Optional[int] = None
+    s3_key_path: Optional[str] = None
+    s3_thumbnail_path: Optional[str] = None
+    s3_edited_path: Optional[str] = None
+    s3_original_path: Optional[str] = None
+    s3_live_path: Optional[str] = None
+    library: Optional[str] = None
+    filename: Optional[str] = None
+    file_path: Optional[str] = None
+    content_type: Optional[str] = None
+    file_size: Optional[int] = None
+    uploaded_at: datetime
+    url: Optional[str] = None  # Computed property
+    versions: Optional[List[VersionRead]] = None
+
+    class Config:
+        from_attributes = True
+
+
+class PhotoCreate(SQLModel):
+    """Photo create schema - for API requests"""
+    uuid: str
+    masterFingerprint: Optional[str] = None
+    original_filename: str
+    date: datetime
+    description: Optional[str] = None
+    title: Optional[str] = None
+    keywords: Optional[List[str]] = None
+    labels: Optional[List[str]] = None
+    albums: Optional[List[str]] = None
+    persons: Optional[List[str]] = None
+    faces: Optional[Dict[str, Any]] = None
+    favorite: Optional[bool] = None
+    hidden: Optional[bool] = None
+    isphoto: Optional[bool] = None
+    ismovie: Optional[bool] = None
+    burst: Optional[bool] = None
+    live_photo: Optional[bool] = None
+    portrait: Optional[bool] = None
+    screenshot: Optional[bool] = None
+    slow_mo: Optional[bool] = None
+    time_lapse: Optional[bool] = None
+    hdr: Optional[bool] = None
+    selfie: Optional[bool] = None
+    panorama: Optional[bool] = None
+    intrash: Optional[bool] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    uti: Optional[str] = None
+    date_modified: Optional[datetime] = None
+    place: Optional[Dict[str, Any]] = None
+    exif: Optional[Dict[str, Any]] = None
+    score: Optional[Dict[str, Any]] = None
+    search_info: Optional[Dict[str, Any]] = None
+    fields: Optional[Dict[str, Any]] = None
+    height: Optional[int] = None
+    width: Optional[int] = None
+    size: Optional[int] = None
+    orientation: Optional[int] = None
+    s3_key_path: Optional[str] = None
+    s3_thumbnail_path: Optional[str] = None
+    s3_edited_path: Optional[str] = None
+    s3_original_path: Optional[str] = None
+    s3_live_path: Optional[str] = None
+    library: Optional[str] = None
+    versions: Optional[List[VersionCreate]] = None
+
+
+class PhotoUpdate(SQLModel):
+    """Photo update schema - for API requests (all fields optional)"""
+    masterFingerprint: Optional[str] = None
+    original_filename: Optional[str] = None
+    date: Optional[datetime] = None
+    description: Optional[str] = None
+    title: Optional[str] = None
+    keywords: Optional[List[str]] = None
+    labels: Optional[List[str]] = None
+    albums: Optional[List[str]] = None
+    persons: Optional[List[str]] = None
+    faces: Optional[Dict[str, Any]] = None
+    favorite: Optional[bool] = None
+    hidden: Optional[bool] = None
+    isphoto: Optional[bool] = None
+    ismovie: Optional[bool] = None
+    burst: Optional[bool] = None
+    live_photo: Optional[bool] = None
+    portrait: Optional[bool] = None
+    screenshot: Optional[bool] = None
+    slow_mo: Optional[bool] = None
+    time_lapse: Optional[bool] = None
+    hdr: Optional[bool] = None
+    selfie: Optional[bool] = None
+    panorama: Optional[bool] = None
+    intrash: Optional[bool] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    uti: Optional[str] = None
+    date_modified: Optional[datetime] = None
+    place: Optional[Dict[str, Any]] = None
+    exif: Optional[Dict[str, Any]] = None
+    score: Optional[Dict[str, Any]] = None
+    search_info: Optional[Dict[str, Any]] = None
+    fields: Optional[Dict[str, Any]] = None
+    height: Optional[int] = None
+    width: Optional[int] = None
+    size: Optional[int] = None
+    orientation: Optional[int] = None
+    s3_key_path: Optional[str] = None
+    s3_thumbnail_path: Optional[str] = None
+    s3_edited_path: Optional[str] = None
+    s3_original_path: Optional[str] = None
+    s3_live_path: Optional[str] = None
+    library: Optional[str] = None
+    versions: Optional[List[VersionCreate]] = None
+
+
+class AlbumRead(SQLModel):
+    """Album read schema - for API responses"""
+    uuid: str
+    title: str
+    creation_date: Optional[datetime] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AlbumCreate(SQLModel):
+    """Album create schema - for API requests"""
+    uuid: str
+    title: str = ""
+    creation_date: Optional[datetime] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    photos: Optional[List[str]] = None  # List of photo UUIDs
+
+
+class AlbumUpdate(SQLModel):
+    """Album update schema - for API requests"""
+    title: Optional[str] = None
+    creation_date: Optional[datetime] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    photos: Optional[List[str]] = None  # List of photo UUIDs
+
+
+# ============= ADDITIONAL SCHEMAS =============
+
+
+class Token(SQLModel):
+    """Token response schema"""
+    access_token: str
+    token_type: str
+
+
+class TokenData(SQLModel):
+    """Token data schema"""
+    username: Optional[str] = None
+
+
+class PaginatedPhotosResponse(SQLModel):
+    """Paginated photos response schema"""
+    items: List[PhotoRead]
+    total: int
+    page: int
+    page_size: int
+    has_more: bool
+
+

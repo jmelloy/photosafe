@@ -11,18 +11,22 @@ import shutil
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
-from .database import engine, Base, get_db
-from .models import Photo, Album, Version, User, Library
-from .schemas import (
-    PhotoResponse,
+from .database import engine, get_db
+from .models import (
+    Photo,
+    Album,
+    Version,
+    User,
+    Library,
+    PhotoRead,
     PhotoCreate,
     PhotoUpdate,
-    AlbumResponse,
+    AlbumRead,
     AlbumCreate,
     AlbumUpdate,
-    VersionResponse,
+    VersionRead,
     UserCreate,
-    UserResponse,
+    UserRead,
     Token,
     PaginatedPhotosResponse,
 )
@@ -89,7 +93,7 @@ async def root():
 # ============= AUTHENTICATION ENDPOINTS =============
 
 
-@app.post("/api/auth/register", response_model=UserResponse, status_code=201)
+@app.post("/api/auth/register", response_model=UserRead, status_code=201)
 async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     """Register a new user"""
     # Check if username already exists
@@ -143,7 +147,7 @@ async def login(
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@app.get("/api/auth/me", response_model=UserResponse)
+@app.get("/api/auth/me", response_model=UserRead)
 async def get_current_user_info(current_user: User = Depends(get_current_active_user)):
     """Get current user information"""
     return current_user
@@ -152,7 +156,7 @@ async def get_current_user_info(current_user: User = Depends(get_current_active_
 # ============= PHOTO ENDPOINTS =============
 
 
-@app.post("/api/photos/", response_model=PhotoResponse, status_code=201)
+@app.post("/api/photos/", response_model=PhotoRead, status_code=201)
 async def create_photo(
     photo_data: PhotoCreate,
     db: Session = Depends(get_db),
@@ -203,7 +207,7 @@ async def create_photo(
     return create_photo_response(db_photo)
 
 
-@app.patch("/api/photos/{uuid}/", response_model=PhotoResponse)
+@app.patch("/api/photos/{uuid}/", response_model=PhotoRead)
 async def update_photo(
     uuid: str,
     photo_data: PhotoUpdate,
@@ -350,7 +354,7 @@ async def list_photos(
     )
 
 
-@app.get("/api/photos/{uuid}/", response_model=PhotoResponse)
+@app.get("/api/photos/{uuid}/", response_model=PhotoRead)
 async def get_photo(
     uuid: str,
     db: Session = Depends(get_db),
@@ -468,66 +472,9 @@ async def get_photo_blocks(
     return response
 
 
-def create_photo_response(photo: Photo) -> PhotoResponse:
-    """Helper function to create PhotoResponse from Photo model"""
-    # S3 base URL
-    S3_BASE_URL = "https://photos.melloy.life"
-
-    # Compute URL for frontend display
-    # Priority: S3 paths first (if available), then local file_path
-    url = None
-
-    def build_s3_url(s3_path: str) -> str:
-        """Build full S3 URL from S3 path/key"""
-        if not s3_path:
-            return None
-        # If already a full URL, return as-is
-        if s3_path.startswith("http://") or s3_path.startswith("https://"):
-            return s3_path
-        # Otherwise, construct URL with base domain
-        s3_path = s3_path.lstrip("/")
-        return f"{S3_BASE_URL}/{s3_path}"
-
-    # Check for S3 paths - prioritize thumbnail, then key path, then edited, then original
-    if photo.s3_thumbnail_path:
-        # Use S3 thumbnail if available
-        url = build_s3_url(photo.s3_thumbnail_path)
-    elif photo.s3_key_path:
-        # Use S3 key path if available
-        url = build_s3_url(photo.s3_key_path)
-    elif photo.s3_edited_path:
-        # Use S3 edited path if available
-        url = build_s3_url(photo.s3_edited_path)
-    elif photo.s3_original_path:
-        # Use S3 original path if available
-        url = build_s3_url(photo.s3_original_path)
-    elif photo.file_path:
-        # Fallback to local file_path
-        # Convert file_path to URL
-        file_path_str = str(photo.file_path).replace("\\", "/")
-
-        # If file_path contains "uploads", extract the path from there
-        if "uploads" in file_path_str:
-            # Find the uploads directory and everything after it
-            uploads_index = file_path_str.find("uploads")
-            if uploads_index != -1:
-                url = "/" + file_path_str[uploads_index:]
-            else:
-                url = f"/uploads/{Path(photo.file_path).name}"
-        else:
-            # If no uploads in path, assume it's relative to uploads directory
-            # Extract just the filename if it's an absolute path
-            file_path = Path(photo.file_path)
-            if file_path.is_absolute():
-                url = f"/uploads/{file_path.name}"
-            else:
-                # Relative path - prepend /uploads if not already there
-                if not file_path_str.startswith("/"):
-                    url = f"/uploads/{file_path_str}"
-                else:
-                    url = file_path_str
-
-    # Deserialize JSON fields
+def create_photo_response(photo: Photo) -> PhotoRead:
+    """Helper function to create PhotoRead from Photo model"""
+    # Deserialize JSON fields and create response
     response_dict = {
         "uuid": photo.uuid,
         "masterFingerprint": photo.masterFingerprint,
@@ -578,10 +525,10 @@ def create_photo_response(photo: Photo) -> PhotoResponse:
         "file_path": photo.file_path,
         "content_type": photo.content_type,
         "file_size": photo.file_size,
-        "url": url,
+        "url": photo.url,  # Use computed property
         "versions": (
             [
-                VersionResponse(
+                VersionRead(
                     id=v.id,
                     photo_uuid=v.photo_uuid,
                     version=v.version,
@@ -599,13 +546,13 @@ def create_photo_response(photo: Photo) -> PhotoResponse:
         ),
     }
 
-    return PhotoResponse(**response_dict)
+    return PhotoRead(**response_dict)
 
 
 # ============= ALBUM ENDPOINTS =============
 
 
-@app.post("/api/albums/", response_model=AlbumResponse, status_code=201)
+@app.post("/api/albums/", response_model=AlbumRead, status_code=201)
 async def create_album(album_data: AlbumCreate, db: Session = Depends(get_db)):
     """Create a new album (for sync_photos_linux compatibility)"""
     # Check if album already exists
@@ -634,7 +581,7 @@ async def create_album(album_data: AlbumCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_album)
 
-    return AlbumResponse(
+    return AlbumRead(
         uuid=db_album.uuid,
         title=db_album.title,
         creation_date=db_album.creation_date,
@@ -643,7 +590,7 @@ async def create_album(album_data: AlbumCreate, db: Session = Depends(get_db)):
     )
 
 
-@app.put("/api/albums/{uuid}/", response_model=AlbumResponse)
+@app.put("/api/albums/{uuid}/", response_model=AlbumRead)
 async def update_or_create_album(
     uuid: str, album_data: AlbumCreate, db: Session = Depends(get_db)
 ):
@@ -683,7 +630,7 @@ async def update_or_create_album(
     db.commit()
     db.refresh(db_album)
 
-    return AlbumResponse(
+    return AlbumRead(
         uuid=db_album.uuid,
         title=db_album.title,
         creation_date=db_album.creation_date,
@@ -692,7 +639,7 @@ async def update_or_create_album(
     )
 
 
-@app.patch("/api/albums/{uuid}/", response_model=AlbumResponse)
+@app.patch("/api/albums/{uuid}/", response_model=AlbumRead)
 async def patch_album(
     uuid: str, album_data: AlbumUpdate, db: Session = Depends(get_db)
 ):
@@ -720,7 +667,7 @@ async def patch_album(
     db.commit()
     db.refresh(db_album)
 
-    return AlbumResponse(
+    return AlbumRead(
         uuid=db_album.uuid,
         title=db_album.title,
         creation_date=db_album.creation_date,
@@ -729,12 +676,12 @@ async def patch_album(
     )
 
 
-@app.get("/api/albums/", response_model=List[AlbumResponse])
+@app.get("/api/albums/", response_model=List[AlbumRead])
 async def list_albums(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """List all albums"""
     albums = db.query(Album).offset(skip).limit(limit).all()
     return [
-        AlbumResponse(
+        AlbumRead(
             uuid=album.uuid,
             title=album.title,
             creation_date=album.creation_date,
@@ -745,14 +692,14 @@ async def list_albums(skip: int = 0, limit: int = 100, db: Session = Depends(get
     ]
 
 
-@app.get("/api/albums/{uuid}/", response_model=AlbumResponse)
+@app.get("/api/albums/{uuid}/", response_model=AlbumRead)
 async def get_album(uuid: str, db: Session = Depends(get_db)):
     """Get a specific album by UUID"""
     album = db.query(Album).filter(Album.uuid == uuid).first()
     if not album:
         raise HTTPException(status_code=404, detail="Album not found")
 
-    return AlbumResponse(
+    return AlbumRead(
         uuid=album.uuid,
         title=album.title,
         creation_date=album.creation_date,
@@ -778,7 +725,7 @@ async def delete_album(uuid: str, db: Session = Depends(get_db)):
 # ============= LEGACY UPLOAD ENDPOINT =============
 
 
-@app.post("/api/photos/upload", response_model=PhotoResponse)
+@app.post("/api/photos/upload", response_model=PhotoRead)
 async def upload_photo(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
