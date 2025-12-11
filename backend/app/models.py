@@ -5,7 +5,12 @@ from sqlalchemy import String, Text, DateTime, Integer, Boolean, Float, ForeignK
 from sqlalchemy.dialects.postgresql import JSONB, ARRAY
 from datetime import datetime
 from typing import Optional, List, Dict, Any
+from pathlib import Path
 import uuid
+import os
+
+# S3 base URL from environment or default
+S3_BASE_URL = os.getenv("S3_BASE_URL", "https://photos.melloy.life")
 
 
 # Association table for many-to-many relationship between albums and photos
@@ -178,8 +183,6 @@ class Photo(SQLModel, table=True):
     @property
     def url(self) -> Optional[str]:
         """Compute URL for frontend display - prioritize S3 paths, then local file_path"""
-        S3_BASE_URL = "https://photos.melloy.life"
-
         def build_s3_url(s3_path: str) -> Optional[str]:
             """Build full S3 URL from S3 path/key"""
             if not s3_path:
@@ -202,7 +205,6 @@ class Photo(SQLModel, table=True):
             return build_s3_url(self.s3_original_path)
         elif self.file_path:
             # Fallback to local file_path
-            from pathlib import Path
             file_path_str = str(self.file_path).replace("\\", "/")
 
             # If file_path contains "uploads", extract the path from there
