@@ -67,12 +67,36 @@ npm run dev
 
 ### Running Tests
 
-#### Python Tests
+#### Backend Tests (FastAPI)
+
+The backend has comprehensive test coverage and uses pytest:
+
+```bash
+cd backend
+pip install -e .
+pip install pytest pytest-cov
+pytest -v --cov=app --cov=cli
+```
+
+**Note:** Tests require a PostgreSQL database. Set the `TEST_DATABASE_URL` environment variable:
+```bash
+export TEST_DATABASE_URL="postgresql://user:pass@localhost:5432/photosafe_test"
+```
+
+#### Python Tests (Legacy Django)
 
 ```bash
 cd photosafe
 pytest
 ```
+
+#### GitHub Actions CI/CD
+
+All pull requests and pushes to `main`/`master` branches automatically trigger:
+1. **Backend Tests**: Runs all backend tests with PostgreSQL in CI
+2. **Version Increment**: On successful merge to main/master, automatically increments the backend CLI version in `backend/pyproject.toml`
+
+The version increment uses semantic versioning and bumps the patch version (e.g., 1.0.0 → 1.0.1).
 
 #### Pre-commit Hooks
 
