@@ -54,6 +54,25 @@ services:
       - backend
     restart: unless-stopped
 
+  cli:
+    build: ./backend
+    container_name: photosafe-cli
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - ./backend:/app
+      - backend_pycache:/app/__pycache__
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=postgresql://photosafe:photosafe@db:5432/photosafe
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles:
+      - cli
+    stdin_open: true
+    tty: true
+    entrypoint: /bin/bash
+
 volumes:
   postgres_data:
   uploads:
