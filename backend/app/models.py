@@ -3,6 +3,7 @@
 from sqlmodel import SQLModel, Field, Relationship, Column
 from sqlalchemy import String, Text, DateTime, Integer, Boolean, Float, ForeignKey, Table
 from sqlalchemy.dialects.postgresql import JSONB, ARRAY
+from sqlalchemy.orm import relationship
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 import uuid
@@ -23,9 +24,9 @@ class User(SQLModel, table=True):
     __tablename__ = "users"
 
     id: Optional[int] = Field(default=None, primary_key=True, index=True)
-    username: str = Field(unique=True, index=True, nullable=False, sa_type=String)
-    email: str = Field(unique=True, index=True, nullable=False, sa_type=String)
-    hashed_password: str = Field(nullable=False, sa_type=String)
+    username: str = Field(unique=True, index=True, sa_type=String)
+    email: str = Field(unique=True, index=True, sa_type=String)
+    hashed_password: str = Field(sa_type=String)
     name: Optional[str] = Field(default=None, sa_type=String)
     is_active: bool = Field(default=True)
     is_superuser: bool = Field(default=False)
@@ -43,14 +44,14 @@ class Library(SQLModel, table=True):
     __tablename__ = "libraries"
 
     id: Optional[int] = Field(default=None, primary_key=True, index=True)
-    name: str = Field(nullable=False, sa_type=String)
+    name: str = Field(sa_type=String)
     path: Optional[str] = Field(default=None, sa_type=Text)
     description: Optional[str] = Field(default=None, sa_type=Text)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     # Owner relationship
-    owner_id: int = Field(foreign_key="users.id", nullable=False)
+    owner_id: int = Field(foreign_key="users.id")
 
     # Relationships
     owner: Optional["User"] = Relationship(back_populates="libraries")
@@ -71,8 +72,8 @@ class Photo(SQLModel, table=True):
     masterFingerprint: Optional[str] = Field(default=None, sa_type=Text)
 
     # File information
-    original_filename: str = Field(nullable=False, sa_type=Text)
-    date: datetime = Field(nullable=False)
+    original_filename: str = Field(sa_type=Text)
+    date: datetime
     description: Optional[str] = Field(default=None, sa_type=Text)
     title: Optional[str] = Field(default=None, sa_type=Text)
 
@@ -181,8 +182,8 @@ class Version(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True, index=True)
     photo_uuid: Optional[str] = Field(default=None, foreign_key="photos.uuid")
 
-    version: str = Field(nullable=False, sa_type=Text)
-    s3_path: str = Field(nullable=False, sa_type=Text)
+    version: str = Field(sa_type=Text)
+    s3_path: str = Field(sa_type=Text)
     filename: Optional[str] = Field(default=None, sa_type=Text)
     width: Optional[int] = None
     height: Optional[int] = None
@@ -199,12 +200,18 @@ class Album(SQLModel, table=True):
     __tablename__ = "albums"
 
     uuid: str = Field(primary_key=True, sa_type=String)
-    title: str = Field(default="", nullable=False, sa_type=Text)
+    title: str = Field(default="", sa_type=Text)
     creation_date: Optional[datetime] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
 
-    # Many-to-many relationship with photos - using backref approach
-    # Note: SQLModel doesn't support direct many-to-many in the same way as SQLAlchemy
-    # We'll handle this in the API layer
+    # Many-to-many relationship with photos
+    # SQLModel doesn't have native many-to-many support, so we use SQLAlchemy's relationship
+    photos: List["Photo"] = Relationship(
+        sa_relationship=relationship(
+            "Photo",
+            secondary=album_photos,
+            backref="photo_albums"
+        )
+    )
 
