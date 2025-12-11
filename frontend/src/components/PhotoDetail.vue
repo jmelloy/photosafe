@@ -167,7 +167,8 @@ defineEmits<PhotoDetailEmits>();
 const detailImageUrl = computed(() => {
   if (!props.photo) return "";
   
-  const S3_BASE_URL = "https://photos.melloy.life";
+  // Use environment variable or default to production URL
+  const S3_BASE_URL = import.meta.env.VITE_S3_BASE_URL || "https://photos.melloy.life";
   
   const buildS3Url = (s3Path: string | undefined): string | null => {
     if (!s3Path) return null;
