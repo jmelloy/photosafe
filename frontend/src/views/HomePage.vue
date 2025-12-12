@@ -116,7 +116,7 @@
 
     <div class="content">
       <PhotoGallery
-        :photos="photos"
+        :photos="filteredPhotos"
         :loading="loading"
         :loading-more="loadingMore"
         :has-more="hasMore"
