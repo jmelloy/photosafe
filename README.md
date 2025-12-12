@@ -47,18 +47,45 @@ git clone https://github.com/jmelloy/photosafe.git
 cd photosafe
 ```
 
-2. Start the application (includes PostgreSQL database):
+2. Start the application in **development mode** (includes PostgreSQL database):
 ```bash
 docker-compose up --build
 ```
 
-> **Security Note**: The default docker-compose.yml uses simple credentials for development. For production deployments, change the PostgreSQL credentials in docker-compose.yml or use environment variables/Docker secrets.
+This automatically applies development overrides from `docker-compose.override.yml`:
+- Source code hot-reload enabled
+- Database port exposed for direct access
+- Default credentials: photosafe/photosafe
 
 3. Access the application:
    - Frontend: http://localhost:5173
    - Backend API: http://localhost:8000
    - API Docs: http://localhost:8000/docs
    - PostgreSQL: localhost:5432 (user: photosafe, password: photosafe, database: photosafe)
+
+#### Production Deployment
+
+For production, use only the base `docker-compose.yml` (without dev overrides):
+
+```bash
+# Create a .env file with your configuration
+cat > .env << EOF
+POSTGRES_DB=photosafe
+POSTGRES_USER=photosafe
+POSTGRES_PASSWORD=your_secure_password_here
+VITE_API_URL=http://backend:8000
+EOF
+
+# Start services without development overrides
+docker-compose -f docker-compose.yml up -d
+```
+
+**Production Security Notes:**
+- Database ports are not exposed (internal network only)
+- Source code is not mounted (uses built images)
+- Set strong passwords via environment variables
+- Use a reverse proxy (nginx/traefik) for SSL termination
+- Consider using Docker secrets for sensitive data
 
 ### Manual Setup
 

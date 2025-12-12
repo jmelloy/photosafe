@@ -1,69 +1,134 @@
+# PhotoSafe Docker Compose Configuration
+#
+# This file provides a unified configuration for both development and production deployments.
+#
+# ## Development Mode (default)
+# Automatically applies overrides from docker-compose.override.yml:
+#   docker-compose up --build
+#
+# Features:
+#   - Source code mounted for hot-reload
+#   - Database port exposed (5432)
+#   - Simple credentials (photosafe/photosafe)
+#
+# ## Production Mode
+# Use docker-compose.yml alone (ignoring overrides):
+#   docker-compose -f docker-compose.yml up -d
+#
+# Required Environment Variables (set in .env file or environment):
+#   - POSTGRES_PASSWORD: Database password (REQUIRED)
+#
+# Optional Environment Variables:
+#   - POSTGRES_DB: Database name (default: photosafe)
+#   - POSTGRES_USER: Database user (default: photosafe)
+#   - VITE_API_URL: Frontend API URL (default: http://backend:8000)
+#
+# Security Notes for Production:
+#   - Database ports are not exposed by default (only in dev override)
+#   - Set strong passwords via environment variables
+#   - Consider using Docker secrets for sensitive data
+#   - Use a reverse proxy (nginx/traefik) for SSL termination
+
 services:
   db:
     image: postgres:16-alpine
     container_name: photosafe-db
     environment:
-      # IMPORTANT: Change these credentials for production deployments!
-      # For production, use Docker secrets or environment variables
-      POSTGRES_DB: photosafe
-      POSTGRES_USER: photosafe
-      POSTGRES_PASSWORD: photosafe
+      # Use environment variables with defaults for development
+      POSTGRES_DB: ${POSTGRES_DB:-photosafe}
+      POSTGRES_USER: ${POSTGRES_USER:-photosafe}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-photosafe}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    # Port mapping removed from base - added in docker-compose.override.yml for dev
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U photosafe"]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-photosafe}"]
+      interval: 10s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
+      start_period: 30s
+    restart: always
+    networks:
+      - photosafe-network
 
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: photosafe-backend
     ports:
       - "8000:8000"
     volumes:
-      - ./backend/uploads:/app/uploads
-      - ./backend:/app
-      # Use named volume for Python cache to avoid conflicts
-      - backend_pycache:/app/__pycache__
+      # Production: only uploads volume
+      # Development: code volumes added via docker-compose.override.yml
+      - uploads_data:/app/uploads
     environment:
       - PYTHONUNBUFFERED=1
-      - DATABASE_URL=postgresql://photosafe:photosafe@db:5432/photosafe
-    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-photosafe}:${POSTGRES_PASSWORD:-photosafe}@db:5432/${POSTGRES_DB:-photosafe}
+      # Add any additional environment variables here
+      # - SECRET_KEY=${SECRET_KEY}
+      # - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    # Production command - override in docker-compose.override.yml for dev
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
     depends_on:
       db:
         condition: service_healthy
-    restart: unless-stopped
+    restart: always
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'python -c "import urllib.request; urllib.request.urlopen(''http://localhost:8000/'')" || exit 1',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - photosafe-network
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: photosafe-frontend
     ports:
       - "5173:5173"
-    volumes:
-      - ./frontend:/app
-      # Use named volume for node_modules to preserve container's dependencies
-      - frontend_node_modules:/app/node_modules
+    # Production: no volumes (use built image)
+    # Development: code volumes added via docker-compose.override.yml
     environment:
-      - VITE_API_URL=http://backend:8000
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+      - VITE_API_URL=${VITE_API_URL:-http://backend:8000}
+    # Production command - override in docker-compose.override.yml for dev
+    command: npm run preview -- --host 0.0.0.0 --port 5173
     depends_on:
-      - backend
-    restart: unless-stopped
-
+      backend:
+        condition: service_healthy
+    restart: always
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'node -e "require(''http'').get(''http://localhost:5173'', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on(''error'', () => process.exit(1))" || exit 1',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - photosafe-network
+  
   cli:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: photosafe-cli
     volumes:
-      - ./backend/uploads:/app/uploads
-      - ./backend:/app
-      - backend_pycache:/app/__pycache__
+      # Production: only uploads volume
+      # Development: code volumes added via docker-compose.override.yml
+      - uploads_data:/app/uploads
     environment:
       - PYTHONUNBUFFERED=1
-      - DATABASE_URL=postgresql://photosafe:photosafe@db:5432/photosafe
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-photosafe}:${POSTGRES_PASSWORD:-photosafe}@db:5432/${POSTGRES_DB:-photosafe}
     depends_on:
       db:
         condition: service_healthy
@@ -72,9 +137,15 @@ services:
     stdin_open: true
     tty: true
     entrypoint: /bin/bash
+    networks:
+      - photosafe-network
 
 volumes:
   postgres_data:
-  uploads:
-  frontend_node_modules:
-  backend_pycache:
+    driver: local
+  uploads_data:
+    driver: local
+
+networks:
+  photosafe-network:
+    driver: bridge

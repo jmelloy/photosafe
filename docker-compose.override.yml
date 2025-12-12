@@ -1,0 +1,46 @@
+# Development overrides for Docker Compose
+#
+# This file is automatically loaded by docker-compose when running in development mode.
+# It overrides settings from docker-compose.yml for local development.
+#
+# Usage:
+#   docker-compose up --build  (automatically applies overrides)
+#
+# To run in production mode (without overrides):
+#   docker-compose -f docker-compose.yml up -d
+
+services:
+  db:
+    # Expose database port for local development access
+    ports:
+      - "5432:5432"
+
+  backend:
+    # Mount source code for hot-reload in development
+    volumes:
+      - ./backend:/app
+      - ./backend/uploads:/app/uploads
+      # Use named volume for Python cache to avoid conflicts
+      - backend_pycache:/app/__pycache__
+    # Development command with auto-reload
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  frontend:
+    # Mount source code for hot-reload in development
+    volumes:
+      - ./frontend:/app
+      # Use named volume for node_modules to preserve container's dependencies
+      - frontend_node_modules:/app/node_modules
+    # Development command with hot module replacement
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+
+  cli:
+    # Mount source code for development
+    volumes:
+      - ./backend:/app
+      - ./backend/uploads:/app/uploads
+      - backend_pycache:/app/__pycache__
+
+volumes:
+  frontend_node_modules:
+  backend_pycache:
