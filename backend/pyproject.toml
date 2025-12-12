@@ -39,6 +39,11 @@ macos = [
 icloud = [
     "pyicloud @ git+https://github.com/jmelloy/pyicloud.git",
 ]
+test = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "httpx>=0.24.0",
+]
 
 [project.scripts]
 photosafe = "cli.main:cli"

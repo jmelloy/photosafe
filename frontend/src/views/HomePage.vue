@@ -128,10 +128,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import PhotoGallery from "../components/PhotoGallery.vue";
-import { getPhotos, deletePhoto } from "../api/photos";
+import { getPhotos, deletePhoto, getAvailableFilters } from "../api/photos";
 import type { Photo } from "../types/api";
+import type { PhotoFilters } from "../api/photos";
 
 const photos = ref<Photo[]>([]);
 const loading = ref<boolean>(false);
@@ -156,6 +157,26 @@ const albums = ref<string[]>([]);
 const keywords = ref<string[]>([]);
 const persons = ref<string[]>([]);
 
+const buildFilters = (): PhotoFilters => {
+  const filters: PhotoFilters = {};
+  
+  if (searchQuery.value) filters.search = searchQuery.value;
+  if (selectedAlbum.value) filters.album = selectedAlbum.value;
+  if (selectedKeyword.value) filters.keyword = selectedKeyword.value;
+  if (selectedPerson.value) filters.person = selectedPerson.value;
+  if (startDate.value) filters.start_date = startDate.value;
+  if (endDate.value) filters.end_date = endDate.value;
+  if (filterFavorites.value) filters.favorite = true;
+  if (filterPhotos.value) filters.isphoto = true;
+  if (filterVideos.value) filters.ismovie = true;
+  if (filterScreenshots.value) filters.screenshot = true;
+  if (filterPanoramas.value) filters.panorama = true;
+  if (filterPortraits.value) filters.portrait = true;
+  if (filterHasLocation.value) filters.has_location = true;
+  
+  return filters;
+};
+
 const loadPhotos = async (reset: boolean = true) => {
   if (reset) {
     loading.value = true;
@@ -166,7 +187,8 @@ const loadPhotos = async (reset: boolean = true) => {
   }
   
   try {
-    const response = await getPhotos(currentPage.value, 50);
+    const filters = buildFilters();
+    const response = await getPhotos(currentPage.value, 50, filters);
     
     if (reset) {
       photos.value = response.items;
@@ -176,18 +198,23 @@ const loadPhotos = async (reset: boolean = true) => {
     
     hasMore.value = response.has_more;
     totalPhotos.value = response.total;
-    
-    if (reset) {
-      extractAlbums();
-      extractKeywords();
-      extractPersons();
-    }
   } catch (error: unknown) {
     console.error("Failed to load photos:", error);
     alert("Failed to load photos. Please try again.");
   } finally {
     loading.value = false;
     loadingMore.value = false;
+  }
+};
+
+const loadAvailableFilters = async () => {
+  try {
+    const filters = await getAvailableFilters();
+    albums.value = filters.albums;
+    keywords.value = filters.keywords;
+    persons.value = filters.persons;
+  } catch (error) {
+    console.error("Failed to load filters:", error);
   }
 };
 
@@ -198,36 +225,6 @@ const loadMorePhotos = async () => {
   
   currentPage.value += 1;
   await loadPhotos(false);
-};
-
-const extractAlbums = () => {
-  albums.value = [
-    ...new Set(
-      photos.value.flatMap((photo) =>
-        photo.albums && Array.isArray(photo.albums) ? photo.albums : []
-      )
-    ),
-  ].sort();
-};
-
-const extractKeywords = () => {
-  keywords.value = [
-    ...new Set(
-      photos.value.flatMap((photo) =>
-        photo.keywords && Array.isArray(photo.keywords) ? photo.keywords : []
-      )
-    ),
-  ].sort();
-};
-
-const extractPersons = () => {
-  persons.value = [
-    ...new Set(
-      photos.value.flatMap((photo) =>
-        photo.persons && Array.isArray(photo.persons) ? photo.persons : []
-      )
-    ),
-  ].sort();
 };
 
 const hasActiveFilters = computed(() => {
@@ -248,103 +245,6 @@ const hasActiveFilters = computed(() => {
   );
 });
 
-const filteredPhotos = computed(() => {
-  let result = photos.value;
-
-  // Search filter
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase();
-    result = result.filter(
-      (photo) =>
-        photo.original_filename?.toLowerCase().includes(query) ||
-        photo.title?.toLowerCase().includes(query) ||
-        photo.description?.toLowerCase().includes(query)
-    );
-  }
-
-  // Album filter
-  if (selectedAlbum.value) {
-    result = result.filter(
-      (photo) =>
-        photo.albums &&
-        Array.isArray(photo.albums) &&
-        photo.albums.includes(selectedAlbum.value)
-    );
-  }
-
-  // Keyword filter
-  if (selectedKeyword.value) {
-    result = result.filter(
-      (photo) =>
-        photo.keywords &&
-        Array.isArray(photo.keywords) &&
-        photo.keywords.includes(selectedKeyword.value)
-    );
-  }
-
-  // Person filter
-  if (selectedPerson.value) {
-    result = result.filter(
-      (photo) =>
-        photo.persons &&
-        Array.isArray(photo.persons) &&
-        photo.persons.includes(selectedPerson.value)
-    );
-  }
-
-  // Date range filter
-  if (startDate.value) {
-    const start = new Date(startDate.value);
-    result = result.filter((photo) => {
-      const photoDate = new Date(photo.date || photo.uploaded_at || "");
-      return photoDate >= start;
-    });
-  }
-
-  if (endDate.value) {
-    const end = new Date(endDate.value);
-    end.setHours(23, 59, 59, 999); // Include the entire end date
-    result = result.filter((photo) => {
-      const photoDate = new Date(photo.date || photo.uploaded_at || "");
-      return photoDate <= end;
-    });
-  }
-
-  // Photo type filters
-  if (filterFavorites.value) {
-    result = result.filter((photo) => photo.favorite === true);
-  }
-
-  if (filterPhotos.value) {
-    result = result.filter((photo) => photo.isphoto === true);
-  }
-
-  if (filterVideos.value) {
-    result = result.filter((photo) => photo.ismovie === true);
-  }
-
-  if (filterScreenshots.value) {
-    result = result.filter((photo) => photo.screenshot === true);
-  }
-
-  if (filterPanoramas.value) {
-    result = result.filter((photo) => photo.panorama === true);
-  }
-
-  if (filterPortraits.value) {
-    result = result.filter((photo) => photo.portrait === true);
-  }
-
-  // Location filter
-  if (filterHasLocation.value) {
-    result = result.filter(
-      (photo) => photo.latitude != null && photo.longitude != null
-    );
-  }
-
-  return result;
-});
-
 const clearFilters = () => {
   searchQuery.value = "";
   selectedAlbum.value = "";
@@ -361,11 +261,35 @@ const clearFilters = () => {
   filterHasLocation.value = false;
 };
 
+// Watch for filter changes and reload photos
+watch(
+  [
+    searchQuery,
+    selectedAlbum,
+    selectedKeyword,
+    selectedPerson,
+    startDate,
+    endDate,
+    filterFavorites,
+    filterPhotos,
+    filterVideos,
+    filterScreenshots,
+    filterPanoramas,
+    filterPortraits,
+    filterHasLocation,
+  ],
+  () => {
+    loadPhotos(true);
+  }
+);
+
 const handleDeletePhoto = async (photoId: string) => {
   if (confirm("Are you sure you want to delete this photo?")) {
     try {
       await deletePhoto(photoId);
       await loadPhotos();
+      // Reload filters to update dropdowns in case deleted photo had unique filter values
+      await loadAvailableFilters();
     } catch (error) {
       console.error("Failed to delete photo:", error);
       alert("Failed to delete photo. Please try again.");
@@ -374,6 +298,7 @@ const handleDeletePhoto = async (photoId: string) => {
 };
 
 onMounted(() => {
+  loadAvailableFilters();
   loadPhotos();
 });
 </script>

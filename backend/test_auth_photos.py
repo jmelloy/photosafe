@@ -1,18 +1,16 @@
 """Tests for authentication and user photo management"""
 
+import os
+from datetime import datetime
+
 import pytest
+from app.database import Base, get_db
+from app.main import app
+from app.models import Library, Photo, User
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import Session, SQLModel
-from datetime import datetime
-import os
-import tempfile
-
-from app.main import app
-from app.database import Base, get_db
-from app.models import User, Photo, Library
-
 
 # NOTE: These tests require a PostgreSQL test database
 # Test database setup - PostgreSQL connection required
