@@ -109,18 +109,18 @@ def serialize_photo_json_fields(photo_dict):
 
 def handle_library_upsert(library_name: str, current_user: User, db: Session) -> int:
     """Handle library name by upserting into libraries table.
-    
+
     Looks up or creates a library with the given name for the current user.
     If the library doesn't exist, it will be created and flushed to the database.
-    
+
     Args:
         library_name: The name of the library (should not be None or empty)
         current_user: The user who owns the library
         db: Database session
-        
+
     Returns:
         The library_id for the given library name and user.
-        
+
     Note:
         This function assumes library_name is not None or empty.
         Caller should validate before calling.
@@ -282,7 +282,9 @@ async def update_photo(
     # Handle library name - upsert into libraries table
     if "library" in update_dict and update_dict["library"]:
         library_name = update_dict["library"]
-        update_dict["library_id"] = handle_library_upsert(library_name, current_user, db)
+        update_dict["library_id"] = handle_library_upsert(
+            library_name, current_user, db
+        )
 
     # Serialize JSON fields
     update_dict = serialize_photo_json_fields(update_dict)
@@ -423,7 +425,9 @@ async def batch_create_or_update_photos(
 
                 db.flush()
                 results.append(
-                    BatchPhotoResult(uuid=photo_data.uuid, success=True, action="created")
+                    BatchPhotoResult(
+                        uuid=photo_data.uuid, success=True, action="created"
+                    )
                 )
                 created_count += 1
 
@@ -909,4 +913,6 @@ async def upload_photo(
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    debug = os.getenv("DEBUG", "false").lower() == "true"
+
+    uvicorn.run(app, host="0.0.0.0", port=8000, debug=debug)
