@@ -41,6 +41,8 @@ A modern photo gallery application built with FastAPI and Vue 3.
 
 ### Using Docker Compose (Recommended)
 
+#### Development Setup
+
 1. Clone the repository:
 ```bash
 git clone https://github.com/jmelloy/photosafe.git
@@ -52,13 +54,43 @@ cd photosafe
 docker-compose up --build
 ```
 
-> **Security Note**: The default docker-compose.yml uses simple credentials for development. For production deployments, change the PostgreSQL credentials in docker-compose.yml or use environment variables/Docker secrets.
+> **Security Note**: The default docker-compose.yml uses simple credentials (photosafe/photosafe) for development. For production deployments, see the Production Setup section below.
 
 3. Access the application:
    - Frontend: http://localhost:5173
    - Backend API: http://localhost:8000
    - API Docs: http://localhost:8000/docs
    - PostgreSQL: localhost:5432 (user: photosafe, password: photosafe, database: photosafe)
+
+#### Production Setup
+
+For production deployments, use environment variables to configure the services:
+
+1. Create a production environment file:
+```bash
+cp .env.production.example .env.production
+# Edit .env.production and set a strong POSTGRES_PASSWORD
+```
+
+2. Start the application in production mode:
+```bash
+docker-compose --env-file .env.production up -d
+```
+
+Key production environment variables:
+- `POSTGRES_PASSWORD`: **Required** - Set a strong database password
+- `BACKEND_COMMAND`: Runs without --reload for better performance
+- `FRONTEND_COMMAND`: Runs production preview build
+- `BACKEND_CODE_MOUNT` & `FRONTEND_CODE_MOUNT`: Set to empty to disable code mounting
+- `RESTART_POLICY`: Set to "always" for auto-restart after reboot
+
+For details, see `.env.production.example` and comments in `docker-compose.yml`.
+
+> **Production Security Notes**:
+> - Always set a strong `POSTGRES_PASSWORD`
+> - Consider removing database port exposure from docker-compose.yml
+> - Use a reverse proxy (nginx/traefik) in front of backend/frontend services
+> - Consider using Docker secrets for sensitive data
 
 ### Manual Setup
 
