@@ -48,13 +48,17 @@
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Infinite scroll trigger -->
-      <div ref="loadMoreTrigger" class="load-more-trigger" v-if="hasMore">
-        <div v-if="loadingMore" class="loading-more">
-          <div class="spinner-small"></div>
-          <p>Loading more photos...</p>
-        </div>
+    <!-- Infinite scroll trigger (outside v-else so it's always present) -->
+    <div 
+      ref="loadMoreTrigger" 
+      class="load-more-trigger" 
+      v-if="!loading && hasMore"
+    >
+      <div v-if="loadingMore" class="loading-more">
+        <div class="spinner-small"></div>
+        <p>Loading more photos...</p>
       </div>
     </div>
   </div>
@@ -105,42 +109,55 @@ const setupIntersectionObserver = () => {
   // Disconnect any existing observer first
   if (observer) {
     observer.disconnect();
+    observer = null;
   }
 
-  if (!loadMoreTrigger.value || !props.hasMore) {
-    return;
-  }
-
-  observer = new IntersectionObserver(
-    (entries) => {
-      const [entry] = entries;
-      if (entry.isIntersecting && props.hasMore && !props.loadingMore) {
-        emit("load-more");
-      }
-    },
-    {
-      root: null,
-      rootMargin: "200px", // Load more when within 200px of trigger
-      threshold: 0.1,
+  // Wait for next tick to ensure DOM is updated
+  setTimeout(() => {
+    if (!loadMoreTrigger.value || !props.hasMore || props.loading) {
+      return;
     }
-  );
 
-  observer.observe(loadMoreTrigger.value);
+    observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry.isIntersecting && props.hasMore && !props.loadingMore) {
+          console.log("Infinite scroll triggered - loading more photos");
+          emit("load-more");
+        }
+      },
+      {
+        root: null,
+        rootMargin: "200px", // Load more when within 200px of trigger
+        threshold: 0.1,
+      }
+    );
+
+    observer.observe(loadMoreTrigger.value);
+    console.log("Intersection observer set up, hasMore:", props.hasMore);
+  }, 100);
 };
 
 onMounted(() => {
   setupIntersectionObserver();
 });
 
-// Re-setup observer when hasMore changes from false to true
-watch(() => props.hasMore, (newHasMore, oldHasMore) => {
-  if (newHasMore && !oldHasMore) {
-    setupIntersectionObserver();
-  } else if (!newHasMore && observer) {
-    // Disconnect observer when hasMore becomes false
-    observer.disconnect();
+// Watch for changes that should trigger observer setup
+watch(
+  () => [props.hasMore, props.loading, props.photos.length],
+  ([newHasMore, newLoading, newLength], [oldHasMore, , oldLength]) => {
+    // Re-setup observer when photos are loaded or hasMore changes
+    if (newHasMore && !newLoading) {
+      if (newLength !== oldLength || newHasMore !== oldHasMore) {
+        setupIntersectionObserver();
+      }
+    } else if (!newHasMore && observer) {
+      // Disconnect observer when hasMore becomes false
+      observer.disconnect();
+      observer = null;
+    }
   }
-});
+);
 
 onBeforeUnmount(() => {
   if (observer) {
