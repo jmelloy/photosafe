@@ -573,3 +573,28 @@ class PaginatedPhotosResponse(SQLModel):
     page: int
     page_size: int
     has_more: bool
+
+
+class BatchPhotoRequest(SQLModel):
+    """Batch photo create/update request schema"""
+
+    photos: List[PhotoCreate]
+
+
+class BatchPhotoResult(SQLModel):
+    """Result for a single photo in batch operation"""
+
+    uuid: str
+    success: bool
+    action: str  # 'created', 'updated', or 'error'
+    error: Optional[str] = None
+
+
+class BatchPhotoResponse(SQLModel):
+    """Batch photo operation response schema"""
+
+    results: List[BatchPhotoResult]
+    total: int
+    created: int
+    updated: int
+    errors: int

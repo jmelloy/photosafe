@@ -60,6 +60,7 @@ photosafe sync icloud \
 **Options:**
 - `--stop-after` - Stop after N existing photos (default: 1000)
 - `--offset` - Offset for fetching photos (default: 0)
+- `--batch-size` - Number of photos to process in each batch (default: 10)
 
 ### 3. Leonardo AI Sync
 
