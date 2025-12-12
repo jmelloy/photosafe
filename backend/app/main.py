@@ -88,12 +88,14 @@ def deserialize_json_field(value):
 
 
 def serialize_photo_json_fields(photo_dict):
-    """Serialize JSON fields in a photo dictionary for database storage"""
-    json_fields = [
-        "keywords",
-        "labels",
-        "albums",
-        "persons",
+    """Serialize JSON fields in a photo dictionary for database storage
+    
+    Note: Only serializes JSONB fields (faces, place, exif, score, search_info, fields).
+    Array fields (keywords, labels, albums, persons) are stored as PostgreSQL arrays 
+    and should NOT be JSON-serialized.
+    """
+    # Only serialize JSONB fields - array fields should remain as lists
+    jsonb_fields = [
         "faces",
         "place",
         "exif",
@@ -101,7 +103,7 @@ def serialize_photo_json_fields(photo_dict):
         "search_info",
         "fields",
     ]
-    for field in json_fields:
+    for field in jsonb_fields:
         if field in photo_dict and photo_dict[field] is not None:
             photo_dict[field] = serialize_json_field(photo_dict[field])
     return photo_dict
