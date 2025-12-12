@@ -135,7 +135,7 @@ services:
       - cli
     stdin_open: true
     tty: true
-    entrypoint: /bin/bash
+    entrypoint: photosafe
     networks:
       - photosafe-network
 
