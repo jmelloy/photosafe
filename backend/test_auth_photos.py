@@ -4,9 +4,9 @@ import os
 from datetime import datetime
 
 import pytest
-from app.database import Base, get_db
+from app.database import get_db
 from app.main import app
-from app.models import Library, Photo, User
+from app.models import Library, Photo, User, Version, Album, album_photos
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -53,7 +53,11 @@ def cleanup_db():
     # Clear all data between tests
     db = TestingSessionLocal()
     try:
+        db.execute(album_photos.delete())
+        db.query(Version).delete()
         db.query(Photo).delete()
+        db.query(Album).delete()
+        db.query(Library).delete()
         db.query(User).delete()
         db.commit()
     finally:

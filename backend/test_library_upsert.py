@@ -8,8 +8,9 @@ from datetime import datetime
 import os
 
 from app.main import app
-from app.database import Base, get_db
-from app.models import User, Photo, Library
+from app.database import get_db
+from app.models import User, Photo, Library, Version, Album, album_photos
+from sqlmodel import Session, SQLModel
 
 
 # Test database setup
@@ -18,10 +19,10 @@ SQLALCHEMY_DATABASE_URL = os.getenv(
     "postgresql://photosafe:photosafe@localhost:5432/photosafe_test",
 )
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, class_=Session)
 
 # Create all tables
-Base.metadata.create_all(bind=engine)
+SQLModel.metadata.create_all(bind=engine)
 
 
 def override_get_db():
@@ -46,7 +47,10 @@ def cleanup_db():
     db = TestingSessionLocal()
     try:
         # Clean up in correct order due to foreign keys
+        db.execute(album_photos.delete())
+        db.query(Version).delete()
         db.query(Photo).delete()
+        db.query(Album).delete()
         db.query(Library).delete()
         db.query(User).delete()
         db.commit()
