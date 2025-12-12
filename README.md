@@ -81,7 +81,6 @@ Key production environment variables:
 - `POSTGRES_PASSWORD`: **Required** - Set a strong database password
 - `BACKEND_COMMAND`: Runs without --reload for better performance
 - `FRONTEND_COMMAND`: Runs production preview build
-- `BACKEND_CODE_MOUNT` & `FRONTEND_CODE_MOUNT`: Set to empty to disable code mounting
 - `RESTART_POLICY`: Set to "always" for auto-restart after reboot
 
 For details, see `.env.production.example` and comments in `docker-compose.yml`.

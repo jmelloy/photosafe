@@ -54,9 +54,9 @@ Key variables that control the behavior:
 - `POSTGRES_PASSWORD`: Database password (must be set for production)
 - `BACKEND_COMMAND`: Controls backend startup (dev: with --reload, prod: without)
 - `FRONTEND_COMMAND`: Controls frontend startup (dev: npm dev, prod: npm preview)
-- `BACKEND_CODE_MOUNT`: Mount backend code (dev: ./backend, prod: empty)
-- `FRONTEND_CODE_MOUNT`: Mount frontend code (dev: ./frontend, prod: empty)
 - `RESTART_POLICY`: Container restart policy (dev: unless-stopped, prod: always)
+
+**Note**: In the unified configuration, code volumes are always mounted from the repository directory. This allows for hot-reloading in development and easy debugging in production. For a truly immutable production deployment, consider using multi-stage Docker builds or Docker Compose override files.
 
 ## Files Modified
 
