@@ -2,7 +2,7 @@
 
 import pytest
 from click.testing import CliRunner
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import Session, SQLModel
 from pathlib import Path
@@ -11,7 +11,7 @@ import json
 import os
 
 from app.database import get_db
-from app.models import User, Library, Photo
+from app.models import User, Library, Photo, Version, Album, album_photos
 from cli.user_commands import user
 from cli.library_commands import library
 from cli.import_commands import import_photos
@@ -52,14 +52,40 @@ def setup_database():
     library_commands.SessionLocal = TestingSessionLocal
     import_commands.SessionLocal = TestingSessionLocal
 
-    yield
-
-    # Cleanup
+    # Cleanup before test to ensure clean state
     db = TestingSessionLocal()
     try:
+        db.execute(album_photos.delete())
+        db.query(Version).delete()
         db.query(Photo).delete()
+        db.query(Album).delete()
         db.query(Library).delete()
         db.query(User).delete()
+        db.commit()
+        
+        # Reset sequences so IDs start from 1 again
+        db.execute(text("ALTER SEQUENCE users_id_seq RESTART WITH 1"))
+        db.execute(text("ALTER SEQUENCE libraries_id_seq RESTART WITH 1"))
+        db.commit()
+    finally:
+        db.close()
+
+    yield
+
+    # Cleanup after test
+    db = TestingSessionLocal()
+    try:
+        db.execute(album_photos.delete())
+        db.query(Version).delete()
+        db.query(Photo).delete()
+        db.query(Album).delete()
+        db.query(Library).delete()
+        db.query(User).delete()
+        db.commit()
+        
+        # Reset sequences so IDs start from 1 again
+        db.execute(text("ALTER SEQUENCE users_id_seq RESTART WITH 1"))
+        db.execute(text("ALTER SEQUENCE libraries_id_seq RESTART WITH 1"))
         db.commit()
     finally:
         db.close()

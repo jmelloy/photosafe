@@ -4,9 +4,9 @@ import os
 from datetime import datetime
 
 import pytest
-from app.database import Base, get_db
+from app.database import get_db
 from app.main import app
-from app.models import Library, Photo, User
+from app.models import Library, Photo, User, Version, Album, album_photos
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -49,11 +49,29 @@ client = TestClient(app)
 @pytest.fixture(autouse=True)
 def cleanup_db():
     """Clean up database between tests"""
-    yield
-    # Clear all data between tests
+    # Clear all data before test
     db = TestingSessionLocal()
     try:
+        db.execute(album_photos.delete())
+        db.query(Version).delete()
         db.query(Photo).delete()
+        db.query(Album).delete()
+        db.query(Library).delete()
+        db.query(User).delete()
+        db.commit()
+    finally:
+        db.close()
+    
+    yield
+    
+    # Clear all data after test
+    db = TestingSessionLocal()
+    try:
+        db.execute(album_photos.delete())
+        db.query(Version).delete()
+        db.query(Photo).delete()
+        db.query(Album).delete()
+        db.query(Library).delete()
         db.query(User).delete()
         db.commit()
     finally:
@@ -276,7 +294,7 @@ def test_list_photos_only_owned():
         "/api/photos/", headers={"Authorization": f"Bearer {token1}"}
     )
     assert response1.status_code == 200
-    photos1 = response1.json()
+    photos1 = response1.json()["items"]
     assert len(photos1) == 1
     assert photos1[0]["uuid"] == "user1-photo"
 
@@ -285,7 +303,7 @@ def test_list_photos_only_owned():
         "/api/photos/", headers={"Authorization": f"Bearer {token2}"}
     )
     assert response2.status_code == 200
-    photos2 = response2.json()
+    photos2 = response2.json()["items"]
     assert len(photos2) == 1
     assert photos2[0]["uuid"] == "user2-photo"
 
@@ -448,7 +466,7 @@ def test_batch_create_photos():
     photos_response = client.get(
         "/api/photos/", headers={"Authorization": f"Bearer {token}"}
     )
-    photos = photos_response.json()
+    photos = photos_response.json()["items"]
     assert len(photos) == 3
 
 
