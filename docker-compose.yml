@@ -11,9 +11,6 @@
 #     POSTGRES_PASSWORD=<strong-password>
 #     BACKEND_COMMAND=sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
 #     FRONTEND_COMMAND=npm run preview -- --host 0.0.0.0
-#     BACKEND_CODE_MOUNT=/dev/null
-#     FRONTEND_CODE_MOUNT=/dev/null
-#     BACKEND_UPLOADS_MOUNT=uploads_data
 #     RESTART_POLICY=always
 #   Then run: docker-compose up -d
 #
@@ -29,9 +26,6 @@
 #   - FRONTEND_PORT: Frontend port mapping (default: 5173:5173)
 #   - BACKEND_COMMAND: Backend startup command (default: dev mode with --reload)
 #   - FRONTEND_COMMAND: Frontend startup command (default: dev mode)
-#   - BACKEND_CODE_MOUNT: Mount path for backend code (default: ./backend, set to empty for prod)
-#   - FRONTEND_CODE_MOUNT: Mount path for frontend code (default: ./frontend, set to empty for prod)
-#   - BACKEND_UPLOADS_MOUNT: Mount path for uploads (default: ./backend/uploads)
 #   - RESTART_POLICY: Container restart policy (default: unless-stopped)
 #
 # Security Notes for Production:
@@ -71,9 +65,8 @@ services:
     ports:
       - "${BACKEND_PORT:-8000:8000}"
     volumes:
-      # In production, set BACKEND_CODE_MOUNT to empty to disable code mounting
-      - ${BACKEND_CODE_MOUNT:-./backend}:/app
-      - ${BACKEND_UPLOADS_MOUNT:-./backend/uploads}:/app/uploads
+      - ./backend:/app
+      - ./backend/uploads:/app/uploads
       - backend_pycache:/app/__pycache__
     environment:
       - PYTHONUNBUFFERED=1
@@ -85,8 +78,8 @@ services:
         condition: service_healthy
     restart: ${RESTART_POLICY:-unless-stopped}
     healthcheck:
-      # In production, use a real health check
-      test: ["CMD-SHELL", 'python -c "import urllib.request; urllib.request.urlopen(''http://localhost:8000/'')" || exit 0']
+      # Health check for production
+      test: ["CMD-SHELL", 'python -c "import urllib.request; urllib.request.urlopen(''http://localhost:8000/'')" || exit 1']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -102,8 +95,7 @@ services:
     ports:
       - "${FRONTEND_PORT:-5173:5173}"
     volumes:
-      # In production, set FRONTEND_CODE_MOUNT to empty to disable code mounting
-      - ${FRONTEND_CODE_MOUNT:-./frontend}:/app
+      - ./frontend:/app
       - frontend_node_modules:/app/node_modules
     environment:
       - VITE_API_URL=${VITE_API_URL:-http://backend:8000}
@@ -113,8 +105,8 @@ services:
       - backend
     restart: ${RESTART_POLICY:-unless-stopped}
     healthcheck:
-      # In production, use a real health check
-      test: ["CMD-SHELL", 'node -e "require(''http'').get(''http://localhost:5173'', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on(''error'', () => process.exit(0))" || exit 0']
+      # Health check for production
+      test: ["CMD-SHELL", 'node -e "require(''http'').get(''http://localhost:5173'', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on(''error'', () => process.exit(1))" || exit 1']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -128,8 +120,8 @@ services:
       dockerfile: Dockerfile
     container_name: photosafe-cli
     volumes:
-      - ${BACKEND_CODE_MOUNT:-./backend}:/app
-      - ${BACKEND_UPLOADS_MOUNT:-./backend/uploads}:/app/uploads
+      - ./backend:/app
+      - ./backend/uploads:/app/uploads
       - backend_pycache:/app/__pycache__
     environment:
       - PYTHONUNBUFFERED=1
