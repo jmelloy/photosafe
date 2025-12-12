@@ -105,10 +105,14 @@ When running `docker compose -f docker-compose.yml up`:
 
 ## Need the Old File?
 
-If you need to reference the old `docker-compose.production.yml`, it's still available in git history:
+If you need to reference the old `docker-compose.production.yml`, it's still available in git history. Find the last commit before this PR was merged:
 
 ```bash
-git show ec15719:docker-compose.production.yml
+# Find commits that modified the file
+git log --all --full-history -- docker-compose.production.yml
+
+# View the file from a specific commit
+git show <commit-hash>:docker-compose.production.yml
 ```
 
 ## Questions?

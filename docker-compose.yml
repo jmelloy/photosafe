@@ -75,6 +75,8 @@ services:
         condition: service_healthy
     restart: always
     healthcheck:
+      # Use Python to check the root endpoint (Python is already available in the container)
+      # Alternative: install curl/wget in Dockerfile if preferred
       test:
         [
           "CMD-SHELL",
@@ -105,6 +107,8 @@ services:
         condition: service_healthy
     restart: always
     healthcheck:
+      # Check if the preview server is responding (Node.js is already available in the container)
+      # Alternative: install curl/wget in Dockerfile if preferred
       test:
         [
           "CMD-SHELL",

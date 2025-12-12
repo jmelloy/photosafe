@@ -19,6 +19,8 @@ services:
     # Mount source code for hot-reload in development
     volumes:
       - ./backend:/app
+      # Note: In dev, we mount the local uploads folder instead of using uploads_data volume
+      # This allows you to easily access and manage uploaded files during development
       - ./backend/uploads:/app/uploads
       # Use named volume for Python cache to avoid conflicts
       - backend_pycache:/app/__pycache__
@@ -38,6 +40,7 @@ services:
     # Mount source code for development
     volumes:
       - ./backend:/app
+      # Note: In dev, we mount the local uploads folder to match backend behavior
       - ./backend/uploads:/app/uploads
       - backend_pycache:/app/__pycache__
 
