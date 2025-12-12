@@ -71,7 +71,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - DATABASE_URL=postgresql://${POSTGRES_USER:-photosafe}:${POSTGRES_PASSWORD:-photosafe}@db:5432/${POSTGRES_DB:-photosafe}
-      - DEBUG=${DEBUG:false}
+      - DEBUG=${DEBUG:-false}
     # Development default includes --reload, production should not
     command: ${BACKEND_COMMAND:-sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"}
     depends_on:
