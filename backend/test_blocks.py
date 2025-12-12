@@ -1,19 +1,19 @@
 """Tests for /photos/blocks endpoint"""
 
+import os
+from datetime import datetime
+from uuid import uuid4
+
 import pytest
+from app.auth import get_password_hash
+from app.database import get_db
+from app.main import app
+from app.models import Photo, User
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel
-from datetime import datetime
-from uuid import uuid4
-
-from app.main import app
-from app.database import get_db
-from app.models import User, Photo
-from app.auth import get_password_hash
-
 
 # Test database setup
 SQLALCHEMY_DATABASE_URL = os.getenv(

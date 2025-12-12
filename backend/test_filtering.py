@@ -1,18 +1,17 @@
 """Tests for photo filtering functionality"""
 
+import os
+from datetime import datetime
+from uuid import uuid4
+
 import pytest
+from app.database import get_db
+from app.main import app
+from app.models import Photo, User
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import Session, SQLModel
-from datetime import datetime
-from uuid import uuid4
-import os
-
-from app.main import app
-from app.database import get_db
-from app.models import User, Photo
-
 
 # NOTE: These tests require a PostgreSQL test database
 # Test database setup - PostgreSQL connection required
