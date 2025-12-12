@@ -67,7 +67,7 @@ export const getAvailableFilters = async (): Promise<AvailableFilters> => {
 };
 
 export const getPhoto = async (id: string): Promise<Photo> => {
-  const response = await api.get<Photo>(`/photos/${id}`);
+  const response = await api.get<Photo>(`/photos/${id}/`);
   return response.data;
 };
 
@@ -84,5 +84,5 @@ export const uploadPhoto = async (file: File): Promise<Photo> => {
 };
 
 export const deletePhoto = async (id: string): Promise<void> => {
-  await api.delete(`/photos/${id}`);
+  await api.delete(`/photos/${id}/`);
 };

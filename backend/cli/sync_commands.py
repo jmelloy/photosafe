@@ -166,6 +166,7 @@ def macos(bucket, base_url, username, password):
 @click.option("--icloud-password", envvar="ICLOUD_PASSWORD", help="iCloud password")
 @click.option("--stop-after", default=1000, help="Stop after N existing photos")
 @click.option("--offset", default=0, help="Offset for fetching photos")
+@click.option("--batch-size", default=10, help="Number of photos to process in each batch")
 def icloud(
     bucket,
     base_url,
@@ -175,6 +176,7 @@ def icloud(
     icloud_password,
     stop_after,
     offset,
+    batch_size,
 ):
     """Sync photos from iCloud"""
     import mimetypes
@@ -347,12 +349,60 @@ def icloud(
 
     s3_keys = {}
     os.makedirs(username, exist_ok=True)
+    
+    # Track totals across all libraries
+    total_photos = 0
+    total_created_all = 0
+    total_updated_all = 0
 
     for library_name, library in api.photos.libraries.items():
         click.echo(f"Library: {library_name}")
-        existing = 0
+        photo_batch = []  # Collect photos for batching
+        total_created = 0
+        total_updated = 0
+        photo_count = 0  # Track total photos processed in this library
+
+        def send_batch():
+            """Send accumulated batch of photos to the API"""
+            nonlocal total_created, total_updated
+            
+            if not photo_batch:
+                return
+            
+            batch_data = {"photos": photo_batch}
+            
+            r = requests.post(
+                f"{base_url}/api/photos/batch/",
+                data=json.dumps(batch_data, cls=DateTimeEncoder).replace("\\u0000", ""),
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {token}",
+                },
+            )
+            
+            if r.status_code == 200:
+                result = r.json()
+                total_created += result["created"]
+                total_updated += result["updated"]
+                click.echo(
+                    f"Batch processed: {result['created']} created, "
+                    f"{result['updated']} updated, {result['errors']} errors"
+                )
+                
+                # Log any errors
+                for photo_result in result["results"]:
+                    if not photo_result["success"]:
+                        click.echo(
+                            f"Error processing {photo_result['uuid']}: {photo_result.get('error', 'Unknown error')}",
+                            err=True
+                        )
+            else:
+                click.echo(f"Batch request failed: {r.status_code} {r.text}", err=True)
+            
+            photo_batch.clear()
 
         for i, photo in enumerate(library.all.fetch_records(offset)):
+            photo_count = i + 1  # Track photo count
             click.echo(f"{photo}, {photo.created}")
             dt = (photo.asset_date or photo.created).strftime("%Y/%m/%d")
 
@@ -444,34 +494,25 @@ def icloud(
                     )
                 )
 
-            r = requests.post(
-                f"{base_url}/api/photos/",
-                data=json.dumps(data, cls=DateTimeEncoder).replace("\\u0000", ""),
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {token}",
-                },
-            )
+            # Add photo to batch
+            photo_batch.append(data)
 
-            if r.status_code == 400 and "this uuid already exists" in r.text:
-                existing += 1
-
-                if existing > stop_after:
+            # Send batch when it reaches the batch size
+            if len(photo_batch) >= batch_size:
+                send_batch()
+                
+                # Check stop condition after sending batch
+                if total_updated > stop_after:
                     break
 
-                r = requests.patch(
-                    f"{base_url}/api/photos/{data['uuid']}/",
-                    data=json.dumps(data, cls=DateTimeEncoder).replace("\\u0000", ""),
-                    headers={
-                        "Content-Type": "application/json",
-                        "Authorization": f"Bearer {token}",
-                    },
-                )
-
-            elif r.status_code > 399:
-                click.echo(f"{r.status_code} {r.text}")
-                r.raise_for_status()
+        # Send any remaining photos in the final batch
+        send_batch()
+        
+        # Accumulate totals from this library
+        total_photos += photo_count
+        total_created_all += total_created
+        total_updated_all += total_updated
 
     shutil.rmtree(username)
-    click.echo(f"{i + 1} photos, {existing} existing")
+    click.echo(f"{total_photos} photos processed, {total_created_all} created, {total_updated_all} updated")
     upload_albums()

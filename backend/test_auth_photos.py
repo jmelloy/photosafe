@@ -388,3 +388,214 @@ def test_delete_photo_ownership():
         "/api/photos/user1-photo/", headers={"Authorization": f"Bearer {token2}"}
     )
     assert response.status_code == 403
+
+
+def test_batch_create_photos():
+    """Test batch creation of photos"""
+    # Register and login
+    client.post(
+        "/api/auth/register",
+        json={
+            "username": "batchuser",
+            "email": "batch@example.com",
+            "password": "password123",
+        },
+    )
+    login_response = client.post(
+        "/api/auth/login", data={"username": "batchuser", "password": "password123"}
+    )
+    token = login_response.json()["access_token"]
+
+    # Create batch of photos
+    batch_data = {
+        "photos": [
+            {
+                "uuid": "batch-photo-1",
+                "original_filename": "photo1.jpg",
+                "date": "2024-01-01T00:00:00",
+            },
+            {
+                "uuid": "batch-photo-2",
+                "original_filename": "photo2.jpg",
+                "date": "2024-01-02T00:00:00",
+            },
+            {
+                "uuid": "batch-photo-3",
+                "original_filename": "photo3.jpg",
+                "date": "2024-01-03T00:00:00",
+            },
+        ]
+    }
+
+    response = client.post(
+        "/api/photos/batch/",
+        json=batch_data,
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result["total"] == 3
+    assert result["created"] == 3
+    assert result["updated"] == 0
+    assert result["errors"] == 0
+    assert len(result["results"]) == 3
+
+    # Verify all photos were created successfully
+    for photo_result in result["results"]:
+        assert photo_result["success"] is True
+        assert photo_result["action"] == "created"
+
+    # Verify photos exist in database
+    photos_response = client.get(
+        "/api/photos/", headers={"Authorization": f"Bearer {token}"}
+    )
+    photos = photos_response.json()
+    assert len(photos) == 3
+
+
+def test_batch_update_photos():
+    """Test batch update of existing photos"""
+    # Register and login
+    client.post(
+        "/api/auth/register",
+        json={
+            "username": "updateuser",
+            "email": "update@example.com",
+            "password": "password123",
+        },
+    )
+    login_response = client.post(
+        "/api/auth/login", data={"username": "updateuser", "password": "password123"}
+    )
+    token = login_response.json()["access_token"]
+
+    # Create initial photos
+    for i in range(1, 4):
+        client.post(
+            "/api/photos/",
+            json={
+                "uuid": f"update-photo-{i}",
+                "original_filename": f"photo{i}.jpg",
+                "date": f"2024-01-0{i}T00:00:00",
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    # Update via batch
+    batch_data = {
+        "photos": [
+            {
+                "uuid": "update-photo-1",
+                "original_filename": "photo1.jpg",
+                "date": "2024-01-01T00:00:00",
+                "title": "Updated Photo 1",
+                "favorite": True,
+            },
+            {
+                "uuid": "update-photo-2",
+                "original_filename": "photo2.jpg",
+                "date": "2024-01-02T00:00:00",
+                "title": "Updated Photo 2",
+            },
+        ]
+    }
+
+    response = client.post(
+        "/api/photos/batch/",
+        json=batch_data,
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result["total"] == 2
+    assert result["created"] == 0
+    assert result["updated"] == 2
+    assert result["errors"] == 0
+
+    # Verify updates were applied
+    photo1 = client.get(
+        "/api/photos/update-photo-1/", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert photo1.json()["title"] == "Updated Photo 1"
+    assert photo1.json()["favorite"] is True
+
+
+def test_batch_mixed_create_and_update():
+    """Test batch with both new and existing photos"""
+    # Register and login
+    client.post(
+        "/api/auth/register",
+        json={
+            "username": "mixeduser",
+            "email": "mixed@example.com",
+            "password": "password123",
+        },
+    )
+    login_response = client.post(
+        "/api/auth/login", data={"username": "mixeduser", "password": "password123"}
+    )
+    token = login_response.json()["access_token"]
+
+    # Create one photo first
+    client.post(
+        "/api/photos/",
+        json={
+            "uuid": "existing-photo",
+            "original_filename": "existing.jpg",
+            "date": "2024-01-01T00:00:00",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    # Batch with mix of new and existing
+    batch_data = {
+        "photos": [
+            {
+                "uuid": "existing-photo",
+                "original_filename": "existing.jpg",
+                "date": "2024-01-01T00:00:00",
+                "title": "Updated",
+            },
+            {
+                "uuid": "new-photo-1",
+                "original_filename": "new1.jpg",
+                "date": "2024-01-02T00:00:00",
+            },
+            {
+                "uuid": "new-photo-2",
+                "original_filename": "new2.jpg",
+                "date": "2024-01-03T00:00:00",
+            },
+        ]
+    }
+
+    response = client.post(
+        "/api/photos/batch/",
+        json=batch_data,
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result["total"] == 3
+    assert result["created"] == 2
+    assert result["updated"] == 1
+    assert result["errors"] == 0
+
+
+def test_batch_unauthenticated():
+    """Test batch endpoint requires authentication"""
+    batch_data = {
+        "photos": [
+            {
+                "uuid": "test-photo",
+                "original_filename": "test.jpg",
+                "date": "2024-01-01T00:00:00",
+            }
+        ]
+    }
+
+    response = client.post("/api/photos/batch/", json=batch_data)
+    assert response.status_code == 401

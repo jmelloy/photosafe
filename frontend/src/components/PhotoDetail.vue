@@ -6,7 +6,7 @@
       <div class="detail-container">
         <!-- Left side: Image -->
         <div class="image-section">
-          <img :src="photo.url" :alt="photo.original_filename" />
+          <img :src="detailImageUrl" :alt="photo.original_filename" />
         </div>
 
         <!-- Right side: Metadata -->
@@ -151,6 +151,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { Photo } from "../types/api";
+import { S3_BASE_URL } from "../config";
 
 interface PhotoDetailProps {
   photo: Photo | null;
@@ -162,6 +163,35 @@ interface PhotoDetailEmits {
 
 const props = defineProps<PhotoDetailProps>();
 defineEmits<PhotoDetailEmits>();
+
+// Compute detail image URL - prioritize medium or original over thumbnail
+const detailImageUrl = computed(() => {
+  if (!props.photo) return "";
+  
+  const buildS3Url = (s3Path: string | undefined): string | null => {
+    if (!s3Path) return null;
+    // If already a full URL, return as-is
+    if (s3Path.startsWith("http://") || s3Path.startsWith("https://")) {
+      return s3Path;
+    }
+    // Otherwise, construct URL with base domain
+    const cleanPath = s3Path.startsWith("/") ? s3Path.substring(1) : s3Path;
+    return `${S3_BASE_URL}/${cleanPath}`;
+  };
+  
+  // Prioritize medium (s3_key_path), then original, then edited, then thumbnail
+  // This is different from the backend's url property which prioritizes thumbnail first
+  const candidates = [
+    props.photo.s3_key_path,
+    props.photo.s3_original_path,
+    props.photo.s3_edited_path,
+    props.photo.s3_thumbnail_path,
+  ];
+  
+  const url = candidates.map(buildS3Url).find(Boolean) || props.photo.url || "";
+  
+  return url;
+});
 
 const formatDate = (dateString?: string): string => {
   if (!dateString) return "Unknown";
