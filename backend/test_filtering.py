@@ -28,6 +28,7 @@ TestingSessionLocal = sessionmaker(
     autocommit=False, autoflush=False, bind=engine, class_=Session
 )
 
+
 SQLModel.metadata.create_all(bind=engine)
 
 
@@ -376,7 +377,7 @@ def test_get_available_filters():
     assert "albums" in filters
     assert "keywords" in filters
     assert "persons" in filters
-    
+
     assert set(filters["albums"]) == {"Beach", "Family", "Vacation"}
     assert set(filters["keywords"]) == {"nature", "portrait", "sunset"}
     assert set(filters["persons"]) == {"Alice", "Bob", "Charlie"}
