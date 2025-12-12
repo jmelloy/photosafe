@@ -92,7 +92,9 @@ def serialize_photo_json_fields(photo_dict):
     
     Note: Only serializes JSONB fields (faces, place, exif, score, search_info, fields).
     Array fields (keywords, labels, albums, persons) are stored as PostgreSQL arrays 
-    and should NOT be JSON-serialized.
+    and should NOT be JSON-serialized, as JSON serialization would convert them to 
+    character arrays (splitting each string into individual characters), breaking 
+    filtering functionality.
     """
     # Only serialize JSONB fields - array fields should remain as lists
     jsonb_fields = [
