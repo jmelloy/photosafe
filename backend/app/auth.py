@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta
 from typing import Optional
 import os
-from jose import JWTError, jwt
+from jose import JWTError, jwt, ExpiredSignatureError
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -61,10 +61,17 @@ def verify_refresh_token(token: str) -> Optional[str]:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         token_type: str = payload.get("type")
+        
+        # Validate token has required claims and is of correct type
         if username is None or token_type != "refresh":
             return None
+        
         return username
+    except jwt.ExpiredSignatureError:
+        # Token is expired - log for security monitoring if needed
+        return None
     except JWTError:
+        # Other JWT errors (invalid signature, malformed token, etc.)
         return None
 
 
