@@ -636,17 +636,97 @@ async def list_photos(
 
 @app.get("/api/photos/filters/")
 async def get_photo_filters(
+    search: Optional[str] = None,
+    album: Optional[str] = None,
+    keyword: Optional[str] = None,
+    person: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    favorite: Optional[bool] = None,
+    isphoto: Optional[bool] = None,
+    ismovie: Optional[bool] = None,
+    screenshot: Optional[bool] = None,
+    panorama: Optional[bool] = None,
+    portrait: Optional[bool] = None,
+    has_location: Optional[bool] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> Dict[str, List[str]]:
-    """Get available filter values for albums, keywords, and persons"""
+    """Get available filter values for albums, keywords, and persons based on currently filtered photos"""
     # Superusers can see all photos, regular users only see their own
     if current_user.is_superuser:
         query = db.query(Photo)
     else:
         query = db.query(Photo).filter(Photo.owner_id == current_user.id)
     
-    # Get all photos for this user
+    # Apply same filters as list_photos endpoint to only show relevant filter values
+    # Apply search filter - search in original_filename, title, and description
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(
+            or_(
+                Photo.original_filename.ilike(search_pattern),
+                Photo.title.ilike(search_pattern),
+                Photo.description.ilike(search_pattern),
+            )
+        )
+
+    # Apply album filter
+    if album:
+        query = query.filter(Photo.albums.contains([album]))
+
+    # Apply keyword filter
+    if keyword:
+        query = query.filter(Photo.keywords.contains([keyword]))
+
+    # Apply person filter
+    if person:
+        query = query.filter(Photo.persons.contains([person]))
+
+    # Apply date range filters
+    if start_date:
+        try:
+            start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+            query = query.filter(Photo.date >= start_dt)
+        except ValueError:
+            pass  # Skip invalid date format
+
+    if end_date:
+        try:
+            end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+            # Include the entire end date
+            end_dt = end_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
+            query = query.filter(Photo.date <= end_dt)
+        except ValueError:
+            pass  # Skip invalid date format
+
+    # Apply photo type filters
+    if favorite is not None:
+        query = query.filter(Photo.favorite == favorite)
+
+    if isphoto is not None:
+        query = query.filter(Photo.isphoto == isphoto)
+
+    if ismovie is not None:
+        query = query.filter(Photo.ismovie == ismovie)
+
+    if screenshot is not None:
+        query = query.filter(Photo.screenshot == screenshot)
+
+    if panorama is not None:
+        query = query.filter(Photo.panorama == panorama)
+
+    if portrait is not None:
+        query = query.filter(Photo.portrait == portrait)
+
+    # Apply location filter
+    if has_location is not None:
+        if has_location:
+            query = query.filter(Photo.latitude.isnot(None), Photo.longitude.isnot(None))
+        else:
+            query = query.filter(or_(Photo.latitude.is_(None), Photo.longitude.is_(None)))
+    
+    # Get all photos matching the current filters
     photos = query.all()
     
     # Extract unique values from arrays

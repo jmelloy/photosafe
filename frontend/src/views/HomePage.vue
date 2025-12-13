@@ -209,7 +209,8 @@ const loadPhotos = async (reset: boolean = true) => {
 
 const loadAvailableFilters = async () => {
   try {
-    const filters = await getAvailableFilters();
+    const currentFilters = buildFilters();
+    const filters = await getAvailableFilters(currentFilters);
     albums.value = filters.albums;
     keywords.value = filters.keywords;
     persons.value = filters.persons;
@@ -261,7 +262,7 @@ const clearFilters = () => {
   filterHasLocation.value = false;
 };
 
-// Watch for filter changes and reload photos
+// Watch for filter changes and reload photos and available filters
 watch(
   [
     searchQuery,
@@ -280,6 +281,7 @@ watch(
   ],
   () => {
     loadPhotos(true);
+    loadAvailableFilters();
   }
 );
 
