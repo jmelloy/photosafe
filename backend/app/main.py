@@ -28,6 +28,7 @@ from .models import (
     UserCreate,
     UserRead,
     Token,
+    RefreshTokenRequest,
     PaginatedPhotosResponse,
     BatchPhotoRequest,
     BatchPhotoResult,
@@ -36,9 +37,12 @@ from .models import (
 from .auth import (
     authenticate_user,
     create_access_token,
+    create_refresh_token,
+    verify_refresh_token,
     get_password_hash,
     get_current_active_user,
     ACCESS_TOKEN_EXPIRE_MINUTES,
+    REFRESH_TOKEN_EXPIRE_DAYS,
 )
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
@@ -188,7 +192,7 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
 ):
-    """Login and get access token"""
+    """Login and get access and refresh tokens"""
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
@@ -207,7 +211,55 @@ async def login(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
 
-    return {"access_token": access_token, "token_type": "bearer"}
+    # Create refresh token
+    refresh_token_expires = timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    refresh_token = create_refresh_token(
+        data={"sub": user.username}, expires_delta=refresh_token_expires
+    )
+
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+    }
+
+
+@app.post("/api/auth/refresh", response_model=Token)
+async def refresh_token(request: RefreshTokenRequest, db: Session = Depends(get_db)):
+    """Refresh access token using refresh token"""
+    username = verify_refresh_token(request.refresh_token)
+    if not username:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid refresh token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    user = db.query(User).filter(User.username == username).first()
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid refresh token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Create new access token
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+
+    # Create new refresh token
+    refresh_token_expires = timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    new_refresh_token = create_refresh_token(
+        data={"sub": user.username}, expires_delta=refresh_token_expires
+    )
+
+    return {
+        "access_token": access_token,
+        "refresh_token": new_refresh_token,
+        "token_type": "bearer",
+    }
 
 
 @app.get("/api/auth/me", response_model=UserRead)

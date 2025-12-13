@@ -1,15 +1,24 @@
-import api, { getToken, setToken, removeToken } from "./client";
+import api, {
+  getToken,
+  setToken,
+  removeToken,
+  getRefreshToken,
+  setRefreshToken,
+} from "./client";
 import type { User } from "../types/api";
 import type { TokenResponse } from "../types/auth";
 
-export { getToken, setToken, removeToken };
+export { getToken, setToken, removeToken, getRefreshToken, setRefreshToken };
 
 export const isAuthenticated = (): boolean => {
   return !!getToken();
 };
 
 // API calls
-export const login = async (username: string, password: string): Promise<TokenResponse> => {
+export const login = async (
+  username: string,
+  password: string
+): Promise<TokenResponse> => {
   const formData = new URLSearchParams();
   formData.append("username", username);
   formData.append("password", password);
@@ -20,8 +29,9 @@ export const login = async (username: string, password: string): Promise<TokenRe
     },
   });
 
-  const { access_token } = response.data;
+  const { access_token, refresh_token } = response.data;
   setToken(access_token);
+  setRefreshToken(refresh_token);
   return response.data;
 };
 
@@ -42,6 +52,22 @@ export const register = async (
 
 export const getCurrentUser = async (): Promise<User> => {
   const response = await api.get<User>("/auth/me");
+  return response.data;
+};
+
+export const refreshAccessToken = async (): Promise<TokenResponse> => {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) {
+    throw new Error("No refresh token available");
+  }
+
+  const response = await api.post<TokenResponse>("/auth/refresh", {
+    refresh_token: refreshToken,
+  });
+
+  const { access_token, refresh_token: new_refresh_token } = response.data;
+  setToken(access_token);
+  setRefreshToken(new_refresh_token);
   return response.data;
 };
 

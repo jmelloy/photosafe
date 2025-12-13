@@ -142,7 +142,56 @@ def test_login():
     assert response.status_code == 200
     data = response.json()
     assert "access_token" in data
+    assert "refresh_token" in data
     assert data["token_type"] == "bearer"
+
+
+def test_refresh_token():
+    """Test refreshing access token using refresh token"""
+    # Register user
+    client.post(
+        "/api/auth/register",
+        json={
+            "username": "testuser",
+            "email": "test@example.com",
+            "password": "testpassword123",
+        },
+    )
+
+    # Login to get tokens
+    login_response = client.post(
+        "/api/auth/login", data={"username": "testuser", "password": "testpassword123"}
+    )
+    assert login_response.status_code == 200
+    login_data = login_response.json()
+    refresh_token = login_data["refresh_token"]
+
+    # Use refresh token to get new access token
+    refresh_response = client.post(
+        "/api/auth/refresh", json={"refresh_token": refresh_token}
+    )
+    assert refresh_response.status_code == 200
+    refresh_data = refresh_response.json()
+    assert "access_token" in refresh_data
+    assert "refresh_token" in refresh_data
+    assert refresh_data["token_type"] == "bearer"
+
+    # Verify the new access token works
+    new_access_token = refresh_data["access_token"]
+    me_response = client.get(
+        "/api/auth/me", headers={"Authorization": f"Bearer {new_access_token}"}
+    )
+    assert me_response.status_code == 200
+    assert me_response.json()["username"] == "testuser"
+
+
+def test_refresh_token_invalid():
+    """Test refresh with invalid token"""
+    response = client.post(
+        "/api/auth/refresh", json={"refresh_token": "invalid_token"}
+    )
+    assert response.status_code == 401
+    assert "Invalid refresh token" in response.json()["detail"]
 
 
 def test_login_invalid_credentials():
