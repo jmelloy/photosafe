@@ -114,13 +114,29 @@ const setupIntersectionObserver = () => {
 
   // Wait for next tick to ensure DOM is updated
   setTimeout(() => {
-    if (!loadMoreTrigger.value || !props.hasMore || props.loading) {
+    if (!loadMoreTrigger.value) {
+      console.log("loadMoreTrigger not available yet");
+      return;
+    }
+
+    if (!props.hasMore) {
+      console.log("No more photos to load");
+      return;
+    }
+
+    if (props.loading) {
+      console.log("Currently loading, skipping observer setup");
       return;
     }
 
     observer = new IntersectionObserver(
       (entries) => {
         const [entry] = entries;
+        console.log("Intersection observer callback:", {
+          isIntersecting: entry.isIntersecting,
+          hasMore: props.hasMore,
+          loadingMore: props.loadingMore,
+        });
         if (entry.isIntersecting && props.hasMore && !props.loadingMore) {
           console.log("Infinite scroll triggered - loading more photos");
           emit("load-more");
@@ -134,7 +150,10 @@ const setupIntersectionObserver = () => {
     );
 
     observer.observe(loadMoreTrigger.value);
-    console.log("Intersection observer set up, hasMore:", props.hasMore);
+    console.log("Intersection observer set up successfully", {
+      hasMore: props.hasMore,
+      photosCount: props.photos.length,
+    });
   }, 100);
 };
 
@@ -144,19 +163,29 @@ onMounted(() => {
 
 // Watch for changes that should trigger observer setup
 watch(
-  () => [props.hasMore, props.loading, props.photos.length],
-  ([newHasMore, newLoading, newLength], [oldHasMore, , oldLength]) => {
+  () => [props.hasMore, props.loading, props.photos.length] as const,
+  ([newHasMore, newLoading, newLength], [oldHasMore, oldLoading, oldLength]) => {
+    console.log("PhotoGallery watch triggered:", {
+      hasMore: newHasMore,
+      loading: newLoading,
+      photosLength: newLength,
+      oldPhotosLength: oldLength,
+    });
+
     // Re-setup observer when photos are loaded or hasMore changes
     if (newHasMore && !newLoading) {
       if (newLength !== oldLength || newHasMore !== oldHasMore) {
+        console.log("Setting up intersection observer due to changes");
         setupIntersectionObserver();
       }
     } else if (!newHasMore && observer) {
       // Disconnect observer when hasMore becomes false
+      console.log("Disconnecting observer - no more photos");
       observer.disconnect();
       observer = null;
     }
-  }
+  },
+  { deep: false }
 );
 
 onBeforeUnmount(() => {

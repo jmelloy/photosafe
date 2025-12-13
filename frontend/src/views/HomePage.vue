@@ -178,6 +178,8 @@ const buildFilters = (): PhotoFilters => {
 };
 
 const loadPhotos = async (reset: boolean = true) => {
+  console.log("loadPhotos called", { reset, currentPage: currentPage.value });
+  
   if (reset) {
     loading.value = true;
     currentPage.value = 1;
@@ -188,7 +190,15 @@ const loadPhotos = async (reset: boolean = true) => {
   
   try {
     const filters = buildFilters();
+    console.log("Loading photos with filters:", filters);
     const response = await getPhotos(currentPage.value, 50, filters);
+    console.log("Photos response:", {
+      itemsCount: response.items.length,
+      total: response.total,
+      page: response.page,
+      pageSize: response.page_size,
+      hasMore: response.has_more,
+    });
     
     if (reset) {
       photos.value = response.items;
@@ -198,6 +208,7 @@ const loadPhotos = async (reset: boolean = true) => {
     
     hasMore.value = response.has_more;
     totalPhotos.value = response.total;
+    console.log("Photos loaded. Current count:", photos.value.length, "hasMore:", hasMore.value);
   } catch (error: unknown) {
     console.error("Failed to load photos:", error);
     alert("Failed to load photos. Please try again.");
@@ -209,7 +220,13 @@ const loadPhotos = async (reset: boolean = true) => {
 
 const loadAvailableFilters = async () => {
   try {
+    console.log("Loading available filters...");
     const filters = await getAvailableFilters();
+    console.log("Available filters loaded:", {
+      albumsCount: filters.albums.length,
+      keywordsCount: filters.keywords.length,
+      personsCount: filters.persons.length,
+    });
     albums.value = filters.albums;
     keywords.value = filters.keywords;
     persons.value = filters.persons;
@@ -219,11 +236,19 @@ const loadAvailableFilters = async () => {
 };
 
 const loadMorePhotos = async () => {
+  console.log("loadMorePhotos called", {
+    hasMore: hasMore.value,
+    loadingMore: loadingMore.value,
+    currentPage: currentPage.value,
+  });
+  
   if (!hasMore.value || loadingMore.value) {
+    console.log("Skipping loadMorePhotos - no more data or already loading");
     return;
   }
   
   currentPage.value += 1;
+  console.log("Incremented page to:", currentPage.value);
   await loadPhotos(false);
 };
 
