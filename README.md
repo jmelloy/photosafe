@@ -1,6 +1,7 @@
 # PhotoSafe Gallery
 
 [![Backend Tests](https://github.com/jmelloy/photosafe/actions/workflows/backend-tests.yml/badge.svg)](https://github.com/jmelloy/photosafe/actions/workflows/backend-tests.yml)
+[![Frontend Tests](https://github.com/jmelloy/photosafe/actions/workflows/frontend-tests.yml/badge.svg)](https://github.com/jmelloy/photosafe/actions/workflows/frontend-tests.yml)
 
 A modern photo gallery application built with FastAPI and Vue 3.
 
