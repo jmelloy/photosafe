@@ -67,7 +67,7 @@ def verify_refresh_token(token: str) -> Optional[str]:
             return None
         
         return username
-    except jwt.ExpiredSignatureError:
+    except ExpiredSignatureError:
         # Token is expired - log for security monitoring if needed
         return None
     except JWTError:

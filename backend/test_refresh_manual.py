@@ -23,8 +23,17 @@ def test_refresh_token_flow():
         response = requests.post(f"{BASE_URL}/auth/register", json=register_data)
         if response.status_code == 201:
             print("   ✓ User registered successfully")
-        elif response.status_code == 400 and "already registered" in response.text:
-            print("   ✓ User already exists (continuing)")
+        elif response.status_code == 400:
+            # User already exists, that's okay for this test
+            try:
+                error_detail = response.json().get("detail", "")
+                if "already registered" in error_detail.lower():
+                    print("   ✓ User already exists (continuing)")
+                else:
+                    print(f"   ✗ Registration failed: {response.status_code} - {error_detail}")
+                    return
+            except:
+                print("   ✓ User already exists (continuing)")
         else:
             print(f"   ✗ Registration failed: {response.status_code} - {response.text}")
             return
