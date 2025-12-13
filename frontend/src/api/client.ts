@@ -22,6 +22,15 @@ export const setToken = (token: string): void => {
 
 export const removeToken = (): void => {
   localStorage.removeItem("photosafe_auth_token");
+  localStorage.removeItem("photosafe_refresh_token");
+};
+
+export const getRefreshToken = (): string | null => {
+  return localStorage.getItem("photosafe_refresh_token");
+};
+
+export const setRefreshToken = (token: string): void => {
+  localStorage.setItem("photosafe_refresh_token", token);
 };
 
 // Add auth header to all requests
@@ -49,7 +58,26 @@ api.interceptors.request.use(
   }
 );
 
-// Add response interceptor for debugging
+// Track if we're currently refreshing to prevent multiple simultaneous refresh attempts
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (value?: unknown) => void;
+  reject: (reason?: unknown) => void;
+}> = [];
+
+const processQueue = (error: AxiosError | null, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+
+  failedQueue = [];
+};
+
+// Add response interceptor for debugging and token refresh
 api.interceptors.response.use(
   (response) => {
     console.log(
@@ -63,7 +91,11 @@ api.interceptors.response.use(
     );
     return response;
   },
-  (error: AxiosError) => {
+  async (error: AxiosError) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & {
+      _retry?: boolean;
+    };
+
     console.error(
       `[API Response Error] ${error.config?.method?.toUpperCase()} ${
         error.config?.url
@@ -74,6 +106,67 @@ api.interceptors.response.use(
         message: error.message,
       }
     );
+
+    // If error is 401 and we haven't retried yet, try to refresh the token
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        // If already refreshing, queue this request
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+            }
+            return api(originalRequest);
+          })
+          .catch((err) => {
+            return Promise.reject(err);
+          });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      const refreshToken = getRefreshToken();
+      if (!refreshToken) {
+        // No refresh token available, reject
+        return Promise.reject(error);
+      }
+
+      try {
+        // Call refresh endpoint
+        const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+          refresh_token: refreshToken,
+        });
+
+        const { access_token, refresh_token: new_refresh_token } =
+          response.data;
+
+        // Store new tokens
+        setToken(access_token);
+        setRefreshToken(new_refresh_token);
+
+        // Update authorization header
+        if (originalRequest.headers) {
+          originalRequest.headers.Authorization = `Bearer ${access_token}`;
+        }
+
+        // Process queued requests
+        processQueue(null, access_token);
+
+        // Retry original request
+        return api(originalRequest);
+      } catch (refreshError) {
+        // Refresh failed, clear tokens and reject
+        processQueue(refreshError as AxiosError, null);
+        removeToken();
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
     return Promise.reject(error);
   }
 );
