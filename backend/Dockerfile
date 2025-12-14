@@ -5,7 +5,7 @@ COPY --from=ghcr.io/astral-sh/uv:0.9.16 /uv /uvx /bin/
 
 # Install PostgreSQL client tools
 RUN apt-get update && apt-get install -y \
-    postgresql-client git \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies
@@ -13,7 +13,7 @@ COPY pyproject.toml .
 COPY app ./app
 COPY cli ./cli
 
-RUN uv pip install --system .[icloud]
+RUN uv pip install --system .
 
 # Copy application
 COPY alembic ./alembic
