@@ -120,6 +120,7 @@
         :loading="loading"
         :loading-more="loadingMore"
         :has-more="hasMore"
+        :total="totalPhotos"
         @delete-photo="handleDeletePhoto"
         @load-more="loadMorePhotos"
       />

@@ -3,7 +3,7 @@
     <div class="gallery-header">
       <h2>Photo Gallery</h2>
       <p class="photo-count" v-if="!loading && photos.length > 0">
-        Showing {{ photos.length }} photos
+        Showing {{ photos.length }}{{ total ? ` of ${total}` : '' }} photos
       </p>
     </div>
 
@@ -50,7 +50,7 @@
       </div>
     </div>
 
-    <!-- Infinite scroll trigger (outside v-else so it's always present) -->
+    <!-- Infinite scroll trigger and manual load more button -->
     <div 
       ref="loadMoreTrigger" 
       class="load-more-trigger" 
@@ -60,12 +60,19 @@
         <div class="spinner-small"></div>
         <p>Loading more photos...</p>
       </div>
+      <button 
+        v-else 
+        @click="$emit('load-more')" 
+        class="load-more-button"
+      >
+        Load More Photos
+      </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch } from "vue";
+import { ref, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import type { Photo } from "../types/api";
 
@@ -74,6 +81,7 @@ interface PhotoGalleryProps {
   loading?: boolean;
   loadingMore?: boolean;
   hasMore?: boolean;
+  total?: number;
 }
 
 interface PhotoGalleryEmits {
@@ -105,7 +113,7 @@ const openPhoto = (photo: Photo): void => {
   router.push(`/photos/${photo.uuid}`);
 };
 
-const setupIntersectionObserver = () => {
+const setupIntersectionObserver = async () => {
   // Disconnect any existing observer first
   if (observer) {
     observer.disconnect();
@@ -113,48 +121,51 @@ const setupIntersectionObserver = () => {
   }
 
   // Wait for next tick to ensure DOM is updated
-  setTimeout(() => {
-    if (!loadMoreTrigger.value) {
-      console.log("loadMoreTrigger not available yet");
-      return;
-    }
+  await nextTick();
+  
+  // Also wait a bit more to ensure the element is rendered
+  await new Promise(resolve => setTimeout(resolve, 50));
 
-    if (!props.hasMore) {
-      console.log("No more photos to load");
-      return;
-    }
+  if (!loadMoreTrigger.value) {
+    console.log("loadMoreTrigger not available yet");
+    return;
+  }
 
-    if (props.loading) {
-      console.log("Currently loading, skipping observer setup");
-      return;
-    }
+  if (!props.hasMore) {
+    console.log("No more photos to load");
+    return;
+  }
 
-    observer = new IntersectionObserver(
-      (entries) => {
-        const [entry] = entries;
-        console.log("Intersection observer callback:", {
-          isIntersecting: entry.isIntersecting,
-          hasMore: props.hasMore,
-          loadingMore: props.loadingMore,
-        });
-        if (entry.isIntersecting && props.hasMore && !props.loadingMore) {
-          console.log("Infinite scroll triggered - loading more photos");
-          emit("load-more");
-        }
-      },
-      {
-        root: null,
-        rootMargin: "200px", // Load more when within 200px of trigger
-        threshold: 0.1,
+  if (props.loading) {
+    console.log("Currently loading, skipping observer setup");
+    return;
+  }
+
+  observer = new IntersectionObserver(
+    (entries) => {
+      const [entry] = entries;
+      console.log("Intersection observer callback:", {
+        isIntersecting: entry.isIntersecting,
+        hasMore: props.hasMore,
+        loadingMore: props.loadingMore,
+      });
+      if (entry.isIntersecting && props.hasMore && !props.loadingMore) {
+        console.log("Infinite scroll triggered - loading more photos");
+        emit("load-more");
       }
-    );
+    },
+    {
+      root: null,
+      rootMargin: "200px", // Load more when within 200px of trigger
+      threshold: 0.1,
+    }
+  );
 
-    observer.observe(loadMoreTrigger.value);
-    console.log("Intersection observer set up successfully", {
-      hasMore: props.hasMore,
-      photosCount: props.photos.length,
-    });
-  }, 100);
+  observer.observe(loadMoreTrigger.value);
+  console.log("Intersection observer set up successfully", {
+    hasMore: props.hasMore,
+    photosCount: props.photos.length,
+  });
 };
 
 onMounted(() => {
@@ -360,6 +371,29 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   margin-top: 2rem;
+}
+
+.load-more-button {
+  padding: 0.75rem 2rem;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.load-more-button:hover {
+  background: #5568d3;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.load-more-button:active {
+  transform: translateY(0);
 }
 
 .loading-more {
