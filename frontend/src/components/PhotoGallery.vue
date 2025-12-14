@@ -75,6 +75,7 @@
 import { ref, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import type { Photo } from "../types/api";
+import { debugLog } from "../config";
 
 interface PhotoGalleryProps {
   photos: Photo[];
@@ -123,34 +124,38 @@ const setupIntersectionObserver = async () => {
   // Wait for next tick to ensure DOM is updated
   await nextTick();
   
-  // Also wait a bit more to ensure the element is rendered
-  await new Promise(resolve => setTimeout(resolve, 50));
+  // Retry logic to handle timing issues - check up to 5 times with 50ms intervals
+  let retries = 0;
+  while (!loadMoreTrigger.value && retries < 5) {
+    await new Promise(resolve => setTimeout(resolve, 50));
+    retries++;
+  }
 
   if (!loadMoreTrigger.value) {
-    console.log("loadMoreTrigger not available yet");
+    debugLog("loadMoreTrigger not available yet");
     return;
   }
 
   if (!props.hasMore) {
-    console.log("No more photos to load");
+    debugLog("No more photos to load");
     return;
   }
 
   if (props.loading) {
-    console.log("Currently loading, skipping observer setup");
+    debugLog("Currently loading, skipping observer setup");
     return;
   }
 
   observer = new IntersectionObserver(
     (entries) => {
       const [entry] = entries;
-      console.log("Intersection observer callback:", {
+      debugLog("Intersection observer callback:", {
         isIntersecting: entry.isIntersecting,
         hasMore: props.hasMore,
         loadingMore: props.loadingMore,
       });
       if (entry.isIntersecting && props.hasMore && !props.loadingMore) {
-        console.log("Infinite scroll triggered - loading more photos");
+        debugLog("Infinite scroll triggered - loading more photos");
         emit("load-more");
       }
     },
@@ -162,7 +167,7 @@ const setupIntersectionObserver = async () => {
   );
 
   observer.observe(loadMoreTrigger.value);
-  console.log("Intersection observer set up successfully", {
+  debugLog("Intersection observer set up successfully", {
     hasMore: props.hasMore,
     photosCount: props.photos.length,
   });
@@ -174,9 +179,9 @@ onMounted(() => {
 
 // Watch for changes that should trigger observer setup
 watch(
-  () => [props.hasMore, props.loading, props.photos.length] as const,
+  () => [props.hasMore, props.loading, props.photos.length],
   ([newHasMore, newLoading, newLength], [oldHasMore, oldLoading, oldLength]) => {
-    console.log("PhotoGallery watch triggered:", {
+    debugLog("PhotoGallery watch triggered:", {
       hasMore: newHasMore,
       loading: newLoading,
       photosLength: newLength,
@@ -186,12 +191,12 @@ watch(
     // Re-setup observer when photos are loaded or hasMore changes
     if (newHasMore && !newLoading) {
       if (newLength !== oldLength || newHasMore !== oldHasMore) {
-        console.log("Setting up intersection observer due to changes");
+        debugLog("Setting up intersection observer due to changes");
         setupIntersectionObserver();
       }
     } else if (!newHasMore && observer) {
       // Disconnect observer when hasMore becomes false
-      console.log("Disconnecting observer - no more photos");
+      debugLog("Disconnecting observer - no more photos");
       observer.disconnect();
       observer = null;
     }

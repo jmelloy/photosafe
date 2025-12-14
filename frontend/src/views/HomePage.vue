@@ -134,6 +134,7 @@ import PhotoGallery from "../components/PhotoGallery.vue";
 import { getPhotos, deletePhoto, getAvailableFilters } from "../api/photos";
 import type { Photo } from "../types/api";
 import type { PhotoFilters } from "../api/photos";
+import { debugLog } from "../config";
 
 const photos = ref<Photo[]>([]);
 const loading = ref<boolean>(false);
@@ -179,7 +180,7 @@ const buildFilters = (): PhotoFilters => {
 };
 
 const loadPhotos = async (reset: boolean = true) => {
-  console.log("loadPhotos called", { reset, currentPage: currentPage.value });
+  debugLog("loadPhotos called", { reset, currentPage: currentPage.value });
   
   if (reset) {
     loading.value = true;
@@ -191,9 +192,9 @@ const loadPhotos = async (reset: boolean = true) => {
   
   try {
     const filters = buildFilters();
-    console.log("Loading photos with filters:", filters);
+    debugLog("Loading photos with filters:", filters);
     const response = await getPhotos(currentPage.value, 50, filters);
-    console.log("Photos response:", {
+    debugLog("Photos response:", {
       itemsCount: response.items.length,
       total: response.total,
       page: response.page,
@@ -209,7 +210,7 @@ const loadPhotos = async (reset: boolean = true) => {
     
     hasMore.value = response.has_more;
     totalPhotos.value = response.total;
-    console.log("Photos loaded. Current count:", photos.value.length, "hasMore:", hasMore.value);
+    debugLog("Photos loaded. Current count:", photos.value.length, "hasMore:", hasMore.value);
   } catch (error: unknown) {
     console.error("Failed to load photos:", error);
     alert("Failed to load photos. Please try again.");
@@ -221,9 +222,9 @@ const loadPhotos = async (reset: boolean = true) => {
 
 const loadAvailableFilters = async () => {
   try {
-    console.log("Loading available filters...");
+    debugLog("Loading available filters...");
     const filters = await getAvailableFilters();
-    console.log("Available filters loaded:", {
+    debugLog("Available filters loaded:", {
       albumsCount: filters.albums.length,
       keywordsCount: filters.keywords.length,
       personsCount: filters.persons.length,
@@ -237,19 +238,19 @@ const loadAvailableFilters = async () => {
 };
 
 const loadMorePhotos = async () => {
-  console.log("loadMorePhotos called", {
+  debugLog("loadMorePhotos called", {
     hasMore: hasMore.value,
     loadingMore: loadingMore.value,
     currentPage: currentPage.value,
   });
   
   if (!hasMore.value || loadingMore.value) {
-    console.log("Skipping loadMorePhotos - no more data or already loading");
+    debugLog("Skipping loadMorePhotos - no more data or already loading");
     return;
   }
   
   currentPage.value += 1;
-  console.log("Incremented page to:", currentPage.value);
+  debugLog("Incremented page to:", currentPage.value);
   await loadPhotos(false);
 };
 
@@ -296,7 +297,7 @@ watch(searchQuery, () => {
     clearTimeout(searchDebounceTimer);
   }
   searchDebounceTimer = setTimeout(() => {
-    console.log("Search query changed, reloading photos");
+    debugLog("Search query changed, reloading photos");
     loadPhotos(true);
   }, 500); // 500ms debounce
 });
@@ -318,7 +319,7 @@ watch(
     filterHasLocation,
   ],
   () => {
-    console.log("Filter changed, reloading photos");
+    debugLog("Filter changed, reloading photos");
     loadPhotos(true);
   }
 );

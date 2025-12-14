@@ -14,6 +14,9 @@ from sqlalchemy.orm import sessionmaker
 from sqlmodel import Session, SQLModel
 
 # Test database setup - PostgreSQL connection required
+# For local testing, set TEST_DATABASE_URL environment variable:
+# export TEST_DATABASE_URL="postgresql://user:pass@localhost:5432/photosafe_test"
+# The default below is for Docker Compose development environment only
 SQLALCHEMY_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
     "postgresql://photosafe:photosafe@localhost:5432/photosafe_test",
