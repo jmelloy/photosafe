@@ -616,7 +616,7 @@ async def list_photos(
             )
 
     # Get total count before pagination
-    total = query.count()
+    # total = query.count()
 
     # Calculate offset
     skip = (page - 1) * page_size
