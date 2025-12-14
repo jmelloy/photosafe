@@ -1,0 +1,177 @@
+"""Utility functions for photo processing"""
+
+import json
+from typing import Dict, Any
+from sqlalchemy.orm import Session
+from .models import Photo, User, Library, VersionRead, PhotoRead
+
+
+def serialize_json_field(value):
+    """Convert list/dict to JSON string for storage"""
+    if value is None:
+        return None
+    if isinstance(value, (list, dict)):
+        return json.dumps(value)
+    return value
+
+
+def deserialize_json_field(value):
+    """Convert JSON string back to list/dict"""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except (json.JSONDecodeError, ValueError):
+            return value
+    return value
+
+
+def serialize_photo_json_fields(photo_dict: Dict[str, Any]) -> Dict[str, Any]:
+    """Serialize JSON fields in a photo dictionary for database storage
+    
+    Note: Only serializes JSONB fields (faces, place, exif, score, search_info, fields).
+    Array fields (keywords, labels, albums, persons) are stored as PostgreSQL arrays 
+    and should NOT be JSON-serialized, as JSON serialization would convert them to 
+    character arrays (splitting each string into individual characters), breaking 
+    filtering functionality.
+    
+    Args:
+        photo_dict: Dictionary of photo data to serialize
+        
+    Returns:
+        Dictionary with JSONB fields serialized
+    """
+    # Only serialize JSONB fields - array fields should remain as lists
+    jsonb_fields = [
+        "faces",
+        "place",
+        "exif",
+        "score",
+        "search_info",
+        "fields",
+    ]
+    for field in jsonb_fields:
+        if field in photo_dict and photo_dict[field] is not None:
+            photo_dict[field] = serialize_json_field(photo_dict[field])
+    return photo_dict
+
+
+def handle_library_upsert(library_name: str, current_user: User, db: Session) -> int:
+    """Handle library name by upserting into libraries table.
+
+    Looks up or creates a library with the given name for the current user.
+    If the library doesn't exist, it will be created and flushed to the database.
+
+    Args:
+        library_name: The name of the library (should not be None or empty)
+        current_user: The user who owns the library
+        db: Database session
+
+    Returns:
+        The library_id for the given library name and user.
+
+    Note:
+        This function assumes library_name is not None or empty.
+        Caller should validate before calling.
+    """
+    library = (
+        db.query(Library)
+        .filter(
+            Library.owner_id == current_user.id,
+            Library.name == library_name,
+        )
+        .first()
+    )
+    if not library:
+        library = Library(
+            name=library_name,
+            owner_id=current_user.id,
+        )
+        db.add(library)
+        db.flush()
+    return library.id
+
+
+def create_photo_response(photo: Photo) -> PhotoRead:
+    """Helper function to create PhotoRead from Photo model
+    
+    Args:
+        photo: Photo database model instance
+        
+    Returns:
+        PhotoRead response model with deserialized JSON fields
+    """
+    # Deserialize JSON fields and create response
+    response_dict = {
+        "uuid": photo.uuid,
+        "masterFingerprint": photo.masterFingerprint,
+        "original_filename": photo.original_filename,
+        "date": photo.date,
+        "description": photo.description,
+        "title": photo.title,
+        "keywords": deserialize_json_field(photo.keywords),
+        "labels": deserialize_json_field(photo.labels),
+        "albums": deserialize_json_field(photo.albums),
+        "persons": deserialize_json_field(photo.persons),
+        "faces": deserialize_json_field(photo.faces),
+        "favorite": photo.favorite,
+        "hidden": photo.hidden,
+        "isphoto": photo.isphoto,
+        "ismovie": photo.ismovie,
+        "burst": photo.burst,
+        "live_photo": photo.live_photo,
+        "portrait": photo.portrait,
+        "screenshot": photo.screenshot,
+        "slow_mo": photo.slow_mo,
+        "time_lapse": photo.time_lapse,
+        "hdr": photo.hdr,
+        "selfie": photo.selfie,
+        "panorama": photo.panorama,
+        "intrash": photo.intrash,
+        "latitude": photo.latitude,
+        "longitude": photo.longitude,
+        "uti": photo.uti,
+        "date_modified": photo.date_modified,
+        "place": deserialize_json_field(photo.place),
+        "exif": deserialize_json_field(photo.exif),
+        "score": deserialize_json_field(photo.score),
+        "search_info": deserialize_json_field(photo.search_info),
+        "fields": deserialize_json_field(photo.fields),
+        "height": photo.height,
+        "width": photo.width,
+        "size": photo.size,
+        "orientation": photo.orientation,
+        "s3_key_path": photo.s3_key_path,
+        "s3_thumbnail_path": photo.s3_thumbnail_path,
+        "s3_edited_path": photo.s3_edited_path,
+        "s3_original_path": photo.s3_original_path,
+        "s3_live_path": photo.s3_live_path,
+        "library": photo.library,
+        "uploaded_at": photo.uploaded_at,
+        "filename": photo.filename,
+        "file_path": photo.file_path,
+        "content_type": photo.content_type,
+        "file_size": photo.file_size,
+        "url": photo.url,  # Use computed property
+        "versions": (
+            [
+                VersionRead(
+                    id=v.id,
+                    photo_uuid=v.photo_uuid,
+                    version=v.version,
+                    s3_path=v.s3_path,
+                    filename=v.filename,
+                    width=v.width,
+                    height=v.height,
+                    size=v.size,
+                    type=v.type,
+                )
+                for v in photo.versions
+            ]
+            if photo.versions
+            else None
+        ),
+    }
+
+    return PhotoRead(**response_dict)
