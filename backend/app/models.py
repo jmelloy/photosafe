@@ -26,8 +26,8 @@ S3_BASE_URL = os.getenv("S3_BASE_URL", "https://photos.melloy.life")
 album_photos = Table(
     "album_photos",
     SQLModel.metadata,
-    Column("album_uuid", String, ForeignKey("albums.uuid")),
-    Column("photo_uuid", String, ForeignKey("photos.uuid")),
+    Column("album_uuid", String, ForeignKey("albums.uuid"), index=True),
+    Column("photo_uuid", String, ForeignKey("photos.uuid"), index=True),
 )
 
 
@@ -67,7 +67,7 @@ class Library(SQLModel, table=True):
     )
 
     # Owner relationship
-    owner_id: int = Field(foreign_key="users.id")
+    owner_id: int = Field(foreign_key="users.id", index=True)
 
     # Relationships
     owner: Optional["User"] = Relationship(back_populates="libraries")
@@ -170,7 +170,9 @@ class Photo(SQLModel, table=True):
 
     # Library support - keep library string for backwards compatibility
     library: Optional[str] = Field(default=None, sa_type=Text)
-    library_id: Optional[int] = Field(default=None, foreign_key="libraries.id")
+    library_id: Optional[int] = Field(
+        default=None, foreign_key="libraries.id", index=True
+    )
 
     # For backwards compatibility with existing upload functionality
     filename: Optional[str] = Field(default=None, sa_type=String)
@@ -180,7 +182,7 @@ class Photo(SQLModel, table=True):
     uploaded_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
     # Owner relationship - matching Django Photo model
-    owner_id: Optional[int] = Field(default=None, foreign_key="users.id")
+    owner_id: Optional[int] = Field(default=None, foreign_key="users.id", index=True)
 
     # Relationships
     owner: Optional["User"] = Relationship(back_populates="photos")
@@ -244,7 +246,9 @@ class Version(SQLModel, table=True):
     __tablename__ = "versions"
 
     id: Optional[int] = Field(default=None, primary_key=True, index=True)
-    photo_uuid: Optional[str] = Field(default=None, foreign_key="photos.uuid")
+    photo_uuid: Optional[str] = Field(
+        default=None, foreign_key="photos.uuid", index=True
+    )
 
     version: str = Field(sa_type=Text)
     s3_path: str = Field(sa_type=Text)
@@ -576,7 +580,7 @@ class PaginatedPhotosResponse(SQLModel):
     """Paginated photos response schema"""
 
     items: List[PhotoRead]
-    total: int
+    total: Optional[int] = None
     page: int
     page_size: int
     has_more: bool
