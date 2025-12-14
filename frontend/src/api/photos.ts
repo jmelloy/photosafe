@@ -3,7 +3,7 @@ import type { Photo } from "../types/api";
 
 export interface PaginatedPhotosResponse {
   items: Photo[];
-  total: number;
+  total?: number | null;
   page: number;
   page_size: number;
   has_more: boolean;
@@ -37,7 +37,7 @@ export const getPhotos = async (
   filters?: PhotoFilters
 ): Promise<PaginatedPhotosResponse> => {
   const params: any = { page, page_size: pageSize };
-  
+
   // Add filter parameters if provided
   if (filters) {
     if (filters.search) params.search = filters.search;
@@ -49,12 +49,14 @@ export const getPhotos = async (
     if (filters.favorite !== undefined) params.favorite = filters.favorite;
     if (filters.isphoto !== undefined) params.isphoto = filters.isphoto;
     if (filters.ismovie !== undefined) params.ismovie = filters.ismovie;
-    if (filters.screenshot !== undefined) params.screenshot = filters.screenshot;
+    if (filters.screenshot !== undefined)
+      params.screenshot = filters.screenshot;
     if (filters.panorama !== undefined) params.panorama = filters.panorama;
     if (filters.portrait !== undefined) params.portrait = filters.portrait;
-    if (filters.has_location !== undefined) params.has_location = filters.has_location;
+    if (filters.has_location !== undefined)
+      params.has_location = filters.has_location;
   }
-  
+
   const response = await api.get<PaginatedPhotosResponse>("/photos/", {
     params,
   });

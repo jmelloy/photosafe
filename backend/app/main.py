@@ -93,11 +93,11 @@ def deserialize_json_field(value):
 
 def serialize_photo_json_fields(photo_dict):
     """Serialize JSON fields in a photo dictionary for database storage
-    
+
     Note: Only serializes JSONB fields (faces, place, exif, score, search_info, fields).
-    Array fields (keywords, labels, albums, persons) are stored as PostgreSQL arrays 
-    and should NOT be JSON-serialized, as JSON serialization would convert them to 
-    character arrays (splitting each string into individual characters), breaking 
+    Array fields (keywords, labels, albums, persons) are stored as PostgreSQL arrays
+    and should NOT be JSON-serialized, as JSON serialization would convert them to
+    character arrays (splitting each string into individual characters), breaking
     filtering functionality.
     """
     # Only serialize JSONB fields - array fields should remain as lists
@@ -541,10 +541,8 @@ async def list_photos(
         page_size = 100
 
     # Superusers can see all photos, regular users only see their own
-    if current_user.is_superuser:
-        query = db.query(Photo)
-    else:
-        query = db.query(Photo).filter(Photo.owner_id == current_user.id)
+    query = db.query(Photo)
+    query = query.filter(Photo.owner_id == current_user.id)
 
     # Apply search filter - search in original_filename, title, and description
     if search:
@@ -573,14 +571,14 @@ async def list_photos(
     # Apply date range filters
     if start_date:
         try:
-            start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+            start_dt = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
             query = query.filter(Photo.date >= start_dt)
         except ValueError:
             pass  # Skip invalid date format
 
     if end_date:
         try:
-            end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+            end_dt = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
             # Include the entire end date
             end_dt = end_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
             query = query.filter(Photo.date <= end_dt)
@@ -609,9 +607,13 @@ async def list_photos(
     # Apply location filter
     if has_location is not None:
         if has_location:
-            query = query.filter(Photo.latitude.isnot(None), Photo.longitude.isnot(None))
+            query = query.filter(
+                Photo.latitude.isnot(None), Photo.longitude.isnot(None)
+            )
         else:
-            query = query.filter(or_(Photo.latitude.is_(None), Photo.longitude.is_(None)))
+            query = query.filter(
+                or_(Photo.latitude.is_(None), Photo.longitude.is_(None))
+            )
 
     # Get total count before pagination
     total = query.count()
@@ -620,14 +622,13 @@ async def list_photos(
     skip = (page - 1) * page_size
 
     # Get photos with pagination
-    photos = query.order_by(Photo.date.desc()).offset(skip).limit(page_size).all()
+    photos = query.order_by(Photo.date.desc()).offset(skip).limit(page_size + 1).all()
 
     # Check if there are more pages
-    has_more = (skip + page_size) < total
+    has_more = len(photos) > page_size
 
     return PaginatedPhotosResponse(
-        items=[create_photo_response(photo) for photo in photos],
-        total=total,
+        items=[create_photo_response(photo) for photo in photos[:page_size]],
         page=page,
         page_size=page_size,
         has_more=has_more,
@@ -640,20 +641,21 @@ async def get_photo_filters(
     current_user: User = Depends(get_current_active_user),
 ) -> Dict[str, List[str]]:
     """Get available filter values for albums, keywords, and persons"""
-    # Superusers can see all photos, regular users only see their own
-    if current_user.is_superuser:
-        query = db.query(Photo)
-    else:
-        query = db.query(Photo).filter(Photo.owner_id == current_user.id)
-    
+
+    query = (
+        db.query(Photo)
+        .filter(Photo.owner_id == current_user.id)
+        .with_entities(Photo.albums, Photo.keywords, Photo.persons)
+    )
+
     # Get all photos for this user
-    photos = query.all()
-    
+    photos = query.distinct().all()
+
     # Extract unique values from arrays
     albums = set()
     keywords = set()
     persons = set()
-    
+
     for photo in photos:
         if photo.albums:
             albums.update(photo.albums)
@@ -661,7 +663,7 @@ async def get_photo_filters(
             keywords.update(photo.keywords)
         if photo.persons:
             persons.update(photo.persons)
-    
+
     return {
         "albums": sorted(list(albums)),
         "keywords": sorted(list(keywords)),
