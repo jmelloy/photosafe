@@ -288,9 +288,22 @@ const clearFilters = () => {
 };
 
 // Watch for filter changes and reload photos
+// Debounce search query to avoid too many API calls while typing
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+watch(searchQuery, () => {
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer);
+  }
+  searchDebounceTimer = setTimeout(() => {
+    console.log("Search query changed, reloading photos");
+    loadPhotos(true);
+  }, 500); // 500ms debounce
+});
+
+// Watch other filters without debounce (immediate response)
 watch(
   [
-    searchQuery,
     selectedAlbum,
     selectedKeyword,
     selectedPerson,
@@ -305,6 +318,7 @@ watch(
     filterHasLocation,
   ],
   () => {
+    console.log("Filter changed, reloading photos");
     loadPhotos(true);
   }
 );
