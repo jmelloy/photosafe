@@ -177,7 +177,7 @@ class Photo(SQLModel, table=True):
     file_path: Optional[str] = Field(default=None, sa_type=String)
     content_type: Optional[str] = Field(default=None, sa_type=String)
     file_size: Optional[int] = None
-    uploaded_at: datetime = Field(default_factory=datetime.utcnow)
+    uploaded_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
     # Owner relationship - matching Django Photo model
     owner_id: Optional[int] = Field(default=None, foreign_key="users.id")
@@ -408,7 +408,7 @@ class PhotoRead(SQLModel):
     file_path: Optional[str] = None
     content_type: Optional[str] = None
     file_size: Optional[int] = None
-    uploaded_at: datetime
+    uploaded_at: Optional[datetime] = None
     url: Optional[str] = None  # Computed property
     versions: Optional[List[VersionRead]] = None
 

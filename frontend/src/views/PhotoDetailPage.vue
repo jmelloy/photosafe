@@ -42,10 +42,6 @@
             <span class="label">UUID:</span>
             <span class="value">{{ photo.uuid }}</span>
           </div>
-          <div class="metadata-item">
-            <span class="label">Uploaded:</span>
-            <span class="value">{{ formatDate(photo.uploaded_at) }}</span>
-          </div>
           <div class="metadata-item" v-if="photo.date">
             <span class="label">Date Taken:</span>
             <span class="value">{{ formatDate(photo.date) }}</span>

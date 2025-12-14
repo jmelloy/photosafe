@@ -16,10 +16,6 @@
           <!-- Basic Information -->
           <div class="metadata-group">
             <h3>Basic Information</h3>
-            <div class="metadata-item">
-              <span class="label">Uploaded:</span>
-              <span class="value">{{ formatDate(photo.uploaded_at) }}</span>
-            </div>
             <div class="metadata-item" v-if="photo.date">
               <span class="label">Date Taken:</span>
               <span class="value">{{ formatDate(photo.date) }}</span>

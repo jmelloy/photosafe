@@ -112,7 +112,7 @@ export interface PhotoCreateData {
   labels?: string[];
   albums?: string[];
   persons?: string[];
-  versions?: Omit<Version, 'id' | 'photo_uuid'>[];
+  versions?: Omit<Version, "id" | "photo_uuid">[];
 }
 
 export interface PhotoUpdateData {
