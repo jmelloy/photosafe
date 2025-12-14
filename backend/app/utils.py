@@ -29,16 +29,16 @@ def deserialize_json_field(value):
 
 def serialize_photo_json_fields(photo_dict: Dict[str, Any]) -> Dict[str, Any]:
     """Serialize JSON fields in a photo dictionary for database storage
-    
+
     Note: Only serializes JSONB fields (faces, place, exif, score, search_info, fields).
-    Array fields (keywords, labels, albums, persons) are stored as PostgreSQL arrays 
-    and should NOT be JSON-serialized, as JSON serialization would convert them to 
-    character arrays (splitting each string into individual characters), breaking 
+    Array fields (keywords, labels, albums, persons) are stored as PostgreSQL arrays
+    and should NOT be JSON-serialized, as JSON serialization would convert them to
+    character arrays (splitting each string into individual characters), breaking
     filtering functionality.
-    
+
     Args:
         photo_dict: Dictionary of photo data to serialize
-        
+
     Returns:
         Dictionary with JSONB fields serialized
     """
@@ -95,10 +95,10 @@ def handle_library_upsert(library_name: str, current_user: User, db: Session) ->
 
 def create_photo_response(photo: Photo) -> PhotoRead:
     """Helper function to create PhotoRead from Photo model
-    
+
     Args:
         photo: Photo database model instance
-        
+
     Returns:
         PhotoRead response model with deserialized JSON fields
     """

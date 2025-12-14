@@ -5,11 +5,11 @@
 // Read more: https://github.com/vuejs/core/pull/3399
 export {}
 
-declare module 'vue' {
+declare module "vue" {
   export interface GlobalComponents {
-    Login: typeof import('./components/Login.vue')['default']
-    PhotoGallery: typeof import('./components/PhotoGallery.vue')['default']
-    PhotoUpload: typeof import('./components/PhotoUpload.vue')['default']
-    Register: typeof import('./components/Register.vue')['default']
+    Login: typeof import("./components/Login.vue")["default"];
+    PhotoGallery: typeof import("./components/PhotoGallery.vue")["default"];
+    PhotoUpload: typeof import("./components/PhotoUpload.vue")["default"];
+    Register: typeof import("./components/Register.vue")["default"];
   }
 }

@@ -51,9 +51,9 @@
     </div>
 
     <!-- Infinite scroll trigger (outside v-else so it's always present) -->
-    <div 
-      ref="loadMoreTrigger" 
-      class="load-more-trigger" 
+    <div
+      ref="loadMoreTrigger"
+      class="load-more-trigger"
       v-if="!loading && hasMore"
     >
       <div v-if="loadingMore" class="loading-more">
@@ -239,9 +239,7 @@ onBeforeUnmount(() => {
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  transition:
-    transform 0.2s,
-    box-shadow 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .photo-card:hover {

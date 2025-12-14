@@ -139,7 +139,6 @@ const loading = ref<boolean>(false);
 const loadingMore = ref<boolean>(false);
 const currentPage = ref<number>(1);
 const hasMore = ref<boolean>(true);
-const totalPhotos = ref<number>(0);
 const searchQuery = ref<string>("");
 const selectedAlbum = ref<string>("");
 const selectedKeyword = ref<string>("");
@@ -159,7 +158,7 @@ const persons = ref<string[]>([]);
 
 const buildFilters = (): PhotoFilters => {
   const filters: PhotoFilters = {};
-  
+
   if (searchQuery.value) filters.search = searchQuery.value;
   if (selectedAlbum.value) filters.album = selectedAlbum.value;
   if (selectedKeyword.value) filters.keyword = selectedKeyword.value;
@@ -173,7 +172,7 @@ const buildFilters = (): PhotoFilters => {
   if (filterPanoramas.value) filters.panorama = true;
   if (filterPortraits.value) filters.portrait = true;
   if (filterHasLocation.value) filters.has_location = true;
-  
+
   return filters;
 };
 
@@ -185,19 +184,18 @@ const loadPhotos = async (reset: boolean = true) => {
   } else {
     loadingMore.value = true;
   }
-  
+
   try {
     const filters = buildFilters();
     const response = await getPhotos(currentPage.value, 50, filters);
-    
+
     if (reset) {
       photos.value = response.items;
     } else {
       photos.value = [...photos.value, ...response.items];
     }
-    
+
     hasMore.value = response.has_more;
-    totalPhotos.value = response.total;
   } catch (error: unknown) {
     console.error("Failed to load photos:", error);
     alert("Failed to load photos. Please try again.");
@@ -222,7 +220,7 @@ const loadMorePhotos = async () => {
   if (!hasMore.value || loadingMore.value) {
     return;
   }
-  
+
   currentPage.value += 1;
   await loadPhotos(false);
 };

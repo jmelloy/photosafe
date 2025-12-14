@@ -42,7 +42,7 @@ describe("API Client Token Management", () => {
     it("should remove the token from localStorage", () => {
       setToken("token-to-remove");
       expect(getToken()).not.toBeNull();
-      
+
       removeToken();
       expect(getToken()).toBeNull();
     });

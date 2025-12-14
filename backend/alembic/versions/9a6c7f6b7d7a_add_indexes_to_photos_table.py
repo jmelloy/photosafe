@@ -20,14 +20,14 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # Add indexes for commonly filtered and joined columns
-    
+
     # Foreign key indexes for joins and ownership filtering
     op.create_index("ix_photos_owner_id", "photos", ["owner_id"], unique=False)
     op.create_index("ix_photos_library_id", "photos", ["library_id"], unique=False)
-    
+
     # Date index for ordering and date range filtering (most common query pattern)
     op.create_index("ix_photos_date", "photos", ["date"], unique=False)
-    
+
     # GIN indexes for array containment queries (PostgreSQL specific)
     # These are used for filtering by albums, keywords, and persons
     op.create_index(
@@ -51,7 +51,7 @@ def upgrade() -> None:
         unique=False,
         postgresql_using="gin",
     )
-    
+
     # Index for masterFingerprint (used for deduplication)
     op.create_index(
         "ix_photos_master_fingerprint",
@@ -59,7 +59,7 @@ def upgrade() -> None:
         ["masterFingerprint"],
         unique=False,
     )
-    
+
     # Boolean flag indexes for common filters
     op.create_index("ix_photos_favorite", "photos", ["favorite"], unique=False)
     op.create_index("ix_photos_isphoto", "photos", ["isphoto"], unique=False)
@@ -67,7 +67,7 @@ def upgrade() -> None:
     op.create_index("ix_photos_screenshot", "photos", ["screenshot"], unique=False)
     op.create_index("ix_photos_panorama", "photos", ["panorama"], unique=False)
     op.create_index("ix_photos_portrait", "photos", ["portrait"], unique=False)
-    
+
     # Composite index for location queries (both latitude and longitude together)
     op.create_index(
         "ix_photos_location",

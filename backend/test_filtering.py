@@ -59,9 +59,9 @@ def cleanup_db():
         db.commit()
     finally:
         db.close()
-    
+
     yield
-    
+
     # Clear all data after test
     db = TestingSessionLocal()
     try:

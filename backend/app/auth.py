@@ -61,11 +61,11 @@ def verify_refresh_token(token: str) -> Optional[str]:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         token_type: str = payload.get("type")
-        
+
         # Validate token has required claims and is of correct type
         if username is None or token_type != "refresh":
             return None
-        
+
         return username
     except ExpiredSignatureError:
         # Token is expired - log for security monitoring if needed

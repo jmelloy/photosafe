@@ -16,7 +16,9 @@
       <div class="error-icon">⚠️</div>
       <h2>Photo Not Found</h2>
       <p>{{ error }}</p>
-      <button @click="goBack" class="back-button-alt">Go Back to Gallery</button>
+      <button @click="goBack" class="back-button-alt">
+        Go Back to Gallery
+      </button>
     </div>
 
     <!-- Photo detail content -->
@@ -85,7 +87,10 @@
         </div>
 
         <!-- Albums -->
-        <div class="metadata-group" v-if="photo.albums && photo.albums.length > 0">
+        <div
+          class="metadata-group"
+          v-if="photo.albums && photo.albums.length > 0"
+        >
           <h3>Albums</h3>
           <div class="tags">
             <span v-for="album in photo.albums" :key="album" class="tag album">
@@ -95,17 +100,27 @@
         </div>
 
         <!-- Keywords -->
-        <div class="metadata-group" v-if="photo.keywords && photo.keywords.length > 0">
+        <div
+          class="metadata-group"
+          v-if="photo.keywords && photo.keywords.length > 0"
+        >
           <h3>Keywords</h3>
           <div class="tags">
-            <span v-for="keyword in photo.keywords" :key="keyword" class="tag keyword">
+            <span
+              v-for="keyword in photo.keywords"
+              :key="keyword"
+              class="tag keyword"
+            >
               🏷️ {{ keyword }}
             </span>
           </div>
         </div>
 
         <!-- Labels -->
-        <div class="metadata-group" v-if="photo.labels && photo.labels.length > 0">
+        <div
+          class="metadata-group"
+          v-if="photo.labels && photo.labels.length > 0"
+        >
           <h3>Labels</h3>
           <div class="tags">
             <span v-for="label in photo.labels" :key="label" class="tag label">
@@ -115,10 +130,17 @@
         </div>
 
         <!-- People -->
-        <div class="metadata-group" v-if="photo.persons && photo.persons.length > 0">
+        <div
+          class="metadata-group"
+          v-if="photo.persons && photo.persons.length > 0"
+        >
           <h3>People</h3>
           <div class="tags">
-            <span v-for="person in photo.persons" :key="person" class="tag person">
+            <span
+              v-for="person in photo.persons"
+              :key="person"
+              class="tag person"
+            >
               👤 {{ person }}
             </span>
           </div>
@@ -129,7 +151,9 @@
           <h3>Location</h3>
           <div class="metadata-item">
             <span class="label">Coordinates:</span>
-            <span class="value">{{ photo.latitude }}, {{ photo.longitude }}</span>
+            <span class="value"
+              >{{ photo.latitude }}, {{ photo.longitude }}</span
+            >
           </div>
           <div class="metadata-item" v-if="photo.place">
             <span class="label">Place:</span>
@@ -182,17 +206,13 @@ interface AxiosLikeError {
 }
 
 function isAxiosLikeError(error: unknown): error is AxiosLikeError {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "response" in error
-  );
+  return typeof error === "object" && error !== null && "response" in error;
 }
 
 const loadPhoto = async () => {
   loading.value = true;
   error.value = "";
-  
+
   try {
     photo.value = await getPhoto(props.uuid);
   } catch (err: unknown) {

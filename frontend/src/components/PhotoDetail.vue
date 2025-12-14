@@ -2,7 +2,7 @@
   <div v-if="photo" class="modal" @click="$emit('close')">
     <div class="modal-content" @click.stop>
       <button class="modal-close" @click="$emit('close')">×</button>
-      
+
       <div class="detail-container">
         <!-- Left side: Image -->
         <div class="image-section">
@@ -12,7 +12,7 @@
         <!-- Right side: Metadata -->
         <div class="metadata-section">
           <h2>{{ photo.original_filename }}</h2>
-          
+
           <!-- Basic Information -->
           <div class="metadata-group">
             <h3>Basic Information</h3>
@@ -42,7 +42,9 @@
           <div class="metadata-group" v-if="hasPhotoProperties">
             <h3>Photo Properties</h3>
             <div class="tags">
-              <span v-if="photo.favorite" class="tag favorite">⭐ Favorite</span>
+              <span v-if="photo.favorite" class="tag favorite"
+                >⭐ Favorite</span
+              >
               <span v-if="photo.hidden" class="tag">👁️ Hidden</span>
               <span v-if="photo.isphoto" class="tag">📷 Photo</span>
               <span v-if="photo.ismovie" class="tag">🎬 Movie</span>
@@ -59,52 +61,84 @@
           </div>
 
           <!-- Albums -->
-          <div class="metadata-group" v-if="photo.albums && photo.albums.length > 0">
+          <div
+            class="metadata-group"
+            v-if="photo.albums && photo.albums.length > 0"
+          >
             <h3>Albums</h3>
             <div class="tags">
-              <span v-for="album in photo.albums" :key="album" class="tag album">
+              <span
+                v-for="album in photo.albums"
+                :key="album"
+                class="tag album"
+              >
                 📁 {{ album }}
               </span>
             </div>
           </div>
 
           <!-- Keywords -->
-          <div class="metadata-group" v-if="photo.keywords && photo.keywords.length > 0">
+          <div
+            class="metadata-group"
+            v-if="photo.keywords && photo.keywords.length > 0"
+          >
             <h3>Keywords</h3>
             <div class="tags">
-              <span v-for="keyword in photo.keywords" :key="keyword" class="tag keyword">
+              <span
+                v-for="keyword in photo.keywords"
+                :key="keyword"
+                class="tag keyword"
+              >
                 🏷️ {{ keyword }}
               </span>
             </div>
           </div>
 
           <!-- Labels -->
-          <div class="metadata-group" v-if="photo.labels && photo.labels.length > 0">
+          <div
+            class="metadata-group"
+            v-if="photo.labels && photo.labels.length > 0"
+          >
             <h3>Labels</h3>
             <div class="tags">
-              <span v-for="label in photo.labels" :key="label" class="tag label">
+              <span
+                v-for="label in photo.labels"
+                :key="label"
+                class="tag label"
+              >
                 {{ label }}
               </span>
             </div>
           </div>
 
           <!-- People -->
-          <div class="metadata-group" v-if="photo.persons && photo.persons.length > 0">
+          <div
+            class="metadata-group"
+            v-if="photo.persons && photo.persons.length > 0"
+          >
             <h3>People</h3>
             <div class="tags">
-              <span v-for="person in photo.persons" :key="person" class="tag person">
+              <span
+                v-for="person in photo.persons"
+                :key="person"
+                class="tag person"
+              >
                 👤 {{ person }}
               </span>
             </div>
           </div>
 
           <!-- Location -->
-          <div class="metadata-group" v-if="photo.latitude != null && photo.longitude != null">
+          <div
+            class="metadata-group"
+            v-if="photo.latitude != null && photo.longitude != null"
+          >
             <h3>Location</h3>
             <div class="metadata-item">
               <span class="label">Coordinates:</span>
               <span class="value">
-                {{ photo.latitude.toFixed(6) }}, {{ photo.longitude.toFixed(6) }}
+                {{ photo.latitude.toFixed(6) }},
+                {{ photo.longitude.toFixed(6) }}
               </span>
             </div>
             <div class="metadata-item" v-if="photo.place">
@@ -114,9 +148,16 @@
           </div>
 
           <!-- EXIF Data -->
-          <div class="metadata-group" v-if="photo.exif && Object.keys(photo.exif).length > 0">
+          <div
+            class="metadata-group"
+            v-if="photo.exif && Object.keys(photo.exif).length > 0"
+          >
             <h3>EXIF Data</h3>
-            <div class="metadata-item" v-for="(value, key) in formatExif(photo.exif)" :key="key">
+            <div
+              class="metadata-item"
+              v-for="(value, key) in formatExif(photo.exif)"
+              :key="key"
+            >
               <span class="label">{{ key }}:</span>
               <span class="value">{{ value }}</span>
             </div>
@@ -163,7 +204,7 @@ defineEmits<PhotoDetailEmits>();
 // Compute detail image URL - prioritize medium or original over thumbnail
 const detailImageUrl = computed(() => {
   if (!props.photo) return "";
-  
+
   const buildS3Url = (s3Path: string | undefined): string | null => {
     if (!s3Path) return null;
     // If already a full URL, return as-is
@@ -174,7 +215,7 @@ const detailImageUrl = computed(() => {
     const cleanPath = s3Path.startsWith("/") ? s3Path.substring(1) : s3Path;
     return `${S3_BASE_URL}/${cleanPath}`;
   };
-  
+
   // Prioritize medium (s3_key_path), then original, then edited, then thumbnail
   // This is different from the backend's url property which prioritizes thumbnail first
   const candidates = [
@@ -183,9 +224,9 @@ const detailImageUrl = computed(() => {
     props.photo.s3_edited_path,
     props.photo.s3_thumbnail_path,
   ];
-  
+
   const url = candidates.map(buildS3Url).find(Boolean) || props.photo.url || "";
-  
+
   return url;
 });
 
@@ -210,14 +251,14 @@ const formatFileSize = (bytes?: number): string => {
 
 const formatPlace = (place: Record<string, any>): string => {
   if (!place) return "";
-  
+
   // Try common place properties
   const parts = [];
   if (place.name) parts.push(place.name);
   if (place.city) parts.push(place.city);
   if (place.state) parts.push(place.state);
   if (place.country) parts.push(place.country);
-  
+
   return parts.join(", ") || JSON.stringify(place);
 };
 
@@ -250,7 +291,11 @@ const formatExifValue = (key: string, value: any): string => {
   }
 
   // Format ISO
-  if (key === "ISO" || key === "ISOSpeedRatings" || key === "PhotographicSensitivity") {
+  if (
+    key === "ISO" ||
+    key === "ISOSpeedRatings" ||
+    key === "PhotographicSensitivity"
+  ) {
     return `ISO ${value}`;
   }
 
@@ -330,7 +375,7 @@ const formatExifValue = (key: string, value: any): string => {
 
 const formatExif = (exif: Record<string, any>): Record<string, string> => {
   const formatted: Record<string, string> = {};
-  
+
   // Common EXIF fields with friendly names
   const fieldMappings: Record<string, string> = {
     Make: "Camera Make",
@@ -366,11 +411,25 @@ const formatExif = (exif: Record<string, any>): Record<string, string> => {
 
   // Process EXIF data with priority on more important fields
   const priorityOrder = [
-    "Make", "Model", "LensModel", "FocalLength", "FocalLengthIn35mmFilm",
-    "FNumber", "ApertureValue", "ExposureTime", "ShutterSpeedValue",
-    "ISO", "ISOSpeedRatings", "PhotographicSensitivity",
-    "ExposureProgram", "ExposureMode", "MeteringMode", "ExposureBiasValue",
-    "Flash", "WhiteBalance", "DateTimeOriginal"
+    "Make",
+    "Model",
+    "LensModel",
+    "FocalLength",
+    "FocalLengthIn35mmFilm",
+    "FNumber",
+    "ApertureValue",
+    "ExposureTime",
+    "ShutterSpeedValue",
+    "ISO",
+    "ISOSpeedRatings",
+    "PhotographicSensitivity",
+    "ExposureProgram",
+    "ExposureMode",
+    "MeteringMode",
+    "ExposureBiasValue",
+    "Flash",
+    "WhiteBalance",
+    "DateTimeOriginal",
   ];
 
   // Add priority fields first

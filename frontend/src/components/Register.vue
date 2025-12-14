@@ -124,14 +124,8 @@ const handleRegister = async () => {
   loading.value = true;
 
   try {
-    await register(
-      username.value,
-      email.value,
-      password.value,
-      name.value
-    );
-    success.value =
-      "Account created successfully! Redirecting to login...";
+    await register(username.value, email.value, password.value, name.value);
+    success.value = "Account created successfully! Redirecting to login...";
     // Emit register-success after a brief moment to show the success message
     setTimeout(() => {
       emit("register-success");

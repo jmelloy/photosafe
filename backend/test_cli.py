@@ -62,7 +62,7 @@ def setup_database():
         db.query(Library).delete()
         db.query(User).delete()
         db.commit()
-        
+
         # Reset sequences so IDs start from 1 again
         db.execute(text("ALTER SEQUENCE users_id_seq RESTART WITH 1"))
         db.execute(text("ALTER SEQUENCE libraries_id_seq RESTART WITH 1"))
@@ -82,7 +82,7 @@ def setup_database():
         db.query(Library).delete()
         db.query(User).delete()
         db.commit()
-        
+
         # Reset sequences so IDs start from 1 again
         db.execute(text("ALTER SEQUENCE users_id_seq RESTART WITH 1"))
         db.execute(text("ALTER SEQUENCE libraries_id_seq RESTART WITH 1"))

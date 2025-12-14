@@ -61,9 +61,9 @@ def cleanup_db():
         db.commit()
     finally:
         db.close()
-    
+
     yield
-    
+
     # Clear all data after test
     db = TestingSessionLocal()
     try:
@@ -187,9 +187,7 @@ def test_refresh_token():
 
 def test_refresh_token_invalid():
     """Test refresh with invalid token"""
-    response = client.post(
-        "/api/auth/refresh", json={"refresh_token": "invalid_token"}
-    )
+    response = client.post("/api/auth/refresh", json={"refresh_token": "invalid_token"})
     assert response.status_code == 401
     assert "Invalid refresh token" in response.json()["detail"]
 
