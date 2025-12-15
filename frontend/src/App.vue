@@ -1,8 +1,11 @@
 <template>
   <div class="app">
+    <!-- Show version page without authentication if on /version route -->
+    <RouterView v-if="isVersionPage" />
+
     <!-- Show auth screens if not authenticated -->
     <Login
-      v-if="!isAuthenticatedRef && currentView === 'login'"
+      v-else-if="!isAuthenticatedRef && currentView === 'login'"
       @login-success="handleLoginSuccess"
       @switch-to-register="currentView = 'register'"
     />
@@ -36,8 +39,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
-import { useRouter } from "vue-router";
+import { ref, onMounted, computed } from "vue";
+import { useRouter, useRoute } from "vue-router";
 import Login from "./components/Login.vue";
 import Register from "./components/Register.vue";
 import { isAuthenticated, getCurrentUser, logout } from "./api/auth";
@@ -47,6 +50,9 @@ const currentView = ref<"login" | "register">("login");
 const currentUser = ref<User | null>(null);
 const isAuthenticatedRef = ref<boolean>(isAuthenticated());
 const router = useRouter();
+const route = useRoute();
+
+const isVersionPage = computed(() => route.path === '/version');
 
 const loadCurrentUser = async () => {
   try {

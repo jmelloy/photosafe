@@ -13,6 +13,11 @@ const routes: RouteRecordRaw[] = [
     component: () => import("../views/PhotoDetailPage.vue"),
     props: true,
   },
+  {
+    path: "/version",
+    name: "version",
+    component: () => import("../views/VersionPage.vue"),
+  },
 ];
 
 const router = createRouter({

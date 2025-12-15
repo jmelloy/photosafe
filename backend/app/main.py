@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from .routers import auth, photos, albums
-from .version import get_version
+from .version import get_version, get_version_info
 
 # Database tables are now created via Alembic migrations
 # To initialize the database, run: alembic upgrade head
@@ -40,13 +40,14 @@ app.include_router(albums.router)
 @app.get("/")
 async def root():
     """Root endpoint"""
-    return {"message": "PhotoSafe Gallery API", "version": get_version()}
+    version_info = get_version_info()
+    return {"message": "PhotoSafe Gallery API", **version_info}
 
 
 @app.get("/api/version")
 async def version():
     """Get API version"""
-    return {"version": get_version()}
+    return get_version_info()
 
 
 if __name__ == "__main__":
