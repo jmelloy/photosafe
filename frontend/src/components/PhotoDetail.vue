@@ -370,6 +370,16 @@ const formatExifValue = (key: string, value: any): string => {
     return orientations[parseInt(value)] || String(value);
   }
 
+  // For any other numeric value, limit to 1 decimal point
+  const num = parseFloat(value);
+  if (!isNaN(num) && typeof value !== 'string') {
+    // Check if it's a float with decimals
+    if (num % 1 !== 0) {
+      return num.toFixed(1);
+    }
+    return String(num);
+  }
+
   return String(value);
 };
 

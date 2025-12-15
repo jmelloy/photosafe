@@ -171,7 +171,7 @@
               class="metadata-item"
             >
               <span class="label">{{ formatExifKey(key) }}:</span>
-              <span class="value">{{ value }}</span>
+              <span class="value">{{ formatExifValue(value) }}</span>
             </div>
           </div>
         </div>
@@ -285,6 +285,24 @@ const formatExifKey = (key: string): string => {
     .replace(/([A-Z])/g, " $1")
     .replace(/^./, (str) => str.toUpperCase())
     .trim();
+};
+
+const formatExifValue = (value: any): string => {
+  if (value === null || value === undefined || value === "") {
+    return "";
+  }
+
+  // For numeric values, limit to 1 decimal point
+  const num = parseFloat(value);
+  if (!isNaN(num) && typeof value !== 'string') {
+    // Check if it's a float with decimals
+    if (num % 1 !== 0) {
+      return num.toFixed(1);
+    }
+    return String(num);
+  }
+
+  return String(value);
 };
 
 const hasPhotoProperties = computed(() => {
