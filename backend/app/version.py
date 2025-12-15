@@ -6,12 +6,22 @@ import subprocess
 from pathlib import Path
 
 
+# Cache git SHA at module load time
+_cached_git_sha: str | None = None
+
+
 def get_git_sha() -> str:
-    """Get the current git SHA"""
+    """Get the current git SHA (cached)"""
+    global _cached_git_sha
+    
+    if _cached_git_sha is not None:
+        return _cached_git_sha
+    
     try:
         # Try environment variable first (set during Docker build)
         sha = os.environ.get("GIT_SHA")
         if sha:
+            _cached_git_sha = sha
             return sha
         
         # Fall back to git command
@@ -23,9 +33,13 @@ def get_git_sha() -> str:
             timeout=5
         )
         if result.returncode == 0:
-            return result.stdout.strip()
+            _cached_git_sha = result.stdout.strip()
+            return _cached_git_sha
+        
+        _cached_git_sha = "unknown"
         return "unknown"
     except Exception:
+        _cached_git_sha = "unknown"
         return "unknown"
 
 
