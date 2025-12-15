@@ -73,6 +73,7 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-photosafe}:${POSTGRES_PASSWORD:-photosafe}@db:5432/${POSTGRES_DB:-photosafe}
       - DEBUG=${DEBUG:-false}
       - DEBUG_SQL=${DEBUG_SQL:-false}
+      - GIT_SHA=${GIT_SHA:-dev}
     # Development default includes --reload, production should not
     command: ${BACKEND_COMMAND:-sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"}
     depends_on:
@@ -102,6 +103,7 @@ services:
       - frontend_node_modules:/app/node_modules
     environment:
       - VITE_API_URL=${VITE_API_URL:-http://backend:8000}
+      - GIT_SHA=${GIT_SHA:-dev}
     # Development default includes npm install, production uses preview
     command: ${FRONTEND_COMMAND:-sh -c "npm install && npm run dev -- --host 0.0.0.0"}
     depends_on:
