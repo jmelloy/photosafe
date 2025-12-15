@@ -35,3 +35,10 @@ updates:
     labels:
       - "dependencies"
       - "npm"
+    groups:
+      vite:
+        patterns:
+          - "vite*"
+          - "@vitejs/*"
+          - "vitest*"
+          - "@vitest/*"
