@@ -14,6 +14,9 @@ RUN npm install
 # Copy source code
 COPY . .
 
+ARG GIT_SHA=unknown
+ENV GIT_SHA=${GIT_SHA}
+
 # Build the app (git SHA will be captured by vite.config.ts)
 RUN npm run build
 
