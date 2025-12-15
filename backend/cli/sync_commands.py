@@ -189,7 +189,7 @@ def icloud(
     from pyicloud import PyiCloudService
     from tqdm import tqdm
 
-    from .sync_tools import DateTimeEncoder, list_bucket
+    from .sync_tools import DateTimeEncoder, authenticate_icloud, list_bucket
 
     s3 = boto3.client("s3", "us-west-2")
 
@@ -211,55 +211,7 @@ def icloud(
     click.echo(f"Authenticated as {user.get('username')}")
 
     # Authenticate with iCloud
-    if not icloud_username:
-        icloud_username = click.prompt("iCloud Username")
-    if not icloud_password:
-        icloud_password = click.prompt("iCloud Password", hide_input=True)
-
-    api = PyiCloudService(icloud_username, icloud_password)
-
-    if api.requires_2fa:
-        click.echo("Two-factor authentication required.")
-        code = click.prompt(
-            "Enter the code you received on one of your approved devices"
-        )
-        result = api.validate_2fa_code(code)
-        click.echo(f"Code validation result: {result}")
-
-        if not result:
-            click.echo("Failed to verify security code")
-            raise click.Abort()
-
-        if not api.is_trusted_session:
-            click.echo("Session is not trusted. Requesting trust...")
-            result = api.trust_session()
-            click.echo(f"Session trust result: {result}")
-
-            if not result:
-                click.echo(
-                    "Failed to request trust. You will likely be prompted for the code again in the coming weeks"
-                )
-    elif api.requires_2sa:
-        click.echo("Two-step authentication required. Your trusted devices are:")
-
-        devices = api.trusted_devices
-        for i, device in enumerate(devices):
-            click.echo(
-                f"  {i}: {device.get('deviceName', 'SMS to %s' % device.get('phoneNumber'))}"
-            )
-
-        device_idx = click.prompt(
-            "Which device would you like to use?", type=int, default=0
-        )
-        device = devices[device_idx]
-        if not api.send_verification_code(device):
-            click.echo("Failed to send verification code")
-            raise click.Abort()
-
-        code = click.prompt("Please enter validation code")
-        if not api.validate_verification_code(device, code):
-            click.echo("Failed to verify verification code")
-            raise click.Abort()
+    api = authenticate_icloud(icloud_username, icloud_password)
 
     def upload_photo(photo, version, path):
         os.makedirs(os.path.split(path)[0], exist_ok=True)
@@ -520,3 +472,54 @@ def icloud(
         f"{total_photos} photos processed, {total_created_all} created, {total_updated_all} updated"
     )
     upload_albums()
+
+
+@sync.command()
+@click.option("--icloud-username", envvar="ICLOUD_USERNAME", help="iCloud username")
+@click.option("--icloud-password", envvar="ICLOUD_PASSWORD", help="iCloud password")
+@click.option(
+    "--output", default="fixtures/icloud_sample.json", help="Output JSON file path"
+)
+@click.option("--limit", default=25, help="Number of photos to export")
+def dump_icloud(icloud_username, icloud_password, output, limit):
+    """Dump sample photos from iCloud to a JSON fixtures file"""
+    import sys
+
+    from .sync_tools import DateTimeEncoder, authenticate_icloud
+
+    # Authenticate with iCloud
+    api = authenticate_icloud(icloud_username, icloud_password)
+
+    sample_photos = []
+
+    # Iterate through libraries and collect sample photos
+    for library_name, library in api.photos.libraries.items():
+        click.echo(f"Processing library: {library_name}")
+
+        for i, photo in enumerate(library.all.fetch_records(0)):
+            if len(sample_photos) >= limit:
+                break
+
+            click.echo(f"Processing photo {i+1}: {photo.filename}")
+
+            data = {
+                k: v
+                for k, v in photo.__dict__.items()
+                if k == "_asset_record" or not k.startswith("_")
+            }
+            data.update(photo.versions)
+
+            sample_photos.append(data)
+
+        if len(sample_photos) >= limit:
+            break
+
+    # Write to JSON file
+    os.makedirs(
+        os.path.dirname(output) if os.path.dirname(output) else ".", exist_ok=True
+    )
+
+    with open(output, "w") as f:
+        json.dump(sample_photos, f, cls=DateTimeEncoder, indent=2)
+
+    click.echo(f"Exported {len(sample_photos)} photos to {output}")

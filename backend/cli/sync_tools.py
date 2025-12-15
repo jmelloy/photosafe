@@ -4,6 +4,8 @@ import datetime
 from hashlib import md5
 from json import JSONEncoder
 
+import click
+
 
 class DateTimeEncoder(JSONEncoder):
     """JSON encoder that handles datetime objects"""
@@ -73,4 +75,61 @@ def head(s3, key, bucket):
     except botocore.exceptions.ClientError as ce:
         if "404" in str(ce):
             return False
-        raise
+
+
+def authenticate_icloud(icloud_username, icloud_password):
+    """Authenticate with iCloud and handle 2FA/2SA"""
+    from pyicloud import PyiCloudService
+
+    # Prompt for credentials if not provided
+    if not icloud_username:
+        icloud_username = click.prompt("iCloud Username")
+    if not icloud_password:
+        icloud_password = click.prompt("iCloud Password", hide_input=True)
+
+    api = PyiCloudService(icloud_username, icloud_password)
+
+    if api.requires_2fa:
+        click.echo("Two-factor authentication required.")
+        code = click.prompt(
+            "Enter the code you received on one of your approved devices"
+        )
+        result = api.validate_2fa_code(code)
+        click.echo(f"Code validation result: {result}")
+
+        if not result:
+            click.echo("Failed to verify security code")
+            raise click.Abort()
+
+        if not api.is_trusted_session:
+            click.echo("Session is not trusted. Requesting trust...")
+            result = api.trust_session()
+            click.echo(f"Session trust result: {result}")
+
+            if not result:
+                click.echo(
+                    "Failed to request trust. You will likely be prompted for the code again in the coming weeks"
+                )
+    elif api.requires_2sa:
+        click.echo("Two-step authentication required. Your trusted devices are:")
+
+        devices = api.trusted_devices
+        for i, device in enumerate(devices):
+            click.echo(
+                f"  {i}: {device.get('deviceName', 'SMS to %s' % device.get('phoneNumber'))}"
+            )
+
+        device_idx = click.prompt(
+            "Which device would you like to use?", type=int, default=0
+        )
+        device = devices[device_idx]
+        if not api.send_verification_code(device):
+            click.echo("Failed to send verification code")
+            raise click.Abort()
+
+        code = click.prompt("Please enter validation code")
+        if not api.validate_verification_code(device, code):
+            click.echo("Failed to verify verification code")
+            raise click.Abort()
+
+    return api
