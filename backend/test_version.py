@@ -16,6 +16,9 @@ def test_version_endpoint():
     assert data["version"] != "unknown"
     # Should match semantic version pattern
     assert len(data["version"].split(".")) >= 2
+    # Should also include git_sha
+    assert "git_sha" in data
+    assert isinstance(data["git_sha"], str)
 
 
 def test_root_endpoint_includes_version():
@@ -26,3 +29,6 @@ def test_root_endpoint_includes_version():
     assert "version" in data
     assert isinstance(data["version"], str)
     assert data["version"] != "unknown"
+    # Should also include git_sha
+    assert "git_sha" in data
+    assert isinstance(data["git_sha"], str)
