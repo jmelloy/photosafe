@@ -294,7 +294,7 @@ const formatExifValue = (value: any): string => {
 
   // For numeric values, limit to 1 decimal point
   const num = parseFloat(value);
-  if (!isNaN(num) && typeof value !== 'string') {
+  if (!isNaN(num) && isFinite(num)) {
     // Check if it's a float with decimals
     if (num % 1 !== 0) {
       return num.toFixed(1);
