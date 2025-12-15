@@ -14,7 +14,7 @@ COPY pyproject.toml .
 COPY app ./app
 COPY cli ./cli
 
-RUN uv pip install --system .
+RUN uv pip install --system .[icloud]
 
 # Copy application
 COPY alembic ./alembic
