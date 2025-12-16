@@ -11,6 +11,9 @@ import click
 import requests
 from dateutil import parser
 
+# Constants
+MACOS_LIBRARY_NAME = "macOS Photos"
+
 
 @click.group()
 def sync():
@@ -129,9 +132,8 @@ def macos(bucket, base_url, username, password, output_json):
         # Write JSON file if requested
         if output_json:
             dt = photo.date.astimezone(timezone.utc)
-            library_name = "macOS Photos"
             directory = os.path.join(
-                library_name, dt.strftime("%Y/%m/%d")
+                MACOS_LIBRARY_NAME, dt.strftime("%Y/%m/%d")
             )
             os.makedirs(directory, exist_ok=True)
             json_path = os.path.join(directory, f"{p['uuid']}.json")
@@ -523,14 +525,14 @@ def list_libraries(icloud_username, icloud_password):
 
     click.echo("\nAvailable iCloud Photo Libraries:")
     click.echo("-" * 50)
-    
+
     if not api.photos.libraries:
         click.echo("No libraries found")
         return
-    
+
     for library_name, library in api.photos.libraries.items():
         click.echo(f"  • {library_name}")
-    
+
     click.echo()
 
 
