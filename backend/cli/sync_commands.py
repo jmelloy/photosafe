@@ -31,7 +31,12 @@ def sync():
 )
 @click.option("--username", required=True, envvar="USERNAME", help="API username")
 @click.option("--password", required=True, envvar="PASSWORD", help="API password")
-def macos(bucket, base_url, username, password):
+@click.option(
+    "--output-json",
+    is_flag=True,
+    help="Write JSON files for each photo (similar to iCloud dump)",
+)
+def macos(bucket, base_url, username, password, output_json):
     """Sync photos from macOS Photos library"""
     try:
         import osxphotos
@@ -121,6 +126,18 @@ def macos(bucket, base_url, username, password):
             if v and type(v) is str and base_path in v:
                 p[k] = v.replace(base_path, "")
 
+        # Write JSON file if requested
+        if output_json:
+            dt = photo.date.astimezone(timezone.utc)
+            library_name = "macOS Photos"
+            directory = os.path.join(
+                library_name, dt.strftime("%Y/%m/%d")
+            )
+            os.makedirs(directory, exist_ok=True)
+            json_path = os.path.join(directory, f"{p['uuid']}.json")
+            with open(json_path, "w", encoding="utf-8") as f:
+                f.write(json.dumps(p, cls=DateTimeEncoder, indent=2))
+
         try:
             r = requests.patch(
                 f"{base_url}/api/photos/{p['uuid']}/",
@@ -169,6 +186,9 @@ def macos(bucket, base_url, username, password):
 @click.option(
     "--batch-size", default=10, help="Number of photos to process in each batch"
 )
+@click.option(
+    "--library", help="Filter by library name (optional)"
+)
 def icloud(
     bucket,
     base_url,
@@ -179,6 +199,7 @@ def icloud(
     stop_after,
     offset,
     batch_size,
+    library,
 ):
     """Sync photos from iCloud"""
     import mimetypes
@@ -309,7 +330,23 @@ def icloud(
     total_created_all = 0
     total_updated_all = 0
 
-    for library_name, library in api.photos.libraries.items():
+    # Filter libraries if specified
+    libraries_to_process = {}
+    if library:
+        # Check if the specified library exists
+        if library not in api.photos.libraries:
+            available_libraries = ", ".join(api.photos.libraries.keys())
+            click.echo(
+                f"Error: Library '{library}' not found. Available libraries: {available_libraries}",
+                err=True,
+            )
+            raise click.Abort()
+        libraries_to_process[library] = api.photos.libraries[library]
+        click.echo(f"Filtering to library: {library}")
+    else:
+        libraries_to_process = api.photos.libraries
+
+    for library_name, library_obj in libraries_to_process.items():
         click.echo(f"Library: {library_name}")
         photo_batch = []  # Collect photos for batching
         total_created = 0
@@ -355,7 +392,7 @@ def icloud(
 
             photo_batch.clear()
 
-        for i, photo in enumerate(library.all.fetch_records(offset)):
+        for i, photo in enumerate(library_obj.all.fetch_records(offset)):
             photo_count = i + 1  # Track photo count
             click.echo(f"{photo}, {photo.created}")
             dt = (photo.asset_date or photo.created).strftime("%Y/%m/%d")
@@ -472,6 +509,29 @@ def icloud(
         f"{total_photos} photos processed, {total_created_all} created, {total_updated_all} updated"
     )
     upload_albums()
+
+
+@sync.command()
+@click.option("--icloud-username", envvar="ICLOUD_USERNAME", help="iCloud username")
+@click.option("--icloud-password", envvar="ICLOUD_PASSWORD", help="iCloud password")
+def list_libraries(icloud_username, icloud_password):
+    """List available iCloud photo libraries"""
+    from .sync_tools import authenticate_icloud
+
+    # Authenticate with iCloud
+    api = authenticate_icloud(icloud_username, icloud_password)
+
+    click.echo("\nAvailable iCloud Photo Libraries:")
+    click.echo("-" * 50)
+    
+    if not api.photos.libraries:
+        click.echo("No libraries found")
+        return
+    
+    for library_name, library in api.photos.libraries.items():
+        click.echo(f"  • {library_name}")
+    
+    click.echo()
 
 
 @sync.command()
