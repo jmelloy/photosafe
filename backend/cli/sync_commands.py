@@ -502,24 +502,22 @@ def dump_icloud(icloud_username, icloud_password, output, limit):
 
             click.echo(f"Processing photo {i+1}: {photo.filename}")
 
+            date = photo.asset_date or photo.created
             data = {
                 k: v
                 for k, v in photo.__dict__.items()
                 if k == "_asset_record" or not k.startswith("_")
             }
-            data.update(photo.versions)
+            data["versions"] = photo.versions
 
-            sample_photos.append(data)
-
-        if len(sample_photos) >= limit:
-            break
-
-    # Write to JSON file
-    os.makedirs(
-        os.path.dirname(output) if os.path.dirname(output) else ".", exist_ok=True
-    )
-
-    with open(output, "w") as f:
-        json.dump(sample_photos, f, cls=DateTimeEncoder, indent=2)
+            directory = os.path.join(library_name, date.strftime("%Y/%m/%d"))
+            os.makedirs(directory, exist_ok=True)
+            with open(
+                os.path.join(directory, f"{photo._asset_record['recordName']}.json"),
+                "wb",
+            ) as FILE:
+                FILE.write(
+                    json.dumps(data, cls=DateTimeEncoder, indent=2).encode("utf-8")
+                )
 
     click.echo(f"Exported {len(sample_photos)} photos to {output}")

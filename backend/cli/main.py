@@ -6,6 +6,7 @@ from . import user_commands
 from . import library_commands
 from . import import_commands
 from . import sync_commands
+from . import maintenance_commands
 
 
 @click.group()
@@ -19,6 +20,7 @@ cli.add_command(user_commands.user)
 cli.add_command(library_commands.library)
 cli.add_command(import_commands.import_photos)
 cli.add_command(sync_commands.sync)
+cli.add_command(maintenance_commands.maintenance)
 
 
 if __name__ == "__main__":
