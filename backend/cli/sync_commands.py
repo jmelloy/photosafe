@@ -220,6 +220,61 @@ def macos(bucket, base_url, username, password, output_json):
 
 
 @sync.command()
+@click.option("--limit", help="Number of photos to export")
+def dump_macos(limit):
+    """Dump sample photos from macOS Photos library to JSON fixtures"""
+    try:
+        import osxphotos
+    except ImportError:
+        click.echo("Error: osxphotos is not installed. This command requires macOS.")
+        click.echo("Install with: pip install osxphotos>=0.60")
+        raise click.Abort()
+
+    from .sync_tools import DateTimeEncoder
+
+    photos_db = osxphotos.PhotosDB()
+    base_path = photos_db.library_path
+
+    sample_photos = []
+
+    for i, photo in enumerate(photos_db.photos()):
+        if limit and i >= limit:
+            break
+
+        if (i + 1) % 1000 == 0:
+            click.echo(f"Processing photo {i+1}: {photo.filename}")
+
+        p = photo.asdict()
+        p["masterFingerprint"] = photo._info["masterFingerprint"]
+        if not photo._info["cloudAssetGUID"]:
+            continue
+
+        p["uuid"] = photo._info["cloudAssetGUID"]
+        for k, v in p.items():
+            if v and type(v) is str and base_path in v:
+                p[k] = v.replace(base_path, "")
+
+        directory = os.path.join(
+            p["library"] or "PrimarySync", photo.date.strftime("%Y/%m/%d")
+        )
+        os.makedirs(directory, exist_ok=True)
+        with open(
+            os.path.join(directory, f"{photo._info['cloudAssetGUID']}.json"),
+            "wb",
+        ) as FILE:
+            FILE.write(json.dumps(p, cls=DateTimeEncoder, indent=2).encode("utf-8"))
+
+        if limit:
+            sample_photos.append(p)
+
+    os.makedirs("fixtures", exist_ok=True)
+    with open("fixtures/macos_sample.json", "w", encoding="utf-8") as f:
+        f.write(json.dumps(sample_photos, cls=DateTimeEncoder, indent=2))
+
+    click.echo(f"Exported {len(sample_photos)} photos to fixtures/macos_sample.json")
+
+
+@sync.command()
 @click.option(
     "--bucket",
     default=lambda: os.environ.get("BUCKET", "jmelloy-photo-backup"),
@@ -639,5 +694,13 @@ def dump_icloud(icloud_username, icloud_password, output, limit):
                 FILE.write(
                     json.dumps(data, cls=DateTimeEncoder, indent=2).encode("utf-8")
                 )
+
+            if limit:
+                sample_photos.append(data)
+
+    if limit:
+        os.makedirs("fixtures", exist_ok=True)
+        with open(output, "w", encoding="utf-8") as f:
+            f.write(json.dumps(sample_photos, cls=DateTimeEncoder, indent=2))
 
     click.echo(f"Exported {len(sample_photos)} photos to {output}")

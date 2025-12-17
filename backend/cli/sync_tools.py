@@ -3,6 +3,8 @@
 import datetime
 from hashlib import md5
 from json import JSONEncoder
+from pathlib import PosixPath
+
 
 import click
 
@@ -15,6 +17,8 @@ class DateTimeEncoder(JSONEncoder):
             return obj.isoformat()
         if isinstance(obj, bytes):
             return obj.decode("utf-8", errors="ignore")
+        if isinstance(obj, PosixPath):
+            return str(obj)
         return super().default(obj)
 
 
