@@ -58,7 +58,7 @@ async def create_photo(
     photo_dict = photo_data.model_dump(exclude={"versions"})
 
     # Serialize JSON fields
-    photo_dict = serialize_photo_json_fields(photo_dict)
+    # photo_dict = serialize_photo_json_fields(photo_dict)
 
     # Create photo with owner
     db_photo = Photo(**photo_dict, owner_id=current_user.id)
@@ -110,7 +110,7 @@ async def update_photo(
         )
 
     # Serialize JSON fields
-    update_dict = serialize_photo_json_fields(update_dict)
+    # update_dict = serialize_photo_json_fields(update_dict)
 
     # Update photo fields
     for key, value in update_dict.items():
@@ -190,7 +190,7 @@ async def batch_create_or_update_photos(
                     )
 
                 # Serialize JSON fields
-                update_dict = serialize_photo_json_fields(update_dict)
+                # update_dict = serialize_photo_json_fields(update_dict)
 
                 # Update photo fields
                 for key, value in update_dict.items():
@@ -232,7 +232,7 @@ async def batch_create_or_update_photos(
                 photo_dict = photo_data.model_dump(exclude={"versions"})
 
                 # Serialize JSON fields
-                photo_dict = serialize_photo_json_fields(photo_dict)
+                # photo_dict = serialize_photo_json_fields(photo_dict)
 
                 # Create photo with owner
                 db_photo = Photo(**photo_dict, owner_id=current_user.id)

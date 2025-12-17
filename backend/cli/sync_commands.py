@@ -214,7 +214,7 @@ def dump_macos(limit):
 )
 @click.option(
     "--base-url",
-    default=lambda: os.environ.get("BASE_URL", "https://api.photosafe.melloy.life"),
+    default=lambda: os.environ.get("BASE_URL", "http://localhost:8000"),
     help="PhotoSafe API base URL",
 )
 @click.option("--username", required=True, envvar="USERNAME", help="API username")
@@ -248,7 +248,12 @@ def icloud(
     from pyicloud import PyiCloudService
     from tqdm import tqdm
 
-    from .sync_tools import DateTimeEncoder, PhotoSafeAuth, authenticate_icloud, list_bucket
+    from .sync_tools import (
+        DateTimeEncoder,
+        PhotoSafeAuth,
+        authenticate_icloud,
+        list_bucket,
+    )
 
     s3 = boto3.client("s3", "us-west-2")
 
@@ -382,9 +387,7 @@ def icloud(
 
             r = auth.post(
                 "/api/photos/batch/",
-                data=json.dumps(batch_data, cls=DateTimeEncoder).replace(
-                    "\\u0000", ""
-                ),
+                data=json.dumps(batch_data, cls=DateTimeEncoder).replace("\\u0000", ""),
                 headers={"Content-Type": "application/json"},
             )
 
