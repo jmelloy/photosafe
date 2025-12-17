@@ -59,13 +59,13 @@ def test_photo_blocks_endpoint():
     client.post(
         "/api/auth/register",
         json={
-            "username": "testuser",
-            "email": "test@test.com",
+            "username": "testuser1",
+            "email": "test2@test.com",
             "password": "testpass123",
         },
     )
     login_response = client.post(
-        "/api/auth/login", data={"username": "testuser", "password": "testpass123"}
+        "/api/auth/login", data={"username": "testuser1", "password": "testpass123"}
     )
     token = login_response.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
