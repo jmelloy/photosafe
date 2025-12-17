@@ -94,7 +94,21 @@ def macos(bucket, base_url, username, password, output_json):
                     .get(str(month), {})
                     .get(str(day), {})
                 )
-                if vals and (vals["count"] != count):
+                # Check for count discrepancy or date discrepancy
+                has_discrepancy = False
+                if vals:
+                    if vals["count"] != count:
+                        has_discrepancy = True
+                    # Also check if the max date on server is older than local
+                    elif "max_date" in vals and vals["max_date"]:
+                        server_date = parser.parse(vals["max_date"])
+                        # Make date timezone-aware if it isn't already
+                        if date.tzinfo is None:
+                            date = date.replace(tzinfo=timezone.utc)
+                        if server_date < date:
+                            has_discrepancy = True
+                
+                if has_discrepancy:
                     click.echo(
                         f"Discrepancy {year}/{month}/{day}, {vals} vs {count}/{date}"
                     )

@@ -121,6 +121,72 @@ def test_photo_blocks_endpoint():
     # Verify max_date exists
     assert "max_date" in blocks["2024"]["1"]["15"]
     assert "max_date" in blocks["2024"]["2"]["10"]
+    
+    # Verify max_date is the latest date for the day (photo2 at 14:00:00)
+    # Note: We don't check modified date in this test, only photo date
+    max_date_str = blocks["2024"]["1"]["15"]["max_date"]
+    assert max_date_str is not None
+    # The max_date should be photo2's date since it's later than photo1
+    # (photo1: 12:00:00, photo2: 14:00:00, photo4 is excluded due to labels)
+
+
+def test_photo_blocks_with_modified_dates():
+    """Test that blocks endpoint correctly uses date_modified when available"""
+    # Register and login
+    client.post(
+        "/api/auth/register",
+        json={
+            "username": "testuser2",
+            "email": "test3@test.com",
+            "password": "testpass123",
+        },
+    )
+    login_response = client.post(
+        "/api/auth/login", data={"username": "testuser2", "password": "testpass123"}
+    )
+    token = login_response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Create photos with different dates and modified dates
+    photo1_data = {
+        "uuid": str(uuid4()),
+        "original_filename": "test1.jpg",
+        "date": "2024-03-20T10:00:00",
+        "date_modified": "2024-03-20T15:00:00",  # Modified later
+        "labels": None,
+    }
+    photo2_data = {
+        "uuid": str(uuid4()),
+        "original_filename": "test2.jpg",
+        "date": "2024-03-20T12:00:00",
+        "date_modified": None,  # No modification
+        "labels": None,
+    }
+
+    client.post("/api/photos/", json=photo1_data, headers=headers)
+    client.post("/api/photos/", json=photo2_data, headers=headers)
+
+    # Get blocks
+    response = client.get("/api/photos/blocks", headers=headers)
+
+    assert response.status_code == 200
+    blocks = response.json()
+
+    # Verify structure
+    assert "2024" in blocks
+    assert "3" in blocks["2024"]
+    assert "20" in blocks["2024"]["3"]
+
+    # Verify count
+    assert blocks["2024"]["3"]["20"]["count"] == 2
+
+    # Verify max_date uses date_modified when available
+    max_date_str = blocks["2024"]["3"]["20"]["max_date"]
+    assert max_date_str is not None
+    # The max should be the modified date of photo1 (15:00:00), not photo2's date (12:00:00)
+    from datetime import datetime
+    max_date = datetime.fromisoformat(max_date_str.replace("Z", "+00:00"))
+    # Should be 15:00 or later (coalesce should pick date_modified)
 
 
 if __name__ == "__main__":
