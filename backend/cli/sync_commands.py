@@ -220,7 +220,7 @@ def macos(bucket, base_url, username, password, output_json):
 
 
 @sync.command()
-@click.option("--limit", help="Number of photos to export")
+@click.option("--limit", help="Number of photos to export", type=int)
 def dump_macos(limit):
     """Dump sample photos from macOS Photos library to JSON fixtures"""
     try:
@@ -267,11 +267,14 @@ def dump_macos(limit):
         if limit:
             sample_photos.append(p)
 
-    os.makedirs("fixtures", exist_ok=True)
-    with open("fixtures/macos_sample.json", "w", encoding="utf-8") as f:
-        f.write(json.dumps(sample_photos, cls=DateTimeEncoder, indent=2))
+    if limit:
+        os.makedirs("fixtures", exist_ok=True)
+        with open("fixtures/macos_sample.json", "w", encoding="utf-8") as f:
+            f.write(json.dumps(sample_photos, cls=DateTimeEncoder, indent=2))
 
-    click.echo(f"Exported {len(sample_photos)} photos to fixtures/macos_sample.json")
+        click.echo(
+            f"Exported {len(sample_photos)} photos to fixtures/macos_sample.json"
+        )
 
 
 @sync.command()
