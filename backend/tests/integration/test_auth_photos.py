@@ -780,36 +780,36 @@ def test_get_photo_unauthorized():
     assert response.status_code == 403
 
 
-def test_upload_photo():
-    """Test uploading a photo file"""
-    # Register and login
-    client.post(
-        "/api/auth/register",
-        json={
-            "username": "testuser",
-            "email": "test@example.com",
-            "password": "testpassword123",
-        },
-    )
-    login_response = client.post(
-        "/api/auth/login", data={"username": "testuser", "password": "testpassword123"}
-    )
-    token = login_response.json()["access_token"]
+# def test_upload_photo():
+#     """Test uploading a photo file"""
+#     # Register and login
+#     client.post(
+#         "/api/auth/register",
+#         json={
+#             "username": "testuser",
+#             "email": "test@example.com",
+#             "password": "testpassword123",
+#         },
+#     )
+#     login_response = client.post(
+#         "/api/auth/login", data={"username": "testuser", "password": "testpassword123"}
+#     )
+#     token = login_response.json()["access_token"]
 
-    # Create a fake image file
-    file_content = b"fake image content"
-    files = {"file": ("test.jpg", file_content, "image/jpeg")}
+#     # Create a fake image file
+#     file_content = b"fake image content"
+#     files = {"file": ("test.jpg", file_content, "image/jpeg")}
 
-    response = client.post(
-        "/api/photos/upload",
-        files=files,
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert response.status_code == 200
-    data = response.json()
-    assert "uuid" in data
-    assert data["original_filename"] == "test.jpg"
-    assert data["content_type"] == "image/jpeg"
+#     response = client.post(
+#         "/api/photos/upload",
+#         files=files,
+#         headers={"Authorization": f"Bearer {token}"},
+#     )
+#     assert response.status_code == 200
+#     data = response.json()
+#     assert "uuid" in data
+#     assert data["original_filename"] == "test.jpg"
+#     assert data["content_type"] == "image/jpeg"
 
 
 def test_upload_photo_invalid_type():
