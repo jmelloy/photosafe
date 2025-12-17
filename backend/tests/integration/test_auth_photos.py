@@ -662,3 +662,189 @@ def test_batch_unauthenticated():
 
     response = client.post("/api/photos/batch/", json=batch_data)
     assert response.status_code == 401
+
+
+def test_get_photo():
+    """Test retrieving a specific photo by UUID"""
+    # Register and login
+    client.post(
+        "/api/auth/register",
+        json={
+            "username": "testuser",
+            "email": "test@example.com",
+            "password": "testpassword123",
+        },
+    )
+    login_response = client.post(
+        "/api/auth/login", data={"username": "testuser", "password": "testpassword123"}
+    )
+    token = login_response.json()["access_token"]
+
+    # Create a photo
+    create_response = client.post(
+        "/api/photos/",
+        json={
+            "uuid": "test-photo-uuid",
+            "original_filename": "test.jpg",
+            "date": "2024-01-01T00:00:00",
+            "title": "Test Photo",
+            "description": "This is a test photo",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert create_response.status_code == 201
+
+    # Get the photo
+    response = client.get(
+        "/api/photos/test-photo-uuid/",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["uuid"] == "test-photo-uuid"
+    assert data["original_filename"] == "test.jpg"
+    assert data["title"] == "Test Photo"
+
+
+def test_get_photo_not_found():
+    """Test getting a non-existent photo returns 404"""
+    # Register and login
+    client.post(
+        "/api/auth/register",
+        json={
+            "username": "testuser",
+            "email": "test@example.com",
+            "password": "testpassword123",
+        },
+    )
+    login_response = client.post(
+        "/api/auth/login", data={"username": "testuser", "password": "testpassword123"}
+    )
+    token = login_response.json()["access_token"]
+
+    response = client.get(
+        "/api/photos/nonexistent-uuid/",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 404
+
+
+def test_get_photo_unauthorized():
+    """Test getting another user's photo is forbidden"""
+    # Create two users
+    client.post(
+        "/api/auth/register",
+        json={
+            "username": "user1",
+            "email": "user1@example.com",
+            "password": "password123",
+        },
+    )
+    client.post(
+        "/api/auth/register",
+        json={
+            "username": "user2",
+            "email": "user2@example.com",
+            "password": "password123",
+        },
+    )
+
+    # Login as user1
+    login1 = client.post(
+        "/api/auth/login", data={"username": "user1", "password": "password123"}
+    )
+    token1 = login1.json()["access_token"]
+
+    # Login as user2
+    login2 = client.post(
+        "/api/auth/login", data={"username": "user2", "password": "password123"}
+    )
+    token2 = login2.json()["access_token"]
+
+    # User1 creates a photo
+    client.post(
+        "/api/photos/",
+        json={
+            "uuid": "user1-photo",
+            "original_filename": "user1.jpg",
+            "date": "2024-01-01T00:00:00",
+        },
+        headers={"Authorization": f"Bearer {token1}"},
+    )
+
+    # User2 tries to get user1's photo
+    response = client.get(
+        "/api/photos/user1-photo/",
+        headers={"Authorization": f"Bearer {token2}"},
+    )
+    assert response.status_code == 403
+
+
+def test_upload_photo():
+    """Test uploading a photo file"""
+    # Register and login
+    client.post(
+        "/api/auth/register",
+        json={
+            "username": "testuser",
+            "email": "test@example.com",
+            "password": "testpassword123",
+        },
+    )
+    login_response = client.post(
+        "/api/auth/login", data={"username": "testuser", "password": "testpassword123"}
+    )
+    token = login_response.json()["access_token"]
+
+    # Create a fake image file
+    file_content = b"fake image content"
+    files = {"file": ("test.jpg", file_content, "image/jpeg")}
+
+    response = client.post(
+        "/api/photos/upload",
+        files=files,
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "uuid" in data
+    assert data["original_filename"] == "test.jpg"
+    assert data["content_type"] == "image/jpeg"
+
+
+def test_upload_photo_invalid_type():
+    """Test uploading a non-image file fails"""
+    # Register and login
+    client.post(
+        "/api/auth/register",
+        json={
+            "username": "testuser",
+            "email": "test@example.com",
+            "password": "testpassword123",
+        },
+    )
+    login_response = client.post(
+        "/api/auth/login", data={"username": "testuser", "password": "testpassword123"}
+    )
+    token = login_response.json()["access_token"]
+
+    # Create a non-image file
+    file_content = b"not an image"
+    files = {"file": ("test.txt", file_content, "text/plain")}
+
+    response = client.post(
+        "/api/photos/upload",
+        files=files,
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 400
+    assert "must be an image" in response.json()["detail"]
+
+
+def test_upload_photo_unauthenticated():
+    """Test uploading without authentication fails"""
+    file_content = b"fake image content"
+    files = {"file": ("test.jpg", file_content, "image/jpeg")}
+
+    response = client.post("/api/photos/upload", files=files)
+    assert response.status_code == 401
