@@ -4,12 +4,63 @@
 import concurrent.futures
 import json
 import os
+import time
 from datetime import datetime, timedelta, timezone
 
 import boto3
 import click
 import requests
 from dateutil import parser
+
+
+def retry_on_server_error(func, max_retries=3, initial_wait=1):
+    """Retry a function if it returns 500 or 502 status codes
+
+    Args:
+        func: Function to call that returns a requests.Response
+        max_retries: Maximum number of retry attempts
+        initial_wait: Initial wait time in seconds (doubles with each retry)
+
+    Returns:
+        requests.Response object
+    """
+    wait_time = initial_wait
+    last_exception = None
+
+    for attempt in range(max_retries + 1):
+        try:
+            response = func()
+
+            # If we get 500 or 502, retry
+            if response.status_code in (500, 502) and attempt < max_retries:
+                click.echo(
+                    f"Server error {response.status_code}, retrying in {wait_time}s "
+                    f"(attempt {attempt + 1}/{max_retries})...",
+                    err=True,
+                )
+                time.sleep(wait_time)
+                wait_time *= 2  # Exponential backoff
+                continue
+
+            return response
+
+        except requests.exceptions.RequestException as e:
+            last_exception = e
+            if attempt < max_retries:
+                click.echo(
+                    f"Request error: {e}, retrying in {wait_time}s "
+                    f"(attempt {attempt + 1}/{max_retries})...",
+                    err=True,
+                )
+                time.sleep(wait_time)
+                wait_time *= 2
+                continue
+            raise
+
+    # If we exhausted retries, raise the last exception or return last response
+    if last_exception:
+        raise last_exception
+    return response
 
 
 @click.group()
@@ -122,13 +173,15 @@ def macos(bucket, base_url, username, password):
                 p[k] = v.replace(base_path, "")
 
         try:
-            r = requests.patch(
-                f"{base_url}/api/photos/{p['uuid']}/",
-                data=json.dumps(p, cls=DateTimeEncoder),
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {token}",
-                },
+            r = retry_on_server_error(
+                lambda: requests.patch(
+                    f"{base_url}/api/photos/{p['uuid']}/",
+                    data=json.dumps(p, cls=DateTimeEncoder),
+                    headers={
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {token}",
+                    },
+                )
             )
 
             if r.status_code == 404:
@@ -279,23 +332,27 @@ def icloud(
             if not album_info["photos"]:
                 continue
 
-            r = requests.put(
-                f"{base_url}/api/albums/{album.id}/",
-                data=json.dumps(album_info, cls=DateTimeEncoder),
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {token}",
-                },
-            )
-
-            if r.status_code == 404:
-                r = requests.post(
-                    f"{base_url}/api/albums/",
+            r = retry_on_server_error(
+                lambda: requests.put(
+                    f"{base_url}/api/albums/{album.id}/",
                     data=json.dumps(album_info, cls=DateTimeEncoder),
                     headers={
                         "Content-Type": "application/json",
                         "Authorization": f"Bearer {token}",
                     },
+                )
+            )
+
+            if r.status_code == 404:
+                r = retry_on_server_error(
+                    lambda: requests.post(
+                        f"{base_url}/api/albums/",
+                        data=json.dumps(album_info, cls=DateTimeEncoder),
+                        headers={
+                            "Content-Type": "application/json",
+                            "Authorization": f"Bearer {token}",
+                        },
+                    )
                 )
 
             if r.status_code >= 400:
@@ -325,13 +382,17 @@ def icloud(
 
             batch_data = {"photos": photo_batch}
 
-            r = requests.post(
-                f"{base_url}/api/photos/batch/",
-                data=json.dumps(batch_data, cls=DateTimeEncoder).replace("\\u0000", ""),
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {token}",
-                },
+            r = retry_on_server_error(
+                lambda: requests.post(
+                    f"{base_url}/api/photos/batch/",
+                    data=json.dumps(batch_data, cls=DateTimeEncoder).replace(
+                        "\\u0000", ""
+                    ),
+                    headers={
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {token}",
+                    },
+                )
             )
 
             if r.status_code == 200:
@@ -357,7 +418,7 @@ def icloud(
 
         for i, photo in enumerate(library.all.fetch_records(offset)):
             photo_count = i + 1  # Track photo count
-            click.echo(f"{photo}, {photo.created}")
+            # click.echo(f"{photo}, {photo.created}")
             dt = (photo.asset_date or photo.created).strftime("%Y/%m/%d")
 
             objects = s3_keys.get(dt)
