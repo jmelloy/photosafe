@@ -20,6 +20,17 @@ photosafe sync macos \
   --base-url https://api.photosafe.example.com
 ```
 
+To write JSON files for each photo (similar to iCloud dump):
+
+```bash
+photosafe sync macos \
+  --username YOUR_USERNAME \
+  --password YOUR_PASSWORD \
+  --bucket S3_BUCKET_NAME \
+  --base-url https://api.photosafe.example.com \
+  --output-json
+```
+
 **Requirements:**
 - macOS operating system
 - `osxphotos` package (install with `pip install photosafe-cli[macos]`)
@@ -29,6 +40,9 @@ photosafe sync macos \
 - `PASSWORD` - API password
 - `BUCKET` - S3 bucket name (default: jmelloy-photo-backup)
 - `BASE_URL` - PhotoSafe API base URL (default: http://localhost:8000)
+
+**Options:**
+- `--output-json` - Write JSON files for each photo to disk (organized by date)
 
 ### 2. iCloud Photos Sync
 
@@ -46,6 +60,19 @@ photosafe sync icloud \
   --offset 0
 ```
 
+To filter by a specific library:
+
+```bash
+photosafe sync icloud \
+  --username YOUR_USERNAME \
+  --password YOUR_PASSWORD \
+  --icloud-username YOUR_ICLOUD_EMAIL \
+  --icloud-password YOUR_ICLOUD_PASSWORD \
+  --bucket S3_BUCKET_NAME \
+  --base-url https://api.photosafe.example.com \
+  --library "My Library Name"
+```
+
 **Requirements:**
 - `pyicloud` package (install with `pip install photosafe-cli[icloud]`)
 
@@ -61,8 +88,26 @@ photosafe sync icloud \
 - `--stop-after` - Stop after N existing photos (default: 1000)
 - `--offset` - Offset for fetching photos (default: 0)
 - `--batch-size` - Number of photos to process in each batch (default: 10)
+- `--library` - Filter by library name (optional)
 
-### 3. Leonardo AI Sync
+### 3. List iCloud Libraries
+
+Lists available iCloud photo libraries.
+
+```bash
+photosafe sync list-libraries \
+  --icloud-username YOUR_ICLOUD_EMAIL \
+  --icloud-password YOUR_ICLOUD_PASSWORD
+```
+
+**Requirements:**
+- `pyicloud` package (install with `pip install photosafe-cli[icloud]`)
+
+**Environment Variables:**
+- `ICLOUD_USERNAME` - iCloud username/email
+- `ICLOUD_PASSWORD` - iCloud password
+
+### 4. Leonardo AI Sync
 
 Syncs AI-generated images from Leonardo.ai to PhotoSafe.
 
