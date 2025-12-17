@@ -184,7 +184,6 @@ def test_photo_blocks_with_modified_dates():
     max_date_str = blocks["2024"]["3"]["20"]["max_date"]
     assert max_date_str is not None
     # The max should be the modified date of photo1 (15:00:00), not photo2's date (12:00:00)
-    from datetime import datetime
     max_date = datetime.fromisoformat(max_date_str.replace("Z", "+00:00"))
     # Should be 15:00 or later (coalesce should pick date_modified)
 

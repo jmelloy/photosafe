@@ -235,8 +235,8 @@ class TestMacOSSyncWithFixtures:
                     
                     assert result.exit_code == 0
                     # Should detect discrepancy due to date difference
-                    # Note: This test will fail until we implement date checking in the blocks check
-                    # The current code only checks count, not date
+                    # Date checking is now implemented in the blocks check
+                    assert "Discrepancy" in result.output or "to process" in result.output
 
 
 if __name__ == "__main__":

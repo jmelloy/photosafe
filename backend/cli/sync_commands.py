@@ -102,9 +102,11 @@ def macos(bucket, base_url, username, password, output_json):
                     # Also check if the max date on server is older than local
                     elif "max_date" in vals and vals["max_date"]:
                         server_date = parser.parse(vals["max_date"])
-                        # Make date timezone-aware if it isn't already
+                        # Make both dates timezone-aware for proper comparison
                         if date.tzinfo is None:
                             date = date.replace(tzinfo=timezone.utc)
+                        if server_date.tzinfo is None:
+                            server_date = server_date.replace(tzinfo=timezone.utc)
                         if server_date < date:
                             has_discrepancy = True
                 
