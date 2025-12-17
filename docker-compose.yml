@@ -44,7 +44,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-photosafe}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
+    # ports:
       # For production, comment out or remove this port mapping for security
       # - "5432:5432"
     healthcheck:
