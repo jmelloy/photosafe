@@ -183,9 +183,7 @@ def macos(bucket, base_url, username, password, output_json):
         # Write JSON file if requested
         if output_json:
             dt = photo.date.astimezone(timezone.utc)
-            directory = os.path.join(
-                MACOS_LIBRARY_NAME, dt.strftime("%Y/%m/%d")
-            )
+            directory = os.path.join(MACOS_LIBRARY_NAME, dt.strftime("%Y/%m/%d"))
             os.makedirs(directory, exist_ok=True)
             json_path = os.path.join(directory, f"{p['uuid']}.json")
             with open(json_path, "w", encoding="utf-8") as f:
@@ -241,9 +239,7 @@ def macos(bucket, base_url, username, password, output_json):
 @click.option(
     "--batch-size", default=10, help="Number of photos to process in each batch"
 )
-@click.option(
-    "--library", help="Filter by library name (optional)"
-)
+@click.option("--library", help="Filter by library name (optional)")
 def icloud(
     bucket,
     base_url,
@@ -439,8 +435,8 @@ def icloud(
                 total_created += result["created"]
                 total_updated += result["updated"]
                 click.echo(
-                    f"Batch processed: {result['created']} created, "
-                    f"{result['updated']} updated, {result['errors']} errors"
+                    f"Batch processed: {result['created']} created, total: {total_created} created, "
+                    f"{result['updated']} updated, total: {total_updated} updated, {result['errors']} errors"
                 )
 
                 # Log any errors
@@ -452,6 +448,7 @@ def icloud(
                         )
             else:
                 click.echo(f"Batch request failed: {r.status_code} {r.text}", err=True)
+                r.raise_for_status()
 
             photo_batch.clear()
 
