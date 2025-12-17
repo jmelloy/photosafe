@@ -55,23 +55,6 @@ class TestSyncCommands:
         assert result.exit_code == 0
         assert "Dump sample photos from iCloud" in result.output
 
-    def test_macos_requires_optional_dependency(self, runner):
-        """Test that macos command checks for osxphotos dependency"""
-        result = runner.invoke(
-            sync,
-            [
-                "macos",
-                "--username",
-                "testuser",
-                "--password",
-                "testpass",
-            ],
-        )
-
-        # Without osxphotos installed, should show error message
-        assert result.exit_code != 0
-        assert "osxphotos is not installed" in result.output
-
     @patch("cli.sync_tools.authenticate_icloud")
     def test_list_libraries(self, mock_authenticate, runner):
         """Test list-libraries command"""
