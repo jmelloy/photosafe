@@ -126,6 +126,11 @@ jobs:
 
           # Parse and increment patch version
           major, minor, patch = current_version.split('.')
+          if major != str(datetime.datetime.now().year) or minor != str(datetime.datetime.now().month):
+              # Reset patch if year or month has changed
+              new_patch = 0
+          major = datetime.datetime.now().year # year as major version
+          minor = datetime.datetime.now().month  # month as minor version
           new_patch = int(patch) + 1
           new_version = f"{major}.{minor}.{new_patch}"
 
