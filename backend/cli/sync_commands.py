@@ -17,29 +17,34 @@ MACOS_LIBRARY_NAME = "macOS Photos"
 def clean_photo_data(photo_dict):
     """Clean up None values in photo data to prevent null insertions.
     
+    This function modifies the input dictionary in place to clean up None values
+    that could be serialized as JSON null in fields where they are not appropriate.
+    
     Args:
         photo_dict: Dictionary of photo data from osxphotos
         
     Returns:
-        The same dictionary with None values cleaned up
+        The same dictionary with None values cleaned up (for chaining convenience)
     """
     # Filter None values from persons list
-    if photo_dict.get("persons") is None:
+    persons = photo_dict.get("persons")
+    if persons is None:
         photo_dict["persons"] = []
-    elif isinstance(photo_dict.get("persons"), list):
+    elif isinstance(persons, list):
         # Remove None values from the persons list
-        photo_dict["persons"] = [person for person in photo_dict["persons"] if person is not None]
+        photo_dict["persons"] = [person for person in persons if person is not None]
 
     # Ensure place is an empty dict instead of None
     if photo_dict.get("place") is None:
         photo_dict["place"] = {}
 
     # Clean up face_info - filter out None values and empty/invalid entries
-    if photo_dict.get("face_info") is None:
+    face_info = photo_dict.get("face_info")
+    if face_info is None:
         photo_dict["face_info"] = []
-    elif isinstance(photo_dict.get("face_info"), list):
+    elif isinstance(face_info, list):
         # Filter out None items from face_info list
-        photo_dict["face_info"] = [face for face in photo_dict["face_info"] if face is not None]
+        photo_dict["face_info"] = [face for face in face_info if face is not None]
     
     return photo_dict
 
