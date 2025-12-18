@@ -52,7 +52,7 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
         click.echo("Install with: pip install osxphotos>=0.60")
         raise click.Abort()
 
-    from .sync_tools import DateTimeEncoder, PhotoSafeAuth
+    from cli.sync_tools import DateTimeEncoder, PhotoSafeAuth
 
     photos_db = osxphotos.PhotosDB()
     base_path = photos_db.library_path
@@ -84,7 +84,7 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
 
     # Find discrepancies
     photos_to_process = []
-    
+
     if skip_blocks_check:
         # Skip blocks check and process all photos
         click.echo("Skipping blocks check, processing all photos")
@@ -97,7 +97,7 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
         r = auth.get("/api/photos/blocks")
         r.raise_for_status()
         server_blocks = r.json()
-        
+
         for year, months in sorted(blocks.items()):
             for month, days in sorted(months.items()):
                 for day, photos in sorted(days.items()):
@@ -123,7 +123,7 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
                                 server_date = server_date.replace(tzinfo=timezone.utc)
                             if server_date < date:
                                 has_discrepancy = True
-                    
+
                     if has_discrepancy:
                         click.echo(
                             f"Discrepancy {year}/{month}/{day}, {vals} vs {count}/{date}"
@@ -152,7 +152,7 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
             json_path = os.path.join(directory, f"{p['uuid']}.json")
             with open(json_path, "w", encoding="utf-8") as f:
                 f.write(json.dumps(p, cls=DateTimeEncoder, indent=2))
-
+        p["saerch_info"] = photo.search_info.asdict()
         try:
             r = auth.patch(
                 f"/api/photos/{p['uuid']}/",
