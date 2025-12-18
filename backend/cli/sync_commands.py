@@ -38,7 +38,12 @@ def sync():
     is_flag=True,
     help="Write JSON files for each photo (similar to iCloud dump)",
 )
-def macos(bucket, base_url, username, password, output_json):
+@click.option(
+    "--skip-blocks-check",
+    is_flag=True,
+    help="Skip the blocks check and sync all photos",
+)
+def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
     """Sync photos from macOS Photos library"""
     try:
         import osxphotos
@@ -77,28 +82,53 @@ def macos(bucket, base_url, username, password, output_json):
 
         blocks[dt.year][dt.month][dt.day].append(photo)
 
-    # Get server blocks
-    r = auth.get("/api/photos/blocks")
-    r.raise_for_status()
-    server_blocks = r.json()
-
     # Find discrepancies
     photos_to_process = []
-    for year, months in sorted(blocks.items()):
-        for month, days in sorted(months.items()):
-            for day, photos in sorted(days.items()):
-                count = len(photos)
-                date = max([x.date_modified or x.date for x in photos])
-                vals = (
-                    server_blocks.get(str(year), {})
-                    .get(str(month), {})
-                    .get(str(day), {})
-                )
-                if vals and (vals["count"] != count):
-                    click.echo(
-                        f"Discrepancy {year}/{month}/{day}, {vals} vs {count}/{date}"
+    
+    if skip_blocks_check:
+        # Skip blocks check and process all photos
+        click.echo("Skipping blocks check, processing all photos")
+        for year, months in sorted(blocks.items()):
+            for month, days in sorted(months.items()):
+                for day, photos in sorted(days.items()):
+                    photos_to_process.extend(photos)
+    else:
+        # Get server blocks
+        r = auth.get("/api/photos/blocks")
+        r.raise_for_status()
+        server_blocks = r.json()
+        
+        for year, months in sorted(blocks.items()):
+            for month, days in sorted(months.items()):
+                for day, photos in sorted(days.items()):
+                    count = len(photos)
+                    date = max([x.date_modified or x.date for x in photos])
+                    vals = (
+                        server_blocks.get(str(year), {})
+                        .get(str(month), {})
+                        .get(str(day), {})
                     )
-                    photos_to_process.extend(blocks[year][month][day])
+                    # Check for count discrepancy or date discrepancy
+                    has_discrepancy = False
+                    if vals:
+                        if vals["count"] != count:
+                            has_discrepancy = True
+                        # Also check if the max date on server is older than local
+                        elif "max_date" in vals and vals["max_date"]:
+                            server_date = parser.parse(vals["max_date"])
+                            # Make both dates timezone-aware for proper comparison
+                            if date.tzinfo is None:
+                                date = date.replace(tzinfo=timezone.utc)
+                            if server_date.tzinfo is None:
+                                server_date = server_date.replace(tzinfo=timezone.utc)
+                            if server_date < date:
+                                has_discrepancy = True
+                    
+                    if has_discrepancy:
+                        click.echo(
+                            f"Discrepancy {year}/{month}/{day}, {vals} vs {count}/{date}"
+                        )
+                        photos_to_process.extend(blocks[year][month][day])
 
     click.echo(f"Total: {total}, to process: {len(photos_to_process)}")
 
