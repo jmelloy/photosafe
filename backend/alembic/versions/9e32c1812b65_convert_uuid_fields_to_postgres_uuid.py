@@ -25,12 +25,16 @@ def upgrade() -> None:
     # We need to use USING clause to cast string values to UUID
 
     # 1. Drop foreign key constraints that reference uuid columns
-    op.drop_constraint("fk_versions_photo_uuid", "versions", type_="foreignkey")
+    op.drop_constraint("versions_photo_uuid_fkey", "versions", type_="foreignkey")
     op.drop_constraint(
         "album_photos_album_uuid_fkey", "album_photos", type_="foreignkey"
     )
     op.drop_constraint(
         "album_photos_photo_uuid_fkey", "album_photos", type_="foreignkey"
+    )
+
+    op.execute(
+        "delete from photos where lower(uuid) in (select lower(uuid) from photos group by lower(uuid) having count(*) > 1)"
     )
 
     # 2. Convert photos.uuid (primary key)
@@ -39,9 +43,17 @@ def upgrade() -> None:
     # 3. Convert albums.uuid (primary key)
     op.execute("ALTER TABLE albums ALTER COLUMN uuid TYPE UUID USING uuid::uuid")
 
+    op.execute(
+        "delete from versions where not exists (select 1 from photos where photos.uuid = versions.photo_uuid::uuid)"
+    )
+
     # 4. Convert versions.photo_uuid (foreign key)
     op.execute(
         "ALTER TABLE versions ALTER COLUMN photo_uuid TYPE UUID USING photo_uuid::uuid"
+    )
+
+    op.execute(
+        "delete from album_photos where not exists (select 1 from photos where photos.uuid = album_photos.photo_uuid::uuid)"
     )
 
     # 5. Convert album_photos association table columns
