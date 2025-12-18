@@ -263,7 +263,7 @@ def group_exif_data(exif: ExifData) -> Dict[str, Dict[str, Any]]:
         "Exposure": {
             "ISO": exif.iso,
             "Aperture": f"f/{exif.aperture}" if exif.aperture else None,
-            "Shutter Speed": f"1/{int(1/exif.shutter_speed)}" if exif.shutter_speed and exif.shutter_speed > 0 else None,
+            "Shutter Speed": f"1/{int(1/exif.shutter_speed)}" if exif.shutter_speed and exif.shutter_speed > 0.0001 else (f"{exif.shutter_speed}s" if exif.shutter_speed else None),
             "Focal Length": f"{exif.focal_length}mm" if exif.focal_length else None,
             "Exposure Bias": exif.exposure_bias,
             "Flash Fired": exif.flash_fired,

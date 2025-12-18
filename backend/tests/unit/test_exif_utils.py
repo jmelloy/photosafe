@@ -56,7 +56,7 @@ class TestMacOSExifParsing:
         assert exif.aperture == 1.78
         assert exif.shutter_speed is not None
         assert exif.focal_length is not None
-        assert exif.flash_fired == False
+        assert exif.flash_fired is False
         assert exif.white_balance == 0
         assert exif.metering_mode == 5
     
@@ -234,7 +234,7 @@ class TestGrouping:
         exposure = grouped["Exposure"]
         assert exposure["ISO"] == 80
         assert "f/" in exposure["Aperture"]
-        assert exposure["Flash Fired"] == False
+        assert exposure["Flash Fired"] is False
     
     def test_group_exif_data_location(self, macos_samples):
         """Test location information grouping"""
@@ -320,7 +320,7 @@ class TestComparison:
             else:
                 assert "source1" in info
                 assert "source2" in info
-                assert info["match"] == False
+                assert info["match"] is False
     
     def test_compare_identical_exif(self, macos_samples):
         """Test comparing identical EXIF data"""
