@@ -144,6 +144,25 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
             if v and type(v) is str and base_path in v:
                 p[k] = v.replace(base_path, "")
 
+        # Clean up None values that should be empty structures
+        # Filter None values from persons list
+        if p.get("persons") is None:
+            p["persons"] = []
+        elif isinstance(p.get("persons"), list):
+            # Remove None values from the persons list
+            p["persons"] = [person for person in p["persons"] if person is not None]
+
+        # Ensure place is an empty dict instead of None
+        if p.get("place") is None:
+            p["place"] = {}
+
+        # Clean up face_info - filter out None values and empty/invalid entries
+        if p.get("face_info") is None:
+            p["face_info"] = []
+        elif isinstance(p.get("face_info"), list):
+            # Filter out None items from face_info list
+            p["face_info"] = [face for face in p["face_info"] if face is not None]
+
         # Write JSON file if requested
         if output_json:
             dt = photo.date.astimezone(timezone.utc)
@@ -152,7 +171,9 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
             json_path = os.path.join(directory, f"{p['uuid']}.json")
             with open(json_path, "w", encoding="utf-8") as f:
                 f.write(json.dumps(p, cls=DateTimeEncoder, indent=2))
-        p["saerch_info"] = photo.search_info.asdict()
+        
+        # Fix typo: saerch_info -> search_info
+        p["search_info"] = photo.search_info.asdict()
         try:
             r = auth.patch(
                 f"/api/photos/{p['uuid']}/",
@@ -212,6 +233,25 @@ def dump_macos(limit):
         for k, v in p.items():
             if v and type(v) is str and base_path in v:
                 p[k] = v.replace(base_path, "")
+
+        # Clean up None values that should be empty structures
+        # Filter None values from persons list
+        if p.get("persons") is None:
+            p["persons"] = []
+        elif isinstance(p.get("persons"), list):
+            # Remove None values from the persons list
+            p["persons"] = [person for person in p["persons"] if person is not None]
+
+        # Ensure place is an empty dict instead of None
+        if p.get("place") is None:
+            p["place"] = {}
+
+        # Clean up face_info - filter out None values and empty/invalid entries
+        if p.get("face_info") is None:
+            p["face_info"] = []
+        elif isinstance(p.get("face_info"), list):
+            # Filter out None items from face_info list
+            p["face_info"] = [face for face in p["face_info"] if face is not None]
 
         directory = os.path.join(
             p["library"] or "PrimarySync", photo.date.strftime("%Y/%m/%d")
