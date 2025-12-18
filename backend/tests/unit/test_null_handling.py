@@ -1,8 +1,8 @@
 """Tests for null handling in sync commands"""
 
 import json
-from unittest.mock import MagicMock, patch
 from cli.sync_tools import DateTimeEncoder
+from cli.sync_commands import clean_photo_data
 
 
 def test_none_values_filtered_from_persons():
@@ -15,19 +15,8 @@ def test_none_values_filtered_from_persons():
         "face_info": [{"name": "John"}, None, {"name": "Jane"}],
     }
     
-    # Apply the same cleaning logic as in sync_photo
-    if photo_data.get("persons") is None:
-        photo_data["persons"] = []
-    elif isinstance(photo_data.get("persons"), list):
-        photo_data["persons"] = [person for person in photo_data["persons"] if person is not None]
-    
-    if photo_data.get("place") is None:
-        photo_data["place"] = {}
-    
-    if photo_data.get("face_info") is None:
-        photo_data["face_info"] = []
-    elif isinstance(photo_data.get("face_info"), list):
-        photo_data["face_info"] = [face for face in photo_data["face_info"] if face is not None]
+    # Apply the cleaning logic
+    photo_data = clean_photo_data(photo_data)
     
     # Verify None values are removed
     assert photo_data["persons"] == ["John", "Jane"]
@@ -45,18 +34,7 @@ def test_none_persons_becomes_empty_list():
     }
     
     # Apply the cleaning logic
-    if photo_data.get("persons") is None:
-        photo_data["persons"] = []
-    elif isinstance(photo_data.get("persons"), list):
-        photo_data["persons"] = [person for person in photo_data["persons"] if person is not None]
-    
-    if photo_data.get("place") is None:
-        photo_data["place"] = {}
-    
-    if photo_data.get("face_info") is None:
-        photo_data["face_info"] = []
-    elif isinstance(photo_data.get("face_info"), list):
-        photo_data["face_info"] = [face for face in photo_data["face_info"] if face is not None]
+    photo_data = clean_photo_data(photo_data)
     
     assert photo_data["persons"] == []
     assert photo_data["place"] == {}
@@ -98,18 +76,7 @@ def test_empty_lists_preserved():
     }
     
     # Apply the cleaning logic (should not change anything)
-    if photo_data.get("persons") is None:
-        photo_data["persons"] = []
-    elif isinstance(photo_data.get("persons"), list):
-        photo_data["persons"] = [person for person in photo_data["persons"] if person is not None]
-    
-    if photo_data.get("place") is None:
-        photo_data["place"] = {}
-    
-    if photo_data.get("face_info") is None:
-        photo_data["face_info"] = []
-    elif isinstance(photo_data.get("face_info"), list):
-        photo_data["face_info"] = [face for face in photo_data["face_info"] if face is not None]
+    photo_data = clean_photo_data(photo_data)
     
     assert photo_data["persons"] == []
     assert photo_data["place"] == {}
