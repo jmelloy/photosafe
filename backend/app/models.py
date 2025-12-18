@@ -11,7 +11,7 @@ from sqlalchemy import (
     ForeignKey,
     Table,
 )
-from sqlalchemy.dialects.postgresql import JSONB, ARRAY
+from sqlalchemy.dialects.postgresql import JSONB, ARRAY, UUID
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from pathlib import Path
@@ -26,8 +26,8 @@ S3_BASE_URL = os.getenv("S3_BASE_URL", "https://photos.melloy.life")
 album_photos = Table(
     "album_photos",
     SQLModel.metadata,
-    Column("album_uuid", String, ForeignKey("albums.uuid"), index=True),
-    Column("photo_uuid", String, ForeignKey("photos.uuid"), index=True),
+    Column("album_uuid", UUID(as_uuid=True), ForeignKey("albums.uuid"), index=True),
+    Column("photo_uuid", UUID(as_uuid=True), ForeignKey("photos.uuid"), index=True),
 )
 
 
@@ -83,7 +83,7 @@ class Photo(SQLModel, table=True):
     uuid: str = Field(
         default_factory=lambda: str(uuid.uuid4()),
         primary_key=True,
-        sa_type=String,
+        sa_type=UUID(as_uuid=True),
     )
     masterFingerprint: Optional[str] = Field(default=None, sa_type=Text)
 
@@ -247,7 +247,7 @@ class Version(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True, index=True)
     photo_uuid: Optional[str] = Field(
-        default=None, foreign_key="photos.uuid", index=True
+        default=None, foreign_key="photos.uuid", index=True, sa_type=UUID(as_uuid=True)
     )
 
     version: str = Field(sa_type=Text)
@@ -267,7 +267,7 @@ class Album(SQLModel, table=True):
 
     __tablename__ = "albums"
 
-    uuid: str = Field(primary_key=True, sa_type=String)
+    uuid: str = Field(primary_key=True, sa_type=UUID(as_uuid=True))
     title: str = Field(default="", sa_type=Text)
     creation_date: Optional[datetime] = None
     start_date: Optional[datetime] = None
