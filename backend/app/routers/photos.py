@@ -85,6 +85,7 @@ async def update_photo(
 ):
     """Update a photo (for sync_photos_linux compatibility)"""
     db_photo = db.query(Photo).filter(Photo.uuid == uuid).first()
+    print(db_photo)
     if not db_photo:
         raise HTTPException(status_code=404, detail="Photo not found")
 

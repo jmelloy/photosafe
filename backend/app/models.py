@@ -15,7 +15,7 @@ from sqlalchemy.dialects.postgresql import JSONB, ARRAY, UUID
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from pathlib import Path
-import uuid
+import uuid as pkg_uuid
 import os
 
 # S3 base URL from environment or default
@@ -80,8 +80,8 @@ class Photo(SQLModel, table=True):
     __tablename__ = "photos"
 
     # Primary identifier
-    uuid: str = Field(
-        default_factory=lambda: str(uuid.uuid4()),
+    uuid: pkg_uuid.UUID = Field(
+        default_factory=pkg_uuid.uuid4,
         primary_key=True,
         sa_type=UUID(as_uuid=True),
     )
@@ -108,7 +108,7 @@ class Photo(SQLModel, table=True):
     )
 
     # JSON fields - PostgreSQL JSONB type
-    faces: Optional[Dict[str, Any]] = Field(
+    faces: Optional[List[Dict[str, Any]]] = Field(
         default=None, sa_column=Column(JSONB, nullable=True)
     )
 
@@ -246,7 +246,7 @@ class Version(SQLModel, table=True):
     __tablename__ = "versions"
 
     id: Optional[int] = Field(default=None, primary_key=True, index=True)
-    photo_uuid: Optional[str] = Field(
+    photo_uuid: Optional[pkg_uuid.UUID] = Field(
         default=None, foreign_key="photos.uuid", index=True, sa_type=UUID(as_uuid=True)
     )
 
@@ -267,7 +267,7 @@ class Album(SQLModel, table=True):
 
     __tablename__ = "albums"
 
-    uuid: str = Field(primary_key=True, sa_type=UUID(as_uuid=True))
+    uuid: pkg_uuid.UUID = Field(primary_key=True, sa_type=UUID(as_uuid=True))
     title: str = Field(default="", sa_type=Text)
     creation_date: Optional[datetime] = None
     start_date: Optional[datetime] = None
@@ -339,7 +339,7 @@ class VersionRead(SQLModel):
     """Version read schema - for API responses"""
 
     id: int
-    photo_uuid: Optional[str] = None
+    photo_uuid: Optional[pkg_uuid.UUID] = None
     version: str
     s3_path: str
     filename: Optional[str] = None
@@ -364,7 +364,7 @@ class VersionCreate(SQLModel):
 class PhotoRead(SQLModel):
     """Photo read schema - for API responses"""
 
-    uuid: str
+    uuid: pkg_uuid.UUID
     masterFingerprint: Optional[str] = None
     original_filename: str
     date: datetime
@@ -374,7 +374,7 @@ class PhotoRead(SQLModel):
     labels: Optional[List[str]] = None
     albums: Optional[List[str]] = None
     persons: Optional[List[str]] = None
-    faces: Optional[Dict[str, Any]] = None
+    faces: Optional[List[Dict[str, Any]]] = None
     favorite: Optional[bool] = None
     hidden: Optional[bool] = None
     isphoto: Optional[bool] = None
@@ -423,7 +423,7 @@ class PhotoRead(SQLModel):
 class PhotoCreate(SQLModel):
     """Photo create schema - for API requests"""
 
-    uuid: str
+    uuid: pkg_uuid.UUID
     masterFingerprint: Optional[str] = None
     original_filename: str
     date: datetime
@@ -482,7 +482,7 @@ class PhotoUpdate(SQLModel):
     labels: Optional[List[str]] = None
     albums: Optional[List[str]] = None
     persons: Optional[List[str]] = None
-    faces: Optional[Dict[str, Any]] = None
+    faces: Optional[List[Dict[str, Any]]] = None
     favorite: Optional[bool] = None
     hidden: Optional[bool] = None
     isphoto: Optional[bool] = None
@@ -522,7 +522,7 @@ class PhotoUpdate(SQLModel):
 class AlbumRead(SQLModel):
     """Album read schema - for API responses"""
 
-    uuid: str
+    uuid: pkg_uuid.UUID
     title: str
     creation_date: Optional[datetime] = None
     start_date: Optional[datetime] = None
@@ -535,12 +535,12 @@ class AlbumRead(SQLModel):
 class AlbumCreate(SQLModel):
     """Album create schema - for API requests"""
 
-    uuid: str
+    uuid: pkg_uuid.UUID
     title: str = ""
     creation_date: Optional[datetime] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
-    photos: Optional[List[str]] = None  # List of photo UUIDs
+    photos: Optional[List[pkg_uuid.UUID]] = None  # List of photo UUIDs
 
 
 class AlbumUpdate(SQLModel):
@@ -595,7 +595,7 @@ class BatchPhotoRequest(SQLModel):
 class BatchPhotoResult(SQLModel):
     """Result for a single photo in batch operation"""
 
-    uuid: str
+    uuid: pkg_uuid.UUID
     success: bool
     action: str  # 'created', 'updated', or 'error'
     error: Optional[str] = None
