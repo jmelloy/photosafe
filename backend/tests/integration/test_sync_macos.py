@@ -1,7 +1,6 @@
 """Tests for macOS photo synchronization using fixtures"""
 
 import json
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -115,7 +114,11 @@ class TestMacOSSyncWithFixtures:
                     "cloudAssetGUID": photo_data["uuid"] + str(i),
                     "masterFingerprint": photo_data.get("masterFingerprint", "test")
                 }
-                mock_photo.asdict.return_value = photo_data.copy()
+                # Create a unique dict for each photo
+                photo_dict = photo_data.copy()
+                photo_dict["uuid"] = photo_data["uuid"] + str(i)
+                photo_dict["original_filename"] = f"test{i}.jpg"
+                mock_photo.asdict.return_value = photo_dict
                 mock_photos.append(mock_photo)
             
             mock_photos_db.photos.return_value = mock_photos
