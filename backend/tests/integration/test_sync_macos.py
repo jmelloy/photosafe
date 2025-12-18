@@ -1,6 +1,7 @@
 """Tests for macOS photo synchronization using fixtures"""
 
 import json
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -31,8 +32,9 @@ class TestMacOSSyncWithFixtures:
 
     def test_macos_sync_with_fixture_data(self, runner, macos_sample_data):
         """Test syncing photos from macOS using fixture data"""
-        # Mock osxphotos
-        with patch("cli.sync_commands.osxphotos") as mock_osxphotos:
+        # Mock osxphotos module import
+        mock_osxphotos = MagicMock()
+        with patch.dict("sys.modules", {"osxphotos": mock_osxphotos}):
             # Create mock PhotosDB
             mock_photos_db = MagicMock()
             mock_osxphotos.PhotosDB.return_value = mock_photos_db
@@ -61,7 +63,7 @@ class TestMacOSSyncWithFixtures:
                 mock_boto3.client.return_value = mock_s3
                 
                 # Mock PhotoSafeAuth
-                with patch("cli.sync_commands.PhotoSafeAuth") as mock_auth:
+                with patch("cli.sync_tools.PhotoSafeAuth") as mock_auth:
                     mock_auth_instance = MagicMock()
                     mock_auth.return_value = mock_auth_instance
                     
@@ -91,25 +93,27 @@ class TestMacOSSyncWithFixtures:
 
     def test_macos_sync_discrepancy_detection(self, runner, macos_sample_data):
         """Test that discrepancies are correctly detected between local and server"""
-        with patch("cli.sync_commands.osxphotos") as mock_osxphotos:
+        mock_osxphotos = MagicMock()
+        with patch.dict("sys.modules", {"osxphotos": mock_osxphotos}):
             # Create mock PhotosDB
             mock_photos_db = MagicMock()
             mock_osxphotos.PhotosDB.return_value = mock_photos_db
             mock_photos_db.library_path = "/Users/test/Pictures/Photos Library.photoslibrary"
             
-            # Create mock photos from fixture data
-            # Use photos with the same date to test discrepancy detection
-            test_photos = [p for p in macos_sample_data if p.get("date")][:2]
+            # Create two mock photos with the SAME date to test discrepancy detection
+            photo_data = macos_sample_data[0]
+            same_date = parser.parse(photo_data["date"])
+            
             mock_photos = []
-            for photo_data in test_photos:
+            for i in range(2):  # Create 2 photos with same date
                 mock_photo = MagicMock()
-                mock_photo.uuid = photo_data["uuid"]
-                mock_photo.original_filename = photo_data["original_filename"]
-                mock_photo.date = parser.parse(photo_data["date"])
-                mock_photo.date_modified = parser.parse(photo_data["date_modified"]) if photo_data.get("date_modified") else None
+                mock_photo.uuid = photo_data["uuid"] + str(i)
+                mock_photo.original_filename = f"test{i}.jpg"
+                mock_photo.date = same_date
+                mock_photo.date_modified = None
                 mock_photo._info = {
-                    "cloudAssetGUID": photo_data["uuid"],
-                    "masterFingerprint": photo_data.get("masterFingerprint")
+                    "cloudAssetGUID": photo_data["uuid"] + str(i),
+                    "masterFingerprint": photo_data.get("masterFingerprint", "test")
                 }
                 mock_photo.asdict.return_value = photo_data.copy()
                 mock_photos.append(mock_photo)
@@ -122,18 +126,18 @@ class TestMacOSSyncWithFixtures:
                 mock_boto3.client.return_value = mock_s3
                 
                 # Mock PhotoSafeAuth
-                with patch("cli.sync_commands.PhotoSafeAuth") as mock_auth:
+                with patch("cli.sync_tools.PhotoSafeAuth") as mock_auth:
                     mock_auth_instance = MagicMock()
                     mock_auth.return_value = mock_auth_instance
                     
                     # Create a mismatched blocks response
                     # Set count to 1 when we actually have 2 photos
-                    photo_date = mock_photos[0].date.astimezone(timezone.utc)
+                    photo_date = same_date.astimezone(timezone.utc)
                     server_blocks = {
                         str(photo_date.year): {
                             str(photo_date.month): {
                                 str(photo_date.day): {
-                                    "count": 1,  # Mismatch!
+                                    "count": 1,  # Mismatch! We have 2 but server says 1
                                     "max_date": photo_date.isoformat()
                                 }
                             }
@@ -166,7 +170,8 @@ class TestMacOSSyncWithFixtures:
 
     def test_macos_sync_date_comparison(self, runner, macos_sample_data):
         """Test that date changes are detected in sync"""
-        with patch("cli.sync_commands.osxphotos") as mock_osxphotos:
+        mock_osxphotos = MagicMock()
+        with patch.dict("sys.modules", {"osxphotos": mock_osxphotos}):
             # Create mock PhotosDB
             mock_photos_db = MagicMock()
             mock_osxphotos.PhotosDB.return_value = mock_photos_db
@@ -194,7 +199,7 @@ class TestMacOSSyncWithFixtures:
                 mock_boto3.client.return_value = mock_s3
                 
                 # Mock PhotoSafeAuth
-                with patch("cli.sync_commands.PhotoSafeAuth") as mock_auth:
+                with patch("cli.sync_tools.PhotoSafeAuth") as mock_auth:
                     mock_auth_instance = MagicMock()
                     mock_auth.return_value = mock_auth_instance
                     
