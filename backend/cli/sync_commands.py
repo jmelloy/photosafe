@@ -14,6 +14,41 @@ from dateutil import parser
 MACOS_LIBRARY_NAME = "macOS Photos"
 
 
+def clean_photo_data(photo_dict):
+    """Clean up None values in photo data to prevent null insertions.
+    
+    This function modifies the input dictionary in place to clean up None values
+    that could be serialized as JSON null in fields where they are not appropriate.
+    
+    Args:
+        photo_dict: Dictionary of photo data from osxphotos
+        
+    Returns:
+        The same dictionary with None values cleaned up (for chaining convenience)
+    """
+    # Filter None values from persons list
+    persons = photo_dict.get("persons")
+    if persons is None:
+        photo_dict["persons"] = []
+    elif isinstance(persons, list):
+        # Remove None values from the persons list
+        photo_dict["persons"] = [person for person in persons if person is not None]
+
+    # Ensure place is an empty dict instead of None
+    if photo_dict.get("place") is None:
+        photo_dict["place"] = {}
+
+    # Clean up face_info - filter out None values and empty/invalid entries
+    face_info = photo_dict.get("face_info")
+    if face_info is None:
+        photo_dict["face_info"] = []
+    elif isinstance(face_info, list):
+        # Filter out None items from face_info list
+        photo_dict["face_info"] = [face for face in face_info if face is not None]
+    
+    return photo_dict
+
+
 @click.group()
 def sync():
     """Sync photos from various sources"""
@@ -144,6 +179,9 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
             if v and type(v) is str and base_path in v:
                 p[k] = v.replace(base_path, "")
 
+        # Clean up None values to prevent null insertions
+        p = clean_photo_data(p)
+
         # Write JSON file if requested
         if output_json:
             dt = photo.date.astimezone(timezone.utc)
@@ -152,7 +190,9 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
             json_path = os.path.join(directory, f"{p['uuid']}.json")
             with open(json_path, "w", encoding="utf-8") as f:
                 f.write(json.dumps(p, cls=DateTimeEncoder, indent=2))
-        p["saerch_info"] = photo.search_info.asdict()
+        
+        # Fix typo: saerch_info -> search_info
+        p["search_info"] = photo.search_info.asdict()
         try:
             r = auth.patch(
                 f"/api/photos/{p['uuid']}/",
@@ -212,6 +252,9 @@ def dump_macos(limit):
         for k, v in p.items():
             if v and type(v) is str and base_path in v:
                 p[k] = v.replace(base_path, "")
+
+        # Clean up None values to prevent null insertions
+        p = clean_photo_data(p)
 
         directory = os.path.join(
             p["library"] or "PrimarySync", photo.date.strftime("%Y/%m/%d")
