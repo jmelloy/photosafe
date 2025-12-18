@@ -19,7 +19,7 @@
   "devDependencies": {
     "@types/node": "^25.0.3",
     "@vitejs/plugin-vue": "^6.0.3",
-    "@vitest/ui": "^4.0.15",
+    "@vitest/ui": "^4.0.16",
     "@vue/test-utils": "^2.4.6",
     "jsdom": "^27.3.0",
     "typescript": "^5.9.3",
