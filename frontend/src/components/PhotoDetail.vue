@@ -609,7 +609,7 @@ const formattedExif = computed(() => {
 
 .detail-container {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 3fr 1fr;
   gap: 0;
   min-height: 600px;
 }
@@ -630,7 +630,7 @@ const formattedExif = computed(() => {
 
 .image-section img {
   max-width: 100%;
-  max-height: 80vh;
+  max-height: 90vh;
   object-fit: contain;
   border-radius: 8px;
 }

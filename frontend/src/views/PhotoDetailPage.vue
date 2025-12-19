@@ -25,7 +25,7 @@
     <div v-else-if="photo" class="detail-container">
       <!-- Left side: Image -->
       <div class="image-section">
-        <img :src="photo.url" :alt="photo.original_filename" />
+        <img :src="detailImageUrl" :alt="photo.original_filename" />
       </div>
 
       <!-- Right side: Metadata -->
@@ -195,6 +195,7 @@ import { getPhoto } from "../api/photos";
 import type { Photo } from "../types/api";
 import PhotoMap from "../components/PhotoMap.vue";
 import { formatPlace } from "../utils/formatPlace";
+import { S3_BASE_URL } from "../config";
 
 interface PhotoDetailPageProps {
   uuid: string;
@@ -242,6 +243,35 @@ const loadPhoto = async () => {
     loading.value = false;
   }
 };
+
+// Compute detail image URL - prioritize medium or original over thumbnail
+const detailImageUrl = computed(() => {
+  if (!photo.value) return "";
+
+  const buildS3Url = (s3Path: string | undefined): string | null => {
+    if (!s3Path) return null;
+    // If already a full URL, return as-is
+    if (s3Path.startsWith("http://") || s3Path.startsWith("https://")) {
+      return s3Path;
+    }
+    // Otherwise, construct URL with base domain
+    const cleanPath = s3Path.startsWith("/") ? s3Path.substring(1) : s3Path;
+    return `${S3_BASE_URL}/${cleanPath}`;
+  };
+
+  // Prioritize medium (s3_key_path), then original, then edited, then thumbnail
+  // This is different from the backend's url property which prioritizes thumbnail first
+  const candidates = [
+    photo.value.s3_key_path,
+    photo.value.s3_original_path,
+    photo.value.s3_edited_path,
+    photo.value.s3_thumbnail_path,
+  ];
+
+  const url = candidates.map(buildS3Url).find(Boolean) || photo.value.url || "";
+
+  return url;
+});
 
 const goBack = () => {
   router.push("/");
@@ -431,10 +461,10 @@ onMounted(() => {
 }
 
 .detail-container {
-  max-width: 1400px;
+  max-width: 1600px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 1fr 400px;
+  grid-template-columns: 3fr 1fr;
   gap: 2rem;
   background: #1e1e1e;
   border-radius: 12px;
@@ -458,7 +488,7 @@ onMounted(() => {
 
 .image-section img {
   max-width: 100%;
-  max-height: calc(100vh - 8rem);
+  max-height: calc(100vh - 6rem);
   object-fit: contain;
   border-radius: 8px;
 }
