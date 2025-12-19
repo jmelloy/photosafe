@@ -15,7 +15,6 @@ services:
       # Remove source code mount for production
       # Keep only the uploads directory
       - ./backend/uploads:/app/uploads
-      
   frontend:
     # Remove all volume mounts for production
     # The built files are baked into the Docker image

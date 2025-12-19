@@ -26,9 +26,12 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
+# Vite version can be overridden via build arg, defaults to version in package.json
+ARG VITE_VERSION=7.3.0
+
 # Install only production dependencies and vite (needed for preview server)
 # Using ci for production ensures lock file is respected
-RUN npm ci --omit=dev && npm install --no-save vite@^7.3.0
+RUN npm ci --omit=dev --no-save && npm install --no-save vite@^${VITE_VERSION}
 
 # Copy built files from builder stage
 COPY --from=builder /app/dist ./dist
