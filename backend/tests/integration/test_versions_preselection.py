@@ -4,77 +4,9 @@ import os
 import uuid
 
 import pytest
-from app.database import get_db
-from app.main import app
-from app.models import Library, Photo, User, Version, Album, album_photos
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, delete
-from sqlalchemy.orm import sessionmaker
-from sqlmodel import Session, SQLModel
-
-# Test database setup
-SQLALCHEMY_DATABASE_URL = os.getenv(
-    "TEST_DATABASE_URL",
-    "postgresql://photosafe:photosafe@localhost:5432/photosafe_test",
-)
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
-TestingSessionLocal = sessionmaker(
-    autocommit=False, autoflush=False, bind=engine, class_=Session
-)
-
-# Create all tables once
-SQLModel.metadata.create_all(bind=engine)
 
 
-def override_get_db():
-    """Override database dependency for testing"""
-    try:
-        db = TestingSessionLocal()
-        yield db
-    finally:
-        db.close()
-
-
-# Override the database dependency
-app.dependency_overrides[get_db] = override_get_db
-
-# Create test client
-client = TestClient(app)
-
-
-@pytest.fixture(autouse=True)
-def cleanup_db():
-    """Clean up database between tests"""
-    # Clear all data before test
-    db = TestingSessionLocal()
-    try:
-        db.execute(album_photos.delete())
-        db.exec(delete(Version))
-        db.exec(delete(Photo))
-        db.exec(delete(Album))
-        db.exec(delete(Library))
-        db.exec(delete(User))
-        db.commit()
-    finally:
-        db.close()
-
-    yield
-
-    # Clear all data after test
-    db = TestingSessionLocal()
-    try:
-        db.execute(album_photos.delete())
-        db.exec(delete(Version))
-        db.exec(delete(Photo))
-        db.exec(delete(Album))
-        db.exec(delete(Library))
-        db.exec(delete(User))
-        db.commit()
-    finally:
-        db.close()
-
-
-def test_list_photos_includes_versions():
+def test_list_photos_includes_versions(client):
     """Test that listing photos includes versions"""
     # Register and login
     client.post(
@@ -144,7 +76,7 @@ def test_list_photos_includes_versions():
     assert "original" in version_names
 
 
-def test_library_filter():
+def test_library_filter(client):
     """Test that library filter works correctly"""
     # Register and login
     client.post(
@@ -217,7 +149,7 @@ def test_library_filter():
     assert data["items"][0]["library"] == "Work"
 
 
-def test_available_filters_includes_libraries():
+def test_available_filters_includes_libraries(client):
     """Test that available filters endpoint includes libraries"""
     # Register and login
     client.post(

@@ -2,16 +2,13 @@
 
 import pytest
 from click.testing import CliRunner
-from sqlalchemy import create_engine, delete, select
-from sqlalchemy.orm import sessionmaker
-from sqlmodel import Session, SQLModel
 from pathlib import Path
 import tempfile
 import json
 import os
 from PIL import Image
 
-from app.models import User, Library, Photo, Version, Album, album_photos
+from app.models import User, Library
 from cli.import_commands import import_photos, extract_exif_data, parse_meta_json
 
 
@@ -20,73 +17,50 @@ from cli.import_commands import import_photos, extract_exif_data, parse_meta_jso
 # For local testing, set up a test database: createdb photosafe_test
 # Set environment variable: export TEST_DATABASE_URL="postgresql://user:pass@localhost:5432/photosafe_test"
 # The default below is for Docker Compose development environment only
-SQLALCHEMY_DATABASE_URL = os.getenv(
-    "TEST_DATABASE_URL",
-    "postgresql://photosafe:photosafe@localhost:5432/photosafe_test",
-)
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
-TestingSessionLocal = sessionmaker(
-    autocommit=False, autoflush=False, bind=engine, class_=Session
-)
 
 
 @pytest.fixture(scope="function")
-def setup_database():
-    """Setup test database"""
-    SQLModel.metadata.create_all(bind=engine)
-
+def setup_database(engine, db_session):
+    """Setup test database and patch import commands to use test database"""
     # Override SessionLocal in import_commands
+    from sqlalchemy.orm import sessionmaker
+    from sqlmodel import Session
     from cli import import_commands
+    
+    TestingSessionLocal = sessionmaker(
+        autocommit=False, autoflush=False, bind=engine, class_=Session
+    )
 
     import_commands.SessionLocal = TestingSessionLocal
 
     yield
 
-    # Cleanup
-    db = TestingSessionLocal()
-    try:
-        db.execute(album_photos.delete())
-        db.exec(delete(Version))
-        db.exec(delete(Photo))
-        db.exec(delete(Album))
-        db.exec(delete(Library))
-        db.exec(delete(User))
-        db.commit()
-    finally:
-        db.close()
+    # Note: cleanup is handled by db_session fixture which resets the database via migrations
 
 
 @pytest.fixture
-def test_user(setup_database):
+def test_user(setup_database, db_session):
     """Create a test user"""
-    db = TestingSessionLocal()
-    try:
-        user = User(
-            username="testuser",
-            email="test@example.com",
-            hashed_password="hashed_password",
-            name="Test User",
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-        return user
-    finally:
-        db.close()
+    user = User(
+        username="testuser",
+        email="test@example.com",
+        hashed_password="hashed_password",
+        name="Test User",
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user
 
 
 @pytest.fixture
-def test_library(setup_database, test_user):
+def test_library(setup_database, test_user, db_session):
     """Create a test library"""
-    db = TestingSessionLocal()
-    try:
-        library = Library(name="test_library", owner_id=test_user.id, path="/tmp/test")
-        db.add(library)
-        db.commit()
-        db.refresh(library)
-        return library
-    finally:
-        db.close()
+    library = Library(name="test_library", owner_id=test_user.id, path="/tmp/test")
+    db_session.add(library)
+    db_session.commit()
+    db_session.refresh(library)
+    return library
 
 
 @pytest.fixture
