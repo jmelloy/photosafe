@@ -52,7 +52,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from "vue";
+import { ref, onMounted, onUnmounted, computed, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -96,9 +96,10 @@ const uniqueLocations = computed(() => {
 const loadPhotos = async () => {
   loading.value = true;
   try {
-    // Fetch all photos with location data
-    // Using a large page size to get all photos in one request
-    const response = await getPhotos(1, 10000, { has_location: true });
+    // Fetch photos with location data
+    // Note: Using 1000 as a reasonable limit. For larger collections,
+    // consider implementing pagination or server-side clustering.
+    const response = await getPhotos(1, 1000, { has_location: true });
     photos.value = response.items.filter(
       (p) => p.latitude != null && p.longitude != null
     );
@@ -233,9 +234,8 @@ onMounted(async () => {
   await loadPhotos();
   if (photos.value.length > 0) {
     // Wait for next tick to ensure map container is rendered
-    setTimeout(() => {
-      initMap();
-    }, 100);
+    await nextTick();
+    initMap();
   }
 });
 

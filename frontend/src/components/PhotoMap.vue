@@ -10,8 +10,8 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 interface PhotoMapProps {
-  latitude: number;
-  longitude: number;
+  latitude?: number;
+  longitude?: number;
   photoTitle?: string;
   zoom?: number;
 }
@@ -25,7 +25,7 @@ let map: L.Map | null = null;
 let marker: L.Marker | null = null;
 
 const initMap = () => {
-  if (!mapContainer.value) return;
+  if (!mapContainer.value || props.latitude === undefined || props.longitude === undefined) return;
 
   // Create map centered on the photo location
   map = L.map(mapContainer.value).setView(
@@ -49,7 +49,7 @@ const initMap = () => {
 };
 
 const updateMarker = () => {
-  if (map && marker) {
+  if (map && marker && props.latitude !== undefined && props.longitude !== undefined) {
     // Update marker position
     marker.setLatLng([props.latitude, props.longitude]);
     map.setView([props.latitude, props.longitude], props.zoom);
