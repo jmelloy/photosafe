@@ -25,6 +25,31 @@ TEST_DATABASE_URL = os.getenv(
 )
 
 
+def run_migrations_to_head(database_url: str):
+    """Run alembic migrations to head (latest version)."""
+    # Save the current DATABASE_URL and temporarily override it
+    old_database_url = os.environ.get("DATABASE_URL")
+    os.environ["DATABASE_URL"] = database_url
+
+    try:
+        # Get path to alembic.ini (it's in the backend directory)
+        backend_dir = Path(__file__).parent.parent
+        alembic_ini_path = backend_dir / "alembic.ini"
+
+        # Create Alembic config and set the database URL
+        alembic_cfg = Config(str(alembic_ini_path))
+        alembic_cfg.set_main_option("sqlalchemy.url", database_url)
+
+        # Upgrade to head (creates all tables fresh)
+        command.upgrade(alembic_cfg, "head")
+    finally:
+        # Restore the original DATABASE_URL
+        if old_database_url is not None:
+            os.environ["DATABASE_URL"] = old_database_url
+        else:
+            os.environ.pop("DATABASE_URL", None)
+
+
 def reset_database(database_url: str):
     """Reset database using migrations (downgrade to base, then upgrade to head)."""
     # Save the current DATABASE_URL and temporarily override it
@@ -74,8 +99,8 @@ def db_session(engine):
 
     This fixture:
     - Creates a new session for each test
-    - Cleans up all data after each test using migrations
-    - Ensures tests are isolated from each other
+    - Cleans up all data after each test using DELETE (fast)
+    - Tests are isolated from each other
     """
     SessionLocal = sessionmaker(
         autocommit=False, autoflush=False, bind=engine, class_=Session
@@ -87,9 +112,13 @@ def db_session(engine):
     # Clean up after the test
     session.close()
 
-    # Reset database using migrations (downgrade to base, then upgrade to head)
-    # This ensures all data is cleared and schema is consistent with migrations
-    reset_database(TEST_DATABASE_URL)
+    # Fast cleanup: delete all data from tables (much faster than migrations)
+    # This preserves the schema but removes all data
+    from sqlalchemy import text
+    with engine.begin() as connection:
+        # Delete in reverse order to respect foreign key constraints
+        for table in reversed(SQLModel.metadata.sorted_tables):
+            connection.execute(table.delete())
 
 
 @pytest.fixture(scope="function")

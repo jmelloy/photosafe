@@ -5,21 +5,24 @@ from sqlalchemy import pool
 
 from alembic import context
 
-# Import the database URL and models
 import sys
 import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from app.database import SQLALCHEMY_DATABASE_URL
 from sqlmodel import SQLModel
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
-# Set the database URL from our application config
-config.set_main_option("sqlalchemy.url", SQLALCHEMY_DATABASE_URL)
+# Set the database URL from environment or config
+# Check if already set in config (e.g., by tests), otherwise use environment variable
+if config.get_main_option("sqlalchemy.url") is None:
+    database_url = os.getenv(
+        "DATABASE_URL", "postgresql://photosafe:photosafe@localhost:5432/photosafe"
+    )
+    config.set_main_option("sqlalchemy.url", database_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

@@ -84,7 +84,7 @@ def test_photo_blocks_endpoint(client):
     # (photo1: 12:00:00, photo2: 14:00:00, photo4 is excluded due to labels)
 
 
-def test_photo_blocks_with_modified_dates():
+def test_photo_blocks_with_modified_dates(client):
     """Test that blocks endpoint correctly uses date_modified when available"""
     # Register and login
     client.post(
