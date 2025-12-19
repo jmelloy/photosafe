@@ -2,7 +2,7 @@
 
 import pytest
 from fastapi.testclient import TestClient
-from shortuuid import uuid
+import uuid
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
