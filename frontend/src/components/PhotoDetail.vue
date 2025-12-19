@@ -187,8 +187,9 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import type { Photo, Place } from "../types/api";
+import type { Photo } from "../types/api";
 import { S3_BASE_URL } from "../config";
+import { formatPlace } from "../utils/formatPlace";
 
 interface PhotoDetailProps {
   photo: Photo | null;
@@ -247,35 +248,6 @@ const formatFileSize = (bytes?: number): string => {
   if (bytes < 1024) return bytes + " B";
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
   return (bytes / (1024 * 1024)).toFixed(1) + " MB";
-};
-
-const formatPlace = (place: Place | undefined): string => {
-  if (!place) return "";
-
-  // Only show top-level fields, excluding nested objects like "names" and "address"
-  const parts: string[] = [];
-  
-  // Show the main name if available
-  if (place.name) {
-    parts.push(place.name);
-  }
-  
-  // Show address_str if available (more readable than nested address object)
-  if (place.address_str) {
-    parts.push(`Address: ${place.address_str}`);
-  }
-  
-  // Show if it's home
-  if (place.ishome === true) {
-    parts.push("(Home)");
-  }
-  
-  // Show country code
-  if (place.country_code) {
-    parts.push(`Country: ${place.country_code}`);
-  }
-  
-  return parts.join(" | ") || "";
 };
 
 const formatExifValue = (key: string, value: any): string => {

@@ -192,8 +192,9 @@
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { getPhoto } from "../api/photos";
-import type { Photo, Place } from "../types/api";
+import type { Photo } from "../types/api";
 import PhotoMap from "../components/PhotoMap.vue";
+import { formatPlace } from "../utils/formatPlace";
 
 interface PhotoDetailPageProps {
   uuid: string;
@@ -279,38 +280,6 @@ const formatFileSize = (bytes?: number): string => {
   if (!bytes) return "Unknown";
   const mb = bytes / (1024 * 1024);
   return `${mb.toFixed(2)} MB`;
-};
-
-const formatPlace = (place: unknown): string => {
-  if (typeof place === "string") return place;
-  if (place && typeof place === "object") {
-    // Only show top-level fields, excluding nested objects like "names" and "address"
-    const placeObj = place as Place;
-    const parts: string[] = [];
-    
-    // Show the main name if available
-    if (placeObj.name) {
-      parts.push(placeObj.name);
-    }
-    
-    // Show address_str if available (more readable than nested address object)
-    if (placeObj.address_str) {
-      parts.push(`Address: ${placeObj.address_str}`);
-    }
-    
-    // Show if it's home
-    if (placeObj.ishome === true) {
-      parts.push("(Home)");
-    }
-    
-    // Show country code
-    if (placeObj.country_code) {
-      parts.push(`Country: ${placeObj.country_code}`);
-    }
-    
-    return parts.join(" | ") || "";
-  }
-  return "";
 };
 
 const formatExifKey = (key: string): string => {
