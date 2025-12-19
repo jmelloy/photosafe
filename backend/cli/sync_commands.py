@@ -255,7 +255,7 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
                         base, ext = os.path.splitext(photo.path)
                         versions.append({
                             "version": "original",
-                            "s3_path": f"{p['uuid'][0:1]}/{p['uuid']}{ext}",
+                            "s3_path": f"{username}/originals/{p['uuid'][0:1]}/{p['uuid']}{ext}",
                             "filename": photo.original_filename,
                             "width": p.get("width"),
                             "height": p.get("height"),
@@ -268,7 +268,7 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
                         base, ext = os.path.splitext(photo.path_edited)
                         versions.append({
                             "version": "edited",
-                            "s3_path": f"edited/{p['uuid'][0:1]}/{p['uuid']}{ext}",
+                            "s3_path": f"{username}/edited/{p['uuid'][0:1]}/{p['uuid']}{ext}",
                             "filename": f"{os.path.splitext(photo.original_filename)[0]}_edited{ext}",
                             "width": p.get("width"),
                             "height": p.get("height"),
@@ -284,8 +284,8 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
                             base, ext = os.path.splitext(deriv_path)
                             versions.append({
                                 "version": f"derivative_{i}",
-                                "s3_path": f"thumbnails/{p['uuid'][0:1]}/{p['uuid']}{ext}",
-                                "filename": f"{os.path.splitext(photo.original_filename)[0]}_thumb{ext}",
+                                "s3_path": f"{username}/thumbnails/{p['uuid'][0:1]}/{p['uuid']}_{i}{ext}",
+                                "filename": f"{os.path.splitext(photo.original_filename)[0]}_thumb_{i}{ext}",
                                 "width": None,
                                 "height": None,
                                 "size": None,
@@ -317,7 +317,7 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
                             for i, deriv_path in enumerate(photo.path_derivatives):
                                 if os.path.exists(deriv_path):
                                     base, ext = os.path.splitext(deriv_path)
-                                    s3_key = f"{username}/thumbnails/{p['uuid'][0:1]}/{p['uuid']}{ext}"
+                                    s3_key = f"{username}/thumbnails/{p['uuid'][0:1]}/{p['uuid']}_{i}{ext}"
                                     click.echo(f"Uploading thumbnail to S3: {s3_key}")
                                     s3.upload_file(deriv_path, bucket, s3_key)
                     except Exception as upload_error:
