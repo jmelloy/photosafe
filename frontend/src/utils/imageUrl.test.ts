@@ -49,56 +49,119 @@ describe("getDetailImageUrl", () => {
     expect(getDetailImageUrl(null)).toBe("");
   });
 
-  it("should prioritize s3_key_path (medium) over other paths", () => {
-    const photo = createMockPhoto({
-      s3_key_path: "medium/image.jpg",
-      s3_original_path: "original/image.jpg",
-      s3_edited_path: "edited/image.jpg",
-      s3_thumbnail_path: "thumb/image.jpg",
+  describe("with versions array", () => {
+    it("should use largest version by file size", () => {
+      const photo = createMockPhoto({
+        versions: [
+          { id: 1, version: "original", s3_path: "original.jpg", size: 5000000, width: 4000, height: 3000 },
+          { id: 2, version: "edited", s3_path: "edited.jpg", size: 3000000, width: 3000, height: 2000 },
+          { id: 3, version: "derivative_0", s3_path: "thumb.jpg", size: 100000, width: 800, height: 600 },
+        ],
+      });
+      expect(getDetailImageUrl(photo)).toBe("https://test-s3.example.com/original.jpg");
     });
-    expect(getDetailImageUrl(photo)).toBe("https://test-s3.example.com/medium/image.jpg");
+
+    it("should use largest version by dimensions when size is not available", () => {
+      const photo = createMockPhoto({
+        versions: [
+          { id: 1, version: "original", s3_path: "original.jpg", width: 4000, height: 3000 },
+          { id: 2, version: "edited", s3_path: "edited.jpg", width: 3000, height: 2000 },
+          { id: 3, version: "derivative_0", s3_path: "thumb.jpg", width: 800, height: 600 },
+        ],
+      });
+      expect(getDetailImageUrl(photo)).toBe("https://test-s3.example.com/original.jpg");
+    });
+
+    it("should prefer original over edited when dimensions are equal", () => {
+      const photo = createMockPhoto({
+        versions: [
+          { id: 1, version: "edited", s3_path: "edited.jpg", width: 2000, height: 1500 },
+          { id: 2, version: "original", s3_path: "original.jpg", width: 2000, height: 1500 },
+        ],
+      });
+      expect(getDetailImageUrl(photo)).toBe("https://test-s3.example.com/original.jpg");
+    });
+
+    it("should prefer edited over derivatives when dimensions are equal", () => {
+      const photo = createMockPhoto({
+        versions: [
+          { id: 1, version: "derivative_0", s3_path: "deriv.jpg", width: 1000, height: 750 },
+          { id: 2, version: "edited", s3_path: "edited.jpg", width: 1000, height: 750 },
+        ],
+      });
+      expect(getDetailImageUrl(photo)).toBe("https://test-s3.example.com/edited.jpg");
+    });
+
+    it("should handle versions with absolute URLs", () => {
+      const photo = createMockPhoto({
+        versions: [
+          { id: 1, version: "original", s3_path: "https://cdn.example.com/original.jpg", size: 5000000 },
+        ],
+      });
+      expect(getDetailImageUrl(photo)).toBe("https://cdn.example.com/original.jpg");
+    });
+
+    it("should fallback to S3 paths if versions array is empty", () => {
+      const photo = createMockPhoto({
+        versions: [],
+        s3_key_path: "medium/image.jpg",
+      });
+      expect(getDetailImageUrl(photo)).toBe("https://test-s3.example.com/medium/image.jpg");
+    });
   });
 
-  it("should use s3_original_path if s3_key_path is not available", () => {
-    const photo = createMockPhoto({
-      s3_original_path: "original/image.jpg",
-      s3_edited_path: "edited/image.jpg",
-      s3_thumbnail_path: "thumb/image.jpg",
+  describe("fallback to S3 path fields", () => {
+    it("should prioritize s3_key_path (medium) over other paths", () => {
+      const photo = createMockPhoto({
+        s3_key_path: "medium/image.jpg",
+        s3_original_path: "original/image.jpg",
+        s3_edited_path: "edited/image.jpg",
+        s3_thumbnail_path: "thumb/image.jpg",
+      });
+      expect(getDetailImageUrl(photo)).toBe("https://test-s3.example.com/medium/image.jpg");
     });
-    expect(getDetailImageUrl(photo)).toBe("https://test-s3.example.com/original/image.jpg");
-  });
 
-  it("should use s3_edited_path if medium and original are not available", () => {
-    const photo = createMockPhoto({
-      s3_edited_path: "edited/image.jpg",
-      s3_thumbnail_path: "thumb/image.jpg",
+    it("should use s3_original_path if s3_key_path is not available", () => {
+      const photo = createMockPhoto({
+        s3_original_path: "original/image.jpg",
+        s3_edited_path: "edited/image.jpg",
+        s3_thumbnail_path: "thumb/image.jpg",
+      });
+      expect(getDetailImageUrl(photo)).toBe("https://test-s3.example.com/original/image.jpg");
     });
-    expect(getDetailImageUrl(photo)).toBe("https://test-s3.example.com/edited/image.jpg");
-  });
 
-  it("should use s3_thumbnail_path if no higher resolution is available", () => {
-    const photo = createMockPhoto({
-      s3_thumbnail_path: "thumb/image.jpg",
+    it("should use s3_edited_path if medium and original are not available", () => {
+      const photo = createMockPhoto({
+        s3_edited_path: "edited/image.jpg",
+        s3_thumbnail_path: "thumb/image.jpg",
+      });
+      expect(getDetailImageUrl(photo)).toBe("https://test-s3.example.com/edited/image.jpg");
     });
-    expect(getDetailImageUrl(photo)).toBe("https://test-s3.example.com/thumb/image.jpg");
-  });
 
-  it("should fallback to url property if no S3 paths are available", () => {
-    const photo = createMockPhoto({
-      url: "https://other-cdn.example.com/image.jpg",
+    it("should use s3_thumbnail_path if no higher resolution is available", () => {
+      const photo = createMockPhoto({
+        s3_thumbnail_path: "thumb/image.jpg",
+      });
+      expect(getDetailImageUrl(photo)).toBe("https://test-s3.example.com/thumb/image.jpg");
     });
-    expect(getDetailImageUrl(photo)).toBe("https://other-cdn.example.com/image.jpg");
-  });
 
-  it("should return empty string if no URL is available", () => {
-    const photo = createMockPhoto({});
-    expect(getDetailImageUrl(photo)).toBe("");
-  });
-
-  it("should handle absolute URLs in S3 paths", () => {
-    const photo = createMockPhoto({
-      s3_key_path: "https://direct-s3.example.com/image.jpg",
+    it("should fallback to url property if no S3 paths are available", () => {
+      const photo = createMockPhoto({
+        url: "https://other-cdn.example.com/image.jpg",
+      });
+      expect(getDetailImageUrl(photo)).toBe("https://other-cdn.example.com/image.jpg");
     });
-    expect(getDetailImageUrl(photo)).toBe("https://direct-s3.example.com/image.jpg");
+
+    it("should return empty string if no URL is available", () => {
+      const photo = createMockPhoto({});
+      expect(getDetailImageUrl(photo)).toBe("");
+    });
+
+    it("should handle absolute URLs in S3 paths", () => {
+      const photo = createMockPhoto({
+        s3_key_path: "https://direct-s3.example.com/image.jpg",
+      });
+      expect(getDetailImageUrl(photo)).toBe("https://direct-s3.example.com/image.jpg");
+    });
   });
 });
