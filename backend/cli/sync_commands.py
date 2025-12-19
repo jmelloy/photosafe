@@ -190,8 +190,8 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
         ]
         has_any_file = any(path and os.path.exists(path) for path in paths if path)
         
-        # If photo is marked as missing by osxphotos or all files are gone, soft delete it
-        if hasattr(photo, 'ismissing') and photo.ismissing and not has_any_file:
+        # If photo is in trash and all files are gone, soft delete it
+        if p.get('intrash', False) and not has_any_file:
             try:
                 r = auth.delete(f"/api/photos/{p['uuid']}/")
                 if r.status_code == 404:

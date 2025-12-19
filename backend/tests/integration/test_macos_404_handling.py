@@ -172,8 +172,8 @@ class TestMacOS404Handling:
                     # Verify POST was NOT called
                     mock_auth_instance.post.assert_not_called()
 
-    def test_macos_sync_deletes_missing_photos(self, runner, macos_sample_data):
-        """Test that missing photos are soft deleted"""
+    def test_macos_sync_deletes_trashed_photos(self, runner, macos_sample_data):
+        """Test that trashed photos with no files are soft deleted"""
         mock_osxphotos = MagicMock()
         with patch.dict("sys.modules", {"osxphotos": mock_osxphotos}):
             # Create mock PhotosDB
@@ -181,9 +181,9 @@ class TestMacOS404Handling:
             mock_osxphotos.PhotosDB.return_value = mock_photos_db
             mock_photos_db.library_path = "/Users/test/Pictures/Photos Library.photoslibrary"
             
-            # Create a photo marked as missing
+            # Create a photo in trash with no files
             photo_data = macos_sample_data[0].copy()
-            photo_data["ismissing"] = True
+            photo_data["intrash"] = True
             
             mock_photo = MagicMock()
             mock_photo.uuid = photo_data["uuid"]
@@ -193,7 +193,6 @@ class TestMacOS404Handling:
             mock_photo.path = None  # No path
             mock_photo.path_edited = None
             mock_photo.path_live_photo = None
-            mock_photo.ismissing = True
             mock_photo._info = {
                 "cloudAssetGUID": photo_data["uuid"],
                 "masterFingerprint": photo_data.get("masterFingerprint")
