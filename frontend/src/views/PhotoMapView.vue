@@ -100,9 +100,8 @@ const loadPhotos = async () => {
     // Note: Using 1000 as a reasonable limit. For larger collections,
     // consider implementing pagination or server-side clustering.
     const response = await getPhotos(1, 1000, { has_location: true });
-    photos.value = response.items.filter(
-      (p) => p.latitude != null && p.longitude != null
-    );
+    // Server-side filter already ensures has_location: true returns only photos with coordinates
+    photos.value = response.items;
   } catch (error) {
     console.error("Failed to load photos:", error);
   } finally {

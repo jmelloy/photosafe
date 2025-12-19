@@ -5,7 +5,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from "vue";
+import { ref, onMounted, onUnmounted, watch, nextTick } from "vue";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -61,7 +61,9 @@ const updateMarker = () => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
+  // Wait for DOM to be ready before initializing map
+  await nextTick();
   initMap();
 });
 
