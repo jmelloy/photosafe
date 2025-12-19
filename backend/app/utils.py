@@ -155,17 +155,29 @@ def extend_photo_metadata(
         metadata_entries: List of metadata dictionaries with key, value, and source
         db: Database session
     """
+    if not metadata_entries:
+        return
+    
+    # Batch query for all existing metadata entries with matching key+source combinations
+    key_source_pairs = [(entry["key"], entry["source"]) for entry in metadata_entries]
+    
+    # Query all potentially existing entries in one go
+    existing_metadata = (
+        db.query(PhotoMetadata)
+        .filter(PhotoMetadata.photo_uuid == photo.uuid)
+        .all()
+    )
+    
+    # Create a lookup dict for faster access: (key, source) -> PhotoMetadata
+    existing_lookup = {
+        (meta.key, meta.source): meta
+        for meta in existing_metadata
+    }
+    
+    # Process each entry
     for entry in metadata_entries:
-        # Check if metadata with this key and source already exists
-        existing = (
-            db.query(PhotoMetadata)
-            .filter(
-                PhotoMetadata.photo_uuid == photo.uuid,
-                PhotoMetadata.key == entry["key"],
-                PhotoMetadata.source == entry["source"],
-            )
-            .first()
-        )
+        key_source = (entry["key"], entry["source"])
+        existing = existing_lookup.get(key_source)
         
         if existing:
             # Update existing metadata
