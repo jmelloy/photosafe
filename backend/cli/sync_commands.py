@@ -183,13 +183,12 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
         
         # Check if photo files are deleted locally
         # If all paths are None or point to non-existent files, mark as deleted
-        has_any_file = False
-        if photo.path and os.path.exists(photo.path):
-            has_any_file = True
-        if hasattr(photo, 'path_edited') and photo.path_edited and os.path.exists(photo.path_edited):
-            has_any_file = True
-        if hasattr(photo, 'path_live_photo') and photo.path_live_photo and os.path.exists(photo.path_live_photo):
-            has_any_file = True
+        paths = [
+            photo.path,
+            getattr(photo, 'path_edited', None),
+            getattr(photo, 'path_live_photo', None)
+        ]
+        has_any_file = any(path and os.path.exists(path) for path in paths if path)
         
         # If photo is marked as missing by osxphotos or all files are gone, soft delete it
         if hasattr(photo, 'ismissing') and photo.ismissing and not has_any_file:
@@ -235,8 +234,8 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
                 
                 # Check if photo is not in trash
                 if not p.get("intrash", False):
-                    # Check if we have an original path
-                    if photo.path and "original" in photo.path.lower():
+                    # Check if we have an original path (looking for /originals/ directory)
+                    if photo.path and "/originals/" in photo.path.lower():
                         should_create = True
                         has_original = True
                 

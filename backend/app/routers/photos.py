@@ -3,7 +3,7 @@
 import os
 import shutil
 import uuid as uuid_lib
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional, Dict
 
@@ -552,7 +552,7 @@ async def delete_photo(
         return {"message": "Photo permanently deleted"}
     else:
         # Soft delete - set deleted_at timestamp
-        photo.deleted_at = datetime.utcnow()
+        photo.deleted_at = datetime.now(timezone.utc)
         db.commit()
         return {"message": "Photo deleted successfully"}
 
