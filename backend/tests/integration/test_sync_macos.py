@@ -283,6 +283,110 @@ class TestMacOSSyncWithFixtures:
                         "Discrepancy" in result.output or "to process" in result.output
                     )
 
+    def test_macos_sync_includes_score_field(self, runner, macos_sample_data):
+        """Test that score field is included when syncing photos from macOS"""
+        mock_osxphotos = MagicMock()
+        with patch.dict("sys.modules", {"osxphotos": mock_osxphotos}):
+            # Create mock PhotosDB
+            mock_photos_db = MagicMock()
+            mock_osxphotos.PhotosDB.return_value = mock_photos_db
+            mock_photos_db.library_path = (
+                "/Users/test/Pictures/Photos Library.photoslibrary"
+            )
+
+            # Use photo with score data from fixture
+            photo_data = macos_sample_data[0]
+            assert "score" in photo_data, "Fixture should contain score data"
+            assert photo_data["score"] is not None, "Score should not be None"
+            assert (
+                "overall" in photo_data["score"]
+            ), "Score should contain overall field"
+
+            mock_photo = MagicMock()
+            mock_photo.uuid = photo_data["uuid"]
+            mock_photo.original_filename = photo_data["original_filename"]
+            mock_photo.date = parser.parse(photo_data["date"])
+            mock_photo.date_modified = (
+                parser.parse(photo_data["date_modified"])
+                if photo_data.get("date_modified")
+                else None
+            )
+            mock_photo._info = {
+                "cloudAssetGUID": photo_data["uuid"],
+                "masterFingerprint": photo_data.get("masterFingerprint"),
+            }
+            mock_photo.intrash = False
+            # asdict() should return the score field
+            mock_photo.asdict.return_value = photo_data.copy()
+            # Add search_info mock
+            mock_search_info = MagicMock()
+            mock_search_info.asdict.return_value = photo_data.get("search_info", {})
+            mock_photo.search_info = mock_search_info
+
+            mock_photos_db.photos.return_value = [mock_photo]
+
+            # Mock boto3
+            with patch("cli.sync_commands.boto3") as mock_boto3:
+                mock_s3 = MagicMock()
+                mock_boto3.client.return_value = mock_s3
+
+                # Mock PhotoSafeAuth
+                with patch("cli.sync_tools.PhotoSafeAuth") as mock_auth:
+                    mock_auth_instance = MagicMock()
+                    mock_auth.return_value = mock_auth_instance
+
+                    # Mock empty blocks to trigger sync
+                    mock_auth_instance.get.return_value.json.return_value = {}
+                    mock_auth_instance.get.return_value.status_code = 200
+                    mock_auth_instance.get.return_value.raise_for_status = MagicMock()
+
+                    # Capture the patch request data
+                    patch_call_data = None
+
+                    def capture_patch(*args, **kwargs):
+                        nonlocal patch_call_data
+                        if "data" in kwargs:
+                            patch_call_data = json.loads(kwargs["data"])
+                        mock_response = MagicMock()
+                        mock_response.status_code = 200
+                        mock_response.raise_for_status = MagicMock()
+                        return mock_response
+
+                    mock_auth_instance.patch.side_effect = capture_patch
+
+                    # Run the sync command
+                    result = runner.invoke(
+                        sync,
+                        [
+                            "macos",
+                            "--username",
+                            "test",
+                            "--password",
+                            "test",
+                            "--base-url",
+                            "http://localhost:8000",
+                            "--bucket",
+                            "test-bucket",
+                        ],
+                    )
+
+                    assert result.exit_code == 0
+
+                    # Verify score field was included in the sync
+                    assert patch_call_data is not None, "PATCH request should be made"
+                    assert (
+                        "score" in patch_call_data
+                    ), "Score field should be in synced data"
+                    assert (
+                        patch_call_data["score"] is not None
+                    ), "Score should not be None"
+                    assert (
+                        "overall" in patch_call_data["score"]
+                    ), "Score should contain overall field"
+                    assert isinstance(
+                        patch_call_data["score"]["overall"], (int, float)
+                    ), "Overall score should be numeric"
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
