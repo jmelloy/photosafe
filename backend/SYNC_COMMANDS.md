@@ -10,7 +10,20 @@ The sync functionality for importing photos from various sources has been integr
 
 ### 1. macOS Photos Sync
 
-Syncs photos from the macOS Photos library to PhotoSafe.
+Syncs photos from the macOS Photos library to PhotoSafe, including all photo metadata such as EXIF data, location information, faces, labels, and aesthetic scores.
+
+**Photo Data Included:**
+- Basic metadata (filename, date, dimensions, orientation)
+- EXIF information (camera, lens, ISO, aperture, shutter speed, etc.)
+- Location data (GPS coordinates, place names, address)
+- People and face recognition data
+- Labels and keywords
+- Album associations
+- **Score data** - Apple's aesthetic quality scores including:
+  - Overall quality score
+  - Curation score
+  - Individual aesthetic metrics (composition, lighting, color, focus, etc.)
+  - These scores are used by Apple Photos for intelligent curation and highlighting
 
 ```bash
 photosafe sync macos \

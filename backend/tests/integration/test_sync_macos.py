@@ -354,7 +354,7 @@ class TestMacOSSyncWithFixtures:
 
                     mock_auth_instance.patch.side_effect = capture_patch
 
-                    # Run the sync command
+                    # Run the sync command with skip-blocks-check to ensure sync happens
                     result = runner.invoke(
                         sync,
                         [
@@ -367,6 +367,7 @@ class TestMacOSSyncWithFixtures:
                             "http://localhost:8000",
                             "--bucket",
                             "test-bucket",
+                            "--skip-blocks-check",
                         ],
                     )
 
