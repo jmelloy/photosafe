@@ -1,6 +1,7 @@
 """Tests for CLI commands"""
 
 import pytest
+import uuid
 from click.testing import CliRunner
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
@@ -414,7 +415,6 @@ class TestImportCommands:
             test_image.write_text("test image data")
 
             # Create sidecar JSON
-            import uuid
             test_uuid = str(uuid.uuid4())
             sidecar = tmpdir / "test.json"
             sidecar_data = {
