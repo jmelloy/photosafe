@@ -195,7 +195,7 @@ import { getPhoto } from "../api/photos";
 import type { Photo } from "../types/api";
 import PhotoMap from "../components/PhotoMap.vue";
 import { formatPlace } from "../utils/formatPlace";
-import { S3_BASE_URL } from "../config";
+import { getDetailImageUrl } from "../utils/imageUrl";
 
 interface PhotoDetailPageProps {
   uuid: string;
@@ -245,33 +245,7 @@ const loadPhoto = async () => {
 };
 
 // Compute detail image URL - prioritize medium or original over thumbnail
-const detailImageUrl = computed(() => {
-  if (!photo.value) return "";
-
-  const buildS3Url = (s3Path: string | undefined): string | null => {
-    if (!s3Path) return null;
-    // If already a full URL, return as-is
-    if (s3Path.startsWith("http://") || s3Path.startsWith("https://")) {
-      return s3Path;
-    }
-    // Otherwise, construct URL with base domain
-    const cleanPath = s3Path.startsWith("/") ? s3Path.substring(1) : s3Path;
-    return `${S3_BASE_URL}/${cleanPath}`;
-  };
-
-  // Prioritize medium (s3_key_path), then original, then edited, then thumbnail
-  // This is different from the backend's url property which prioritizes thumbnail first
-  const candidates = [
-    photo.value.s3_key_path,
-    photo.value.s3_original_path,
-    photo.value.s3_edited_path,
-    photo.value.s3_thumbnail_path,
-  ];
-
-  const url = candidates.map(buildS3Url).find(Boolean) || photo.value.url || "";
-
-  return url;
-});
+const detailImageUrl = computed(() => getDetailImageUrl(photo.value));
 
 const goBack = () => {
   router.push("/");
