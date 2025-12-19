@@ -14,6 +14,11 @@ const routes: RouteRecordRaw[] = [
     props: true,
   },
   {
+    path: "/map",
+    name: "map-view",
+    component: () => import("../views/PhotoMapView.vue"),
+  },
+  {
     path: "/version",
     name: "version",
     component: () => import("../views/VersionPage.vue"),

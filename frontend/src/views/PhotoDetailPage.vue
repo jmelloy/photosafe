@@ -159,6 +159,14 @@
             <span class="label">Place:</span>
             <span class="value">{{ formatPlace(photo.place) }}</span>
           </div>
+          <!-- Map -->
+          <div class="map-container">
+            <PhotoMap
+              :latitude="photo.latitude"
+              :longitude="photo.longitude"
+              :photo-title="photo.original_filename"
+            />
+          </div>
         </div>
 
         <!-- EXIF Data -->
@@ -185,6 +193,7 @@ import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { getPhoto } from "../api/photos";
 import type { Photo } from "../types/api";
+import PhotoMap from "../components/PhotoMap.vue";
 
 interface PhotoDetailPageProps {
   uuid: string;
@@ -600,5 +609,14 @@ onMounted(() => {
 
 .metadata-section::-webkit-scrollbar-thumb:hover {
   background: #4a4a4a;
+}
+
+.map-container {
+  margin-top: 1rem;
+  height: 300px;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #3a3a3a;
 }
 </style>
