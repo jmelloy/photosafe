@@ -16,7 +16,7 @@ class PhotoSafeAuth:
 
     def __init__(self, base_url, username, password, max_retries=3, initial_wait=1):
         """Initialize auth handler
-        
+
         Args:
             base_url: Base URL for the PhotoSafe API
             username: API username
@@ -31,10 +31,10 @@ class PhotoSafeAuth:
         self.initial_wait = initial_wait
         self.token = None
         self.user = None
-        
+
         # Authenticate on initialization
         self._authenticate()
-    
+
     def _authenticate(self):
         """Authenticate with the API and store the token"""
         try:
@@ -45,47 +45,47 @@ class PhotoSafeAuth:
             )
             r.raise_for_status()
             self.token = r.json()["access_token"]
-            
+
             # Get user info
             r = requests.get(
                 f"{self.base_url}/api/auth/me",
-                headers={"Authorization": f"Bearer {self.token}"}
+                headers={"Authorization": f"Bearer {self.token}"},
             )
             r.raise_for_status()
             self.user = r.json()
-            
+
             click.echo(f"Authenticated as {self.user.get('username')}")
         except requests.exceptions.RequestException as e:
             click.echo(f"Authentication failed: {e}", err=True)
             raise
-    
+
     def request(self, method, url, **kwargs):
         """Make an authenticated request with automatic retry and reauthentication
-        
+
         Args:
             method: HTTP method (GET, POST, PUT, PATCH, DELETE)
             url: URL to request (can be relative to base_url or absolute)
             **kwargs: Additional arguments to pass to requests
-            
+
         Returns:
             requests.Response object
         """
         # Make URL absolute if it's relative
         if not url.startswith("http"):
             url = f"{self.base_url}{url}"
-        
+
         # Ensure headers dict exists and add authorization
         if "headers" not in kwargs:
             kwargs["headers"] = {}
         kwargs["headers"]["Authorization"] = f"Bearer {self.token}"
-        
+
         wait_time = self.initial_wait
         last_exception = None
-        
+
         for attempt in range(self.max_retries + 1):
             try:
                 response = requests.request(method, url, **kwargs)
-                
+
                 # Handle 401 - reauthenticate and retry
                 if response.status_code == 401:
                     click.echo("Received 401, reauthenticating...", err=True)
@@ -94,7 +94,7 @@ class PhotoSafeAuth:
                     kwargs["headers"]["Authorization"] = f"Bearer {self.token}"
                     # Retry the request immediately after reauthentication
                     response = requests.request(method, url, **kwargs)
-                
+
                 # Handle 500/502 - retry with exponential backoff
                 if response.status_code in (500, 502) and attempt < self.max_retries:
                     click.echo(
@@ -105,9 +105,9 @@ class PhotoSafeAuth:
                     time.sleep(wait_time)
                     wait_time *= 2
                     continue
-                
+
                 return response
-                
+
             except requests.exceptions.RequestException as e:
                 last_exception = e
                 if attempt < self.max_retries:
@@ -120,28 +120,28 @@ class PhotoSafeAuth:
                     wait_time *= 2
                     continue
                 raise
-        
+
         # If we exhausted retries, raise the last exception or return last response
         if last_exception:
             raise last_exception
         return response
-    
+
     def get(self, url, **kwargs):
         """Make an authenticated GET request"""
         return self.request("GET", url, **kwargs)
-    
+
     def post(self, url, **kwargs):
         """Make an authenticated POST request"""
         return self.request("POST", url, **kwargs)
-    
+
     def put(self, url, **kwargs):
         """Make an authenticated PUT request"""
         return self.request("PUT", url, **kwargs)
-    
+
     def patch(self, url, **kwargs):
         """Make an authenticated PATCH request"""
         return self.request("PATCH", url, **kwargs)
-    
+
     def delete(self, url, **kwargs):
         """Make an authenticated DELETE request"""
         return self.request("DELETE", url, **kwargs)

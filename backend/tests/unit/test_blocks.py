@@ -121,7 +121,7 @@ def test_photo_blocks_endpoint():
     # Verify max_date exists
     assert "max_date" in blocks["2024"]["1"]["15"]
     assert "max_date" in blocks["2024"]["2"]["10"]
-    
+
     # Verify max_date is the latest date for the day (photo2 at 14:00:00)
     # Note: We don't check modified date in this test, only photo date
     max_date_str = blocks["2024"]["1"]["15"]["max_date"]

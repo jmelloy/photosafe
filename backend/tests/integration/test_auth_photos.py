@@ -451,7 +451,8 @@ def test_delete_photo_ownership():
     token2 = login2.json()["access_token"]
 
     response = client.delete(
-        "/api/photos/b2ae6737-e14c-4798-82b8-da99a34410ea/", headers={"Authorization": f"Bearer {token2}"}
+        "/api/photos/b2ae6737-e14c-4798-82b8-da99a34410ea/",
+        headers={"Authorization": f"Bearer {token2}"},
     )
     assert response.status_code == 403
 

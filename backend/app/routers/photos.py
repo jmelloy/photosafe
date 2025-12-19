@@ -312,7 +312,7 @@ async def list_photos(
         query = db.query(Photo)
     else:
         query = db.query(Photo).filter(Photo.owner_id == current_user.id)
-    
+
     # Filter out soft-deleted photos by default
     query = query.filter(Photo.deleted_at.is_(None))
 
@@ -419,7 +419,7 @@ async def get_photo_filters(
         query = db.query(Photo)
     else:
         query = db.query(Photo).filter(Photo.owner_id == current_user.id)
-    
+
     # Filter out soft-deleted photos
     query = query.filter(Photo.deleted_at.is_(None))
 
@@ -463,7 +463,7 @@ async def get_photo_blocks(
         func.count().label("count"),
         func.max(func.coalesce(Photo.date_modified, Photo.date)).label("max_date"),
     ).filter(or_(Photo.labels == None, func.array_length(Photo.labels, 1) == None))
-    
+
     # Filter out soft-deleted photos
     query = query.filter(Photo.deleted_at.is_(None))
 

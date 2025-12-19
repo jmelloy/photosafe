@@ -14,10 +14,10 @@ def test_none_values_filtered_from_persons():
         "place": None,
         "face_info": [{"name": "John"}, None, {"name": "Jane"}],
     }
-    
+
     # Apply the cleaning logic
     photo_data = clean_photo_data(photo_data)
-    
+
     # Verify None values are removed
     assert photo_data["persons"] == ["John", "Jane"]
     assert photo_data["place"] == {}
@@ -32,10 +32,10 @@ def test_none_persons_becomes_empty_list():
         "place": None,
         "face_info": None,
     }
-    
+
     # Apply the cleaning logic
     photo_data = clean_photo_data(photo_data)
-    
+
     assert photo_data["persons"] == []
     assert photo_data["place"] == {}
     assert photo_data["face_info"] == []
@@ -50,17 +50,17 @@ def test_json_serialization_without_null_strings():
         "face_info": [],
         "latitude": None,  # This can remain None as it's a numeric field
     }
-    
+
     # Serialize to JSON
     json_str = json.dumps(photo_data, cls=DateTimeEncoder)
-    
+
     # Verify that we don't have the string "null" in arrays
     assert '"persons": ["John", "Jane"]' in json_str
     assert '"place": {}' in json_str
     assert '"face_info": []' in json_str
     # latitude: null is OK for numeric fields
     assert '"latitude": null' in json_str
-    
+
     # Verify we don't have "null" as a string in the persons array
     assert '"persons": [null]' not in json_str
     assert '"persons": ["null"]' not in json_str
@@ -74,10 +74,10 @@ def test_empty_lists_preserved():
         "place": {},
         "face_info": [],
     }
-    
+
     # Apply the cleaning logic (should not change anything)
     photo_data = clean_photo_data(photo_data)
-    
+
     assert photo_data["persons"] == []
     assert photo_data["place"] == {}
     assert photo_data["face_info"] == []
