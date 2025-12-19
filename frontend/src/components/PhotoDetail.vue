@@ -283,14 +283,15 @@ const formatExifValue = (key: string, value: any): string => {
     return "";
   }
 
-  // Format dates - convert from "2025:12:15 14:03:35" to readable format
+  // Format dates - convert from EXIF format "2025:12:15 14:03:35" to readable format
   if (
     key === "DateTimeOriginal" ||
     key === "DateTimeDigitized" ||
     key === "DateTime"
   ) {
     try {
-      // Replace colons in date part with hyphens for proper parsing
+      // Replace colons with hyphens in date part for ISO 8601 format
+      // JavaScript Date constructor requires ISO format (YYYY-MM-DD) not EXIF format (YYYY:MM:DD)
       const dateStr = String(value).replace(/^(\d{4}):(\d{2}):(\d{2})/, "$1-$2-$3");
       const date = new Date(dateStr);
       if (!isNaN(date.getTime())) {
@@ -311,9 +312,9 @@ const formatExifValue = (key: string, value: any): string => {
   // Format LensSpecification - convert nested array to readable format
   if (key === "LensSpecification" && Array.isArray(value)) {
     try {
-      // LensSpecification contains pairs where the second value is the actual spec
-      // Format: [[type, min_focal], [type, max_focal], [type, min_aperture], [type, max_aperture]]
-      // We extract the second value from each pair
+      // LensSpecification format: [[id, min_focal], [id, max_focal], [id, min_aperture], [id, max_aperture]]
+      // Each pair has a constant identifier (usually 4) and the actual value
+      // We extract the second element (index 1) which contains the specification value
       const values = value.map((v) => (Array.isArray(v) && v.length >= 2 ? v[1] : v));
       if (values.length >= 4) {
         const minFocal = parseFloat(values[0]);
