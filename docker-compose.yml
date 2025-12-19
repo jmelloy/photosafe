@@ -82,6 +82,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        - GIT_SHA=${GIT_SHA:-dev}
     container_name: photosafe-backend
     ports:
       - "${BACKEND_PORT:-8000:8000}"
@@ -144,6 +146,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        - GIT_SHA=${GIT_SHA:-dev}
     container_name: photosafe-cli
     volumes:
       - ./backend:/app
