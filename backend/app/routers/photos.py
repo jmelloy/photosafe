@@ -312,7 +312,7 @@ async def list_photos(
         query = db.query(Photo)
     else:
         query = db.query(Photo).filter(Photo.owner_id == current_user.id)
-    
+
     # Filter out soft-deleted photos by default
     query = query.filter(Photo.deleted_at.is_(None))
 
@@ -388,20 +388,20 @@ async def list_photos(
             )
 
     # Get total count before pagination
-    total = query.count()
+    # total = query.count()
 
     # Calculate offset
     skip = (page - 1) * page_size
 
     # Get photos with pagination
-    photos = query.order_by(Photo.date.desc()).offset(skip).limit(page_size).all()
+    photos = query.order_by(Photo.date.desc()).offset(skip).limit(page_size + 1).all()
 
     # Check if there are more pages
-    has_more = (skip + page_size) < total
+    has_more = len(photos) > page_size
 
     return PaginatedPhotosResponse(
-        items=[create_photo_response(photo) for photo in photos],
-        total=total,
+        items=[create_photo_response(photo) for photo in photos[:page_size]],
+        # total=total,
         page=page,
         page_size=page_size,
         has_more=has_more,
@@ -415,16 +415,14 @@ async def get_photo_filters(
 ) -> Dict[str, List[str]]:
     """Get available filter values for albums, keywords, and persons"""
     # Superusers can see all photos, regular users only see their own
-    if current_user.is_superuser:
-        query = db.query(Photo)
-    else:
-        query = db.query(Photo).filter(Photo.owner_id == current_user.id)
-    
-    # Filter out soft-deleted photos
-    query = query.filter(Photo.deleted_at.is_(None))
+    query = (
+        db.query(Photo)
+        .filter(Photo.owner_id == current_user.id)
+        .filter(Photo.deleted_at.is_(None))
+    ).with_entities(Photo.albums, Photo.keywords, Photo.persons)
 
     # Get all photos for this user
-    photos = query.all()
+    photos = query.distinct().all()
 
     # Extract unique values from arrays
     albums = set()
@@ -463,7 +461,7 @@ async def get_photo_blocks(
         func.count().label("count"),
         func.max(func.coalesce(Photo.date_modified, Photo.date)).label("max_date"),
     ).filter(or_(Photo.labels == None, func.array_length(Photo.labels, 1) == None))
-    
+
     # Filter out soft-deleted photos
     query = query.filter(Photo.deleted_at.is_(None))
 

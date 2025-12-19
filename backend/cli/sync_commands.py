@@ -183,27 +183,17 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
 
         # Clean up None values to prevent null insertions
         p = clean_photo_data(p)
-        
-        # Check if photo files are deleted locally
-        # If all paths are None or point to non-existent files, mark as deleted
-        paths = [
-            photo.path,
-            getattr(photo, 'path_edited', None),
-            getattr(photo, 'path_live_photo', None)
-        ]
-        has_any_file = any(path and os.path.exists(path) for path in paths if path)
-        
+
         # If photo is in trash and all files are gone, soft delete it
         if photo.intrash:
             try:
                 r = auth.delete(f"/api/photos/{p['uuid']}/")
+                click.echo(f"Photo {p['uuid'].lower()} is in trash, deleting...")
                 if r.status_code == 404:
-                    click.echo(
-                        f"Photo {p['uuid'].lower()} already deleted on server"
-                    )
+                    click.echo(f"Photo {p['uuid'].lower()} already deleted on server")
                 elif r.status_code == 200:
                     click.echo(
-                        f"Deleted photo {p['uuid'].lower()} {photo.original_filename} (file missing locally)"
+                        f"Deleted photo {p['uuid'].lower()} {photo.original_filename}"
                     )
                 else:
                     r.raise_for_status()
@@ -212,6 +202,7 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
                 click.echo(f"Error deleting photo {photo.uuid}: {str(e)}", err=True)
                 return
 
+        p["search_info"] = photo.search_info.asdict()
         # Write JSON file if requested
         if output_json:
             dt = photo.date.astimezone(timezone.utc)
@@ -221,7 +212,6 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
             with open(json_path, "w", encoding="utf-8") as f:
                 f.write(json.dumps(p, cls=DateTimeEncoder, indent=2))
 
-        p["search_info"] = photo.search_info.asdict()
         try:
             r = auth.patch(
                 f"/api/photos/{p['uuid']}/",
@@ -234,68 +224,74 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
                 # Check if we should create it with versions
                 should_create = False
                 has_original = False
-                
+
                 # Check if photo is not in trash
                 if not p.get("intrash", False):
                     # Check if we have an original path (looking for /originals/ directory)
                     if photo.path and "/originals/" in photo.path.lower():
                         should_create = True
                         has_original = True
-                
+
                 if should_create:
                     click.echo(
                         f"Creating photo {p['uuid'].lower()} {photo.original_filename} with versions"
                     )
-                    
+
                     # Build versions list
                     versions = []
-                    
+
                     # Add original version if available
                     if has_original and photo.path:
                         base, ext = os.path.splitext(photo.path)
-                        versions.append({
-                            "version": "original",
-                            "s3_path": f"{username}/originals/{p['uuid'][0:1]}/{p['uuid']}{ext}",
-                            "filename": photo.original_filename,
-                            "width": p.get("width"),
-                            "height": p.get("height"),
-                            "size": p.get("original_filesize"),
-                            "type": ext.lstrip(".").lower(),
-                        })
-                    
+                        versions.append(
+                            {
+                                "version": "original",
+                                "s3_path": f"{username}/originals/{p['uuid'][0:1]}/{p['uuid']}{ext}",
+                                "filename": photo.original_filename,
+                                "width": p.get("width"),
+                                "height": p.get("height"),
+                                "size": p.get("original_filesize"),
+                                "type": ext.lstrip(".").lower(),
+                            }
+                        )
+
                     # Add edited version if available
-                    if hasattr(photo, 'path_edited') and photo.path_edited:
+                    if hasattr(photo, "path_edited") and photo.path_edited:
                         base, ext = os.path.splitext(photo.path_edited)
-                        versions.append({
-                            "version": "edited",
-                            "s3_path": f"{username}/edited/{p['uuid'][0:1]}/{p['uuid']}{ext}",
-                            "filename": f"{os.path.splitext(photo.original_filename)[0]}_edited{ext}",
-                            "width": p.get("width"),
-                            "height": p.get("height"),
-                            "size": None,
-                            "type": ext.lstrip(".").lower(),
-                        })
-                    
+                        versions.append(
+                            {
+                                "version": "edited",
+                                "s3_path": f"{username}/edited/{p['uuid'][0:1]}/{p['uuid']}{ext}",
+                                "filename": f"{os.path.splitext(photo.original_filename)[0]}_edited{ext}",
+                                "width": p.get("width"),
+                                "height": p.get("height"),
+                                "size": None,
+                                "type": ext.lstrip(".").lower(),
+                            }
+                        )
+
                     # Add derivative/thumbnail versions if available
                     # osxphotos doesn't expose path_derivatives directly in the public API,
                     # but we can check for common derivative paths
-                    if hasattr(photo, 'path_derivatives') and photo.path_derivatives:
+                    if hasattr(photo, "path_derivatives") and photo.path_derivatives:
                         for i, deriv_path in enumerate(photo.path_derivatives):
                             base, ext = os.path.splitext(deriv_path)
-                            versions.append({
-                                "version": f"derivative_{i}",
-                                "s3_path": f"{username}/thumbnails/{p['uuid'][0:1]}/{p['uuid']}_{i}{ext}",
-                                "filename": f"{os.path.splitext(photo.original_filename)[0]}_thumb_{i}{ext}",
-                                "width": None,
-                                "height": None,
-                                "size": None,
-                                "type": ext.lstrip(".").lower(),
-                            })
-                    
+                            versions.append(
+                                {
+                                    "version": f"derivative_{i}",
+                                    "s3_path": f"{username}/thumbnails/{p['uuid'][0:1]}/{p['uuid']}_{i}{ext}",
+                                    "filename": f"{os.path.splitext(photo.original_filename)[0]}_thumb_{i}{ext}",
+                                    "width": None,
+                                    "height": None,
+                                    "size": None,
+                                    "type": ext.lstrip(".").lower(),
+                                }
+                            )
+
                     # Add versions to photo data
                     if versions:
                         p["versions"] = versions
-                    
+
                     # Upload files to S3 before creating photo record
                     try:
                         # Upload original file
@@ -304,16 +300,25 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
                             s3_key = f"{username}/originals/{p['uuid'][0:1]}/{p['uuid']}{ext}"
                             click.echo(f"Uploading original to S3: {s3_key}")
                             s3.upload_file(photo.path, bucket, s3_key)
-                        
+
                         # Upload edited file if available
-                        if hasattr(photo, 'path_edited') and photo.path_edited and os.path.exists(photo.path_edited):
+                        if (
+                            hasattr(photo, "path_edited")
+                            and photo.path_edited
+                            and os.path.exists(photo.path_edited)
+                        ):
                             base, ext = os.path.splitext(photo.path_edited)
-                            s3_key = f"{username}/edited/{p['uuid'][0:1]}/{p['uuid']}{ext}"
+                            s3_key = (
+                                f"{username}/edited/{p['uuid'][0:1]}/{p['uuid']}{ext}"
+                            )
                             click.echo(f"Uploading edited to S3: {s3_key}")
                             s3.upload_file(photo.path_edited, bucket, s3_key)
-                        
+
                         # Upload derivative/thumbnail files if available
-                        if hasattr(photo, 'path_derivatives') and photo.path_derivatives:
+                        if (
+                            hasattr(photo, "path_derivatives")
+                            and photo.path_derivatives
+                        ):
                             for i, deriv_path in enumerate(photo.path_derivatives):
                                 if os.path.exists(deriv_path):
                                     base, ext = os.path.splitext(deriv_path)
@@ -326,7 +331,7 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
                             err=True,
                         )
                         # Continue to create photo even if upload fails
-                    
+
                     # Try to create the photo
                     try:
                         r = auth.post(
