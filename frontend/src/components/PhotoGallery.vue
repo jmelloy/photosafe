@@ -44,7 +44,7 @@
             <p class="photo-name" :title="photo.original_filename">
               {{ photo.original_filename }}
             </p>
-            <p class="photo-date">{{ formatDate(photo.uploaded_at) }}</p>
+            <p class="photo-date">{{ formatDate(photo.date) }}</p>
           </div>
         </div>
       </div>
