@@ -14,6 +14,7 @@ export interface PhotoFilters {
   album?: string;
   keyword?: string;
   person?: string;
+  library?: string;
   start_date?: string;
   end_date?: string;
   favorite?: boolean;
@@ -29,6 +30,7 @@ export interface AvailableFilters {
   albums: string[];
   keywords: string[];
   persons: string[];
+  libraries: string[];
 }
 
 export const getPhotos = async (
@@ -44,6 +46,7 @@ export const getPhotos = async (
     if (filters.album) params.album = filters.album;
     if (filters.keyword) params.keyword = filters.keyword;
     if (filters.person) params.person = filters.person;
+    if (filters.library) params.library = filters.library;
     if (filters.start_date) params.start_date = filters.start_date;
     if (filters.end_date) params.end_date = filters.end_date;
     if (filters.favorite !== undefined) params.favorite = filters.favorite;
