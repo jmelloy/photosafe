@@ -211,23 +211,15 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
                 if value is None:
                     continue
                 
-                # Handle list values by converting to JSON string
-                if isinstance(value, list):
-                    if not value:  # Skip empty lists
-                        continue
-                    value_str = json.dumps(value)
-                # Handle dict values by converting to JSON string
-                elif isinstance(value, dict):
-                    if not value:  # Skip empty dicts
-                        continue
-                    value_str = json.dumps(value)
-                # Handle other types
-                else:
-                    value_str = str(value)
+                # Skip empty lists and dicts
+                if isinstance(value, (list, dict)) and not value:
+                    continue
                 
+                # Store value as-is for JSONB
+                # Simple types will be wrapped in a dict, complex types stored directly
                 metadata_entries.append({
                     "key": key,
-                    "value": value_str,
+                    "value": value if isinstance(value, (list, dict)) else {"value": value},
                     "source": "macos",
                 })
         

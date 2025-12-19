@@ -15,11 +15,11 @@ CREATE TABLE photo_metadata (
     id SERIAL PRIMARY KEY,
     photo_uuid UUID REFERENCES photos(uuid),
     key VARCHAR NOT NULL,
-    value TEXT NOT NULL,
+    value JSONB,
     source VARCHAR NOT NULL,
+    UNIQUE (photo_uuid, key),
     INDEX idx_photo_uuid (photo_uuid),
-    INDEX idx_key (key),
-    INDEX idx_source (source)
+    INDEX idx_value_gin USING GIN (value)
 );
 ```
 
@@ -27,8 +27,8 @@ CREATE TABLE photo_metadata (
 
 1. **Extensible Metadata**: Metadata can be added incrementally without replacing existing entries
 2. **Source Tracking**: Each metadata entry tracks its source (e.g., "macos", "exif", "legacy")
-3. **Key-Source Uniqueness**: Updates to metadata with the same key and source will update the value instead of creating duplicates
-4. **Different Sources**: Metadata with the same key but different sources are kept separate
+3. **Key Uniqueness**: Each photo can have only one value per key. Updates to the same key will replace the value and source
+4. **JSONB Values**: Values are stored as JSONB, allowing complex data structures (arrays, objects) with efficient querying via GIN index
 
 ### API Changes
 
@@ -44,12 +44,17 @@ Photos can now include a `metadata` field:
   "metadata": [
     {
       "key": "camera",
-      "value": "Canon PowerShot",
+      "value": {"value": "Canon PowerShot"},
       "source": "macos"
     },
     {
       "key": "year",
-      "value": "2024",
+      "value": {"value": "2024"},
+      "source": "macos"
+    },
+    {
+      "key": "labels",
+      "value": ["Wedding", "People", "Outdoor"],
       "source": "macos"
     }
   ]
@@ -64,8 +69,8 @@ The `search_info` field is still supported for backward compatibility. When prov
 
 The PATCH endpoint now **extends** metadata rather than replacing it:
 - New metadata entries are added
-- Existing entries with the same key+source are updated
-- Entries with different sources are kept separate
+- Existing entries with the same key are updated (value and source are replaced)
+- The unique constraint on (photo_uuid, key) ensures only one value per key per photo
 
 ### macOS Sync Changes
 
@@ -77,9 +82,10 @@ Example in `sync_commands.py`:
 # Convert search_info to metadata with source="macos"
 metadata_entries = []
 for key, value in search_info_dict.items():
+    # Store as JSONB - lists/dicts directly, scalars wrapped
     metadata_entries.append({
         "key": key,
-        "value": str(value),  # or JSON for lists/dicts
+        "value": value if isinstance(value, (list, dict)) else {"value": value},
         "source": "macos",
     })
 

@@ -103,7 +103,7 @@ def handle_library_upsert(library_name: str, current_user: User, db: Session) ->
 
 def process_search_info_to_metadata(
     search_info: Dict[str, Any], source: str = "unknown"
-) -> List[Dict[str, str]]:
+) -> List[Dict[str, Any]]:
     """Convert search_info dictionary to list of metadata entries.
     
     Args:
@@ -122,23 +122,16 @@ def process_search_info_to_metadata(
         if value is None:
             continue
             
-        # Handle list values by converting to JSON string
-        if isinstance(value, list):
-            if not value:  # Skip empty lists
-                continue
-            value_str = json.dumps(value)
-        # Handle dict values by converting to JSON string
-        elif isinstance(value, dict):
-            if not value:  # Skip empty dicts
-                continue
-            value_str = json.dumps(value)
-        # Handle other types
-        else:
-            value_str = str(value)
+        # Skip empty lists and dicts
+        if isinstance(value, (list, dict)) and not value:
+            continue
         
+        # Store the value as-is (will be stored as JSONB)
+        # Simple types (str, int, float, bool) will be converted to JSON scalars
+        # Lists and dicts will be stored as JSON arrays/objects
         metadata_list.append({
             "key": key,
-            "value": value_str,
+            "value": value if isinstance(value, (list, dict)) else {"value": value},
             "source": source,
         })
     
@@ -146,9 +139,12 @@ def process_search_info_to_metadata(
 
 
 def extend_photo_metadata(
-    photo: Photo, metadata_entries: List[Dict[str, str]], db: Session
+    photo: Photo, metadata_entries: List[Dict[str, Any]], db: Session
 ) -> None:
-    """Extend photo metadata with new entries, updating existing keys from the same source.
+    """Extend photo metadata with new entries, updating existing keys.
+    
+    With unique constraint on (photo_uuid, key), each photo can only have one value per key.
+    The source is updated along with the value when the same key is provided.
     
     Args:
         photo: Photo database model instance
@@ -158,30 +154,27 @@ def extend_photo_metadata(
     if not metadata_entries:
         return
     
-    # Batch query for all existing metadata entries with matching key+source combinations
-    key_source_pairs = [(entry["key"], entry["source"]) for entry in metadata_entries]
-    
-    # Query all potentially existing entries in one go
+    # Query all existing entries for this photo in one go
     existing_metadata = (
         db.query(PhotoMetadata)
         .filter(PhotoMetadata.photo_uuid == photo.uuid)
         .all()
     )
     
-    # Create a lookup dict for faster access: (key, source) -> PhotoMetadata
+    # Create a lookup dict for faster access: key -> PhotoMetadata
     existing_lookup = {
-        (meta.key, meta.source): meta
+        meta.key: meta
         for meta in existing_metadata
     }
     
     # Process each entry
     for entry in metadata_entries:
-        key_source = (entry["key"], entry["source"])
-        existing = existing_lookup.get(key_source)
+        existing = existing_lookup.get(entry["key"])
         
         if existing:
-            # Update existing metadata
+            # Update existing metadata (value and source)
             existing.value = entry["value"]
+            existing.source = entry["source"]
         else:
             # Create new metadata entry
             new_metadata = PhotoMetadata(

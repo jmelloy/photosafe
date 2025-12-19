@@ -277,9 +277,11 @@ class PhotoMetadata(SQLModel, table=True):
     photo_uuid: Optional[pkg_uuid.UUID] = Field(
         default=None, foreign_key="photos.uuid", index=True, sa_type=UUID(as_uuid=True)
     )
-    key: str = Field(sa_type=String, index=True)
-    value: str = Field(sa_type=Text)
-    source: str = Field(sa_type=String, index=True)
+    key: str = Field(sa_type=String)
+    value: Optional[Dict[str, Any]] = Field(
+        default=None, sa_column=Column(JSONB, nullable=True)
+    )
+    source: str = Field(sa_type=String)
 
     # Relationship
     photo: Optional["Photo"] = Relationship(back_populates="photo_metadata")
@@ -390,7 +392,7 @@ class PhotoMetadataRead(SQLModel):
     id: int
     photo_uuid: Optional[pkg_uuid.UUID] = None
     key: str
-    value: str
+    value: Optional[Dict[str, Any]] = None
     source: str
 
 
@@ -398,7 +400,7 @@ class PhotoMetadataCreate(SQLModel):
     """PhotoMetadata create schema - for API requests"""
 
     key: str
-    value: str
+    value: Optional[Dict[str, Any]] = None
     source: str = "unknown"
 
 

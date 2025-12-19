@@ -29,8 +29,8 @@ class TestPhotoMetadata:
         
         assert len(metadata) == 4
         assert all(m["source"] == "macos" for m in metadata)
-        assert any(m["key"] == "camera" and m["value"] == "Canon PowerShot A590 IS" for m in metadata)
-        assert any(m["key"] == "year" and m["value"] == "1980" for m in metadata)
+        assert any(m["key"] == "camera" and m["value"] == {"value": "Canon PowerShot A590 IS"} for m in metadata)
+        assert any(m["key"] == "year" and m["value"] == {"value": "1980"} for m in metadata)
 
     def test_process_search_info_to_metadata_with_lists(self):
         """Test converting search_info with list values"""
@@ -43,9 +43,9 @@ class TestPhotoMetadata:
         
         assert len(metadata) == 2
         
-        # Check that lists are JSON encoded
+        # Check that lists are stored as-is (will be JSONB arrays)
         labels_entry = next(m for m in metadata if m["key"] == "labels")
-        assert json.loads(labels_entry["value"]) == ["Wedding", "People", "Outdoor"]
+        assert labels_entry["value"] == ["Wedding", "People", "Outdoor"]
 
     def test_process_search_info_to_metadata_skips_empty(self):
         """Test that empty values are skipped"""
@@ -89,8 +89,8 @@ class TestPhotoMetadata:
         
         # Add metadata entries
         metadata_entries = [
-            {"key": "camera", "value": "Canon", "source": "macos"},
-            {"key": "year", "value": "2024", "source": "macos"},
+            {"key": "camera", "value": {"value": "Canon"}, "source": "macos"},
+            {"key": "year", "value": {"value": "2024"}, "source": "macos"},
         ]
         
         extend_photo_metadata(photo, metadata_entries, db_session)
@@ -102,8 +102,8 @@ class TestPhotoMetadata:
         ).all()
         
         assert len(metadata) == 2
-        assert any(m.key == "camera" and m.value == "Canon" for m in metadata)
-        assert any(m.key == "year" and m.value == "2024" for m in metadata)
+        assert any(m.key == "camera" and m.value == {"value": "Canon"} for m in metadata)
+        assert any(m.key == "year" and m.value == {"value": "2024"} for m in metadata)
 
     def test_extend_photo_metadata_updates_existing(self, db_session):
         """Test that existing metadata with same key+source is updated"""
@@ -132,7 +132,7 @@ class TestPhotoMetadata:
         initial_metadata = PhotoMetadata(
             photo_uuid=photo_uuid,
             key="camera",
-            value="Canon",
+            value={"value": "Canon"},
             source="macos",
         )
         db_session.add(initial_metadata)
@@ -140,7 +140,7 @@ class TestPhotoMetadata:
         
         # Update with new value
         metadata_entries = [
-            {"key": "camera", "value": "Nikon", "source": "macos"},
+            {"key": "camera", "value": {"value": "Nikon"}, "source": "macos"},
         ]
         
         extend_photo_metadata(photo, metadata_entries, db_session)
@@ -154,11 +154,11 @@ class TestPhotoMetadata:
         # Should still have only 1 entry, but with updated value
         assert len(metadata) == 1
         assert metadata[0].key == "camera"
-        assert metadata[0].value == "Nikon"
+        assert metadata[0].value == {"value": "Nikon"}
         assert metadata[0].source == "macos"
 
     def test_extend_photo_metadata_different_sources(self, db_session):
-        """Test that different sources create separate entries for same key"""
+        """Test that different sources update the same key (due to unique constraint)"""
         # Create a test user
         user = User(
             username="testuser",
@@ -182,14 +182,14 @@ class TestPhotoMetadata:
         
         # Add metadata from macos source
         metadata_entries_macos = [
-            {"key": "camera", "value": "Canon", "source": "macos"},
+            {"key": "camera", "value": {"value": "Canon"}, "source": "macos"},
         ]
         extend_photo_metadata(photo, metadata_entries_macos, db_session)
         db_session.commit()
         
-        # Add metadata from different source with same key
+        # Add metadata from different source with same key - should update the entry
         metadata_entries_exif = [
-            {"key": "camera", "value": "Canon EOS", "source": "exif"},
+            {"key": "camera", "value": {"value": "Canon EOS"}, "source": "exif"},
         ]
         extend_photo_metadata(photo, metadata_entries_exif, db_session)
         db_session.commit()
@@ -199,13 +199,11 @@ class TestPhotoMetadata:
             PhotoMetadata.photo_uuid == photo_uuid
         ).all()
         
-        # Should have 2 entries with same key but different sources
-        assert len(metadata) == 2
-        macos_entry = next(m for m in metadata if m.source == "macos")
-        exif_entry = next(m for m in metadata if m.source == "exif")
-        
-        assert macos_entry.value == "Canon"
-        assert exif_entry.value == "Canon EOS"
+        # Should have only 1 entry, updated with the new source and value
+        assert len(metadata) == 1
+        assert metadata[0].key == "camera"
+        assert metadata[0].value == {"value": "Canon EOS"}
+        assert metadata[0].source == "exif"  # Source was updated
 
 
 if __name__ == "__main__":

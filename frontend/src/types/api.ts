@@ -19,7 +19,7 @@ export interface PhotoMetadata {
   id: number;
   photo_uuid?: string;
   key: string;
-  value: string;
+  value?: Record<string, any>;
   source: string;
 }
 
