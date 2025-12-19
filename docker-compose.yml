@@ -57,6 +57,27 @@ services:
     networks:
       - photosafe-network
 
+  test-db:
+    image: postgres:16-alpine
+    container_name: photosafe-test-db
+    environment:
+      POSTGRES_DB: ${TEST_POSTGRES_DB:-photosafe_test}
+      POSTGRES_USER: ${TEST_POSTGRES_USER:-photosafe}
+      POSTGRES_PASSWORD: ${TEST_POSTGRES_PASSWORD:-photosafe}
+    ports:
+      - "${TEST_DB_PORT:-5433:5432}"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${TEST_POSTGRES_USER:-photosafe}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - photosafe-network
+    profiles:
+      - test
+
   backend:
     build:
       context: ./backend
