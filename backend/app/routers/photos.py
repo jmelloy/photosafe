@@ -312,6 +312,9 @@ async def list_photos(
         query = db.query(Photo)
     else:
         query = db.query(Photo).filter(Photo.owner_id == current_user.id)
+    
+    # Filter out soft-deleted photos by default
+    query = query.filter(Photo.deleted_at.is_(None))
 
     # Apply search filter - search in original_filename, title, and description
     if search:
@@ -416,6 +419,9 @@ async def get_photo_filters(
         query = db.query(Photo)
     else:
         query = db.query(Photo).filter(Photo.owner_id == current_user.id)
+    
+    # Filter out soft-deleted photos
+    query = query.filter(Photo.deleted_at.is_(None))
 
     # Get all photos for this user
     photos = query.all()
@@ -457,6 +463,9 @@ async def get_photo_blocks(
         func.count().label("count"),
         func.max(func.coalesce(Photo.date_modified, Photo.date)).label("max_date"),
     ).filter(or_(Photo.labels == None, func.array_length(Photo.labels, 1) == None))
+    
+    # Filter out soft-deleted photos
+    query = query.filter(Photo.deleted_at.is_(None))
 
     # Filter by owner if not superuser
     if not current_user.is_superuser:
@@ -511,10 +520,11 @@ async def get_photo(
 @router.delete("/{uuid}/")
 async def delete_photo(
     uuid: str,
+    hard_delete: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """Delete a photo by UUID"""
+    """Delete a photo by UUID (soft delete by default, use hard_delete=true for permanent deletion)"""
     photo = db.query(Photo).filter(Photo.uuid == uuid).first()
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
@@ -529,17 +539,22 @@ async def delete_photo(
             status_code=403, detail="Not authorized to delete this photo"
         )
 
-    # Delete file from disk if it exists
-    if photo.file_path:
-        file_path = Path(photo.file_path)
-        if file_path.exists():
-            file_path.unlink()
+    if hard_delete:
+        # Delete file from disk if it exists
+        if photo.file_path:
+            file_path = Path(photo.file_path)
+            if file_path.exists():
+                file_path.unlink()
 
-    # Delete from database (versions will be cascade deleted)
-    db.delete(photo)
-    db.commit()
-
-    return {"message": "Photo deleted successfully"}
+        # Delete from database (versions will be cascade deleted)
+        db.delete(photo)
+        db.commit()
+        return {"message": "Photo permanently deleted"}
+    else:
+        # Soft delete - set deleted_at timestamp
+        photo.deleted_at = datetime.utcnow()
+        db.commit()
+        return {"message": "Photo deleted successfully"}
 
 
 @router.post("/upload", response_model=PhotoRead)

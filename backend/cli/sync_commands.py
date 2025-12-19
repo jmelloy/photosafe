@@ -180,6 +180,35 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
 
         # Clean up None values to prevent null insertions
         p = clean_photo_data(p)
+        
+        # Check if photo files are deleted locally
+        # If all paths are None or point to non-existent files, mark as deleted
+        has_any_file = False
+        if photo.path and os.path.exists(photo.path):
+            has_any_file = True
+        if hasattr(photo, 'path_edited') and photo.path_edited and os.path.exists(photo.path_edited):
+            has_any_file = True
+        if hasattr(photo, 'path_live_photo') and photo.path_live_photo and os.path.exists(photo.path_live_photo):
+            has_any_file = True
+        
+        # If photo is marked as missing by osxphotos or all files are gone, soft delete it
+        if hasattr(photo, 'ismissing') and photo.ismissing and not has_any_file:
+            try:
+                r = auth.delete(f"/api/photos/{p['uuid']}/")
+                if r.status_code == 404:
+                    click.echo(
+                        f"Photo {p['uuid'].lower()} already deleted on server"
+                    )
+                elif r.status_code == 200:
+                    click.echo(
+                        f"Deleted photo {p['uuid'].lower()} {photo.original_filename} (file missing locally)"
+                    )
+                else:
+                    r.raise_for_status()
+                return
+            except Exception as e:
+                click.echo(f"Error deleting photo {photo.uuid}: {str(e)}", err=True)
+                return
 
         # Write JSON file if requested
         if output_json:
@@ -199,9 +228,92 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
             )
 
             if r.status_code == 404:
-                click.echo(
-                    f"Missing photo {p['uuid'].lower()} {photo.original_filename} ({r.status_code})"
-                )
+                # Photo not found on server
+                # Check if we should create it with versions
+                should_create = False
+                has_original = False
+                
+                # Check if photo is not in trash
+                if not p.get("intrash", False):
+                    # Check if we have an original path
+                    if photo.path and "original" in photo.path.lower():
+                        should_create = True
+                        has_original = True
+                
+                if should_create:
+                    click.echo(
+                        f"Creating photo {p['uuid'].lower()} {photo.original_filename} with versions"
+                    )
+                    
+                    # Build versions list
+                    versions = []
+                    
+                    # Add original version if available
+                    if has_original and photo.path:
+                        base, ext = os.path.splitext(photo.path)
+                        versions.append({
+                            "version": "original",
+                            "s3_path": f"{p['uuid'][0:1]}/{p['uuid']}{ext}",
+                            "filename": photo.original_filename,
+                            "width": p.get("width"),
+                            "height": p.get("height"),
+                            "size": p.get("original_filesize"),
+                            "type": ext.lstrip(".").lower(),
+                        })
+                    
+                    # Add edited version if available
+                    if hasattr(photo, 'path_edited') and photo.path_edited:
+                        base, ext = os.path.splitext(photo.path_edited)
+                        versions.append({
+                            "version": "edited",
+                            "s3_path": f"edited/{p['uuid'][0:1]}/{p['uuid']}{ext}",
+                            "filename": f"{os.path.splitext(photo.original_filename)[0]}_edited{ext}",
+                            "width": p.get("width"),
+                            "height": p.get("height"),
+                            "size": None,
+                            "type": ext.lstrip(".").lower(),
+                        })
+                    
+                    # Add derivative/thumbnail versions if available
+                    # osxphotos doesn't expose path_derivatives directly in the public API,
+                    # but we can check for common derivative paths
+                    if hasattr(photo, 'path_derivatives') and photo.path_derivatives:
+                        for i, deriv_path in enumerate(photo.path_derivatives):
+                            base, ext = os.path.splitext(deriv_path)
+                            versions.append({
+                                "version": f"derivative_{i}",
+                                "s3_path": f"thumbnails/{p['uuid'][0:1]}/{p['uuid']}{ext}",
+                                "filename": f"{os.path.splitext(photo.original_filename)[0]}_thumb{ext}",
+                                "width": None,
+                                "height": None,
+                                "size": None,
+                                "type": ext.lstrip(".").lower(),
+                            })
+                    
+                    # Add versions to photo data
+                    if versions:
+                        p["versions"] = versions
+                    
+                    # Try to create the photo
+                    try:
+                        r = auth.post(
+                            "/api/photos/",
+                            data=json.dumps(p, cls=DateTimeEncoder),
+                            headers={"Content-Type": "application/json"},
+                        )
+                        r.raise_for_status()
+                        click.echo(
+                            f"Created photo {p['uuid'].lower()} {photo.original_filename} ({r.status_code})"
+                        )
+                    except Exception as create_error:
+                        click.echo(
+                            f"Error creating photo {photo.uuid}: {str(create_error)}",
+                            err=True,
+                        )
+                else:
+                    click.echo(
+                        f"Skipping missing photo {p['uuid'].lower()} {photo.original_filename} (in trash or no original path)"
+                    )
                 return
             r.raise_for_status()
             click.echo(
