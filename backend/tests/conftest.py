@@ -12,7 +12,7 @@ from alembic import command
 
 from app.database import get_db
 from app.main import app
-from app.models import User, Library, Photo, Version, Album, album_photos
+from app.models import User, Library, Photo, Version, Album, PhotoMetadata, album_photos
 
 # Define the fixtures directory
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
@@ -95,7 +95,7 @@ def db_session(engine):
     with engine.begin() as connection:
         # Delete in order to respect foreign key constraints
         connection.execute(album_photos.delete())
-        for table in [Version, Photo, Album, Library, User]:
+        for table in [PhotoMetadata, Version, Photo, Album, Library, User]:
             connection.execute(table.__table__.delete())
 
 

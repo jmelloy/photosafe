@@ -193,7 +193,7 @@ class Photo(SQLModel, table=True):
     versions: List["Version"] = Relationship(
         back_populates="photo", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
-    metadata: List["PhotoMetadata"] = Relationship(
+    photo_metadata: List["PhotoMetadata"] = Relationship(
         back_populates="photo", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
 

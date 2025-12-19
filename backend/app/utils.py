@@ -261,9 +261,9 @@ def create_photo_response(photo: Photo) -> PhotoRead:
                     value=m.value,
                     source=m.source,
                 )
-                for m in photo.metadata
+                for m in photo.photo_metadata
             ]
-            if photo.metadata
+            if photo.photo_metadata
             else None
         ),
     }
