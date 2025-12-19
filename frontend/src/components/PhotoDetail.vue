@@ -311,8 +311,9 @@ const formatExifValue = (key: string, value: any): string => {
   // Format LensSpecification - convert nested array to readable format
   if (key === "LensSpecification" && Array.isArray(value)) {
     try {
-      // LensSpecification is typically [[min_focal, ratio], [max_focal, ratio], [min_aperture, ratio], [max_aperture, ratio]]
-      // Extract the actual values from the nested arrays
+      // LensSpecification contains pairs where the second value is the actual spec
+      // Format: [[type, min_focal], [type, max_focal], [type, min_aperture], [type, max_aperture]]
+      // We extract the second value from each pair
       const values = value.map((v) => (Array.isArray(v) && v.length >= 2 ? v[1] : v));
       if (values.length >= 4) {
         const minFocal = parseFloat(values[0]);
@@ -471,7 +472,7 @@ const formatExif = (exif: Record<string, any>): { important: Record<string, stri
     ISOSpeedRatings: "ISO",
     PhotographicSensitivity: "ISO",
     FocalLength: "Focal Length",
-    FocalLenIn35mmFilm: "Focal Length (35mm equiv)",
+    FocalLengthIn35mmFilm: "Focal Length (35mm equiv)",
     DateTimeOriginal: "Date Taken",
     DateTime: "Modified",
     DateTimeDigitized: "Date Digitized",
@@ -499,7 +500,7 @@ const formatExif = (exif: Record<string, any>): { important: Record<string, stri
     "LensModel",
     "LensSpecification",
     "FocalLength",
-    "FocalLenIn35mmFilm",
+    "FocalLengthIn35mmFilm",
     "FNumber",
     "ApertureValue",
     "ExposureTime",
