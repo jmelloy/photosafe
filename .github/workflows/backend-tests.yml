@@ -105,6 +105,7 @@ jobs:
           python << 'EOF'
           import re
           import sys
+          import datetime
 
           # Read pyproject.toml
           with open('pyproject.toml', 'r') as f:
