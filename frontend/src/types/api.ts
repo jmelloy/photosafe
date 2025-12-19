@@ -15,6 +15,17 @@ export interface Version {
   type?: string;
 }
 
+export interface Place {
+  name?: string;
+  address_str?: string;
+  ishome?: boolean;
+  country_code?: string;
+  // Additional fields that may exist but are not displayed
+  names?: Record<string, any>;
+  address?: Record<string, any>;
+  [key: string]: any;
+}
+
 export interface Photo {
   uuid: string;
   masterFingerprint?: string;
@@ -45,7 +56,7 @@ export interface Photo {
   longitude?: number;
   uti?: string;
   date_modified?: string;
-  place?: Record<string, any>;
+  place?: Place;
   exif?: Record<string, any>;
   score?: Record<string, any>;
   search_info?: Record<string, any>;

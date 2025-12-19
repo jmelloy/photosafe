@@ -192,7 +192,7 @@
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { getPhoto } from "../api/photos";
-import type { Photo } from "../types/api";
+import type { Photo, Place } from "../types/api";
 import PhotoMap from "../components/PhotoMap.vue";
 
 interface PhotoDetailPageProps {
@@ -285,7 +285,7 @@ const formatPlace = (place: unknown): string => {
   if (typeof place === "string") return place;
   if (place && typeof place === "object") {
     // Only show top-level fields, excluding nested objects like "names" and "address"
-    const placeObj = place as Record<string, any>;
+    const placeObj = place as Place;
     const parts: string[] = [];
     
     // Show the main name if available
@@ -308,7 +308,7 @@ const formatPlace = (place: unknown): string => {
       parts.push(`Country: ${placeObj.country_code}`);
     }
     
-    return parts.join(" | ") || "Location information available";
+    return parts.join(" | ") || "";
   }
   return "";
 };
