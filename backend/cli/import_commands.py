@@ -1,14 +1,12 @@
 """Photo import CLI commands"""
 
 import click
-import os
 import json
 import mimetypes
 import hashlib
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict, Any
-import uuid as uuid_module
 import dateutil
 from sqlalchemy.orm import Session
 from sqlmodel import select
@@ -276,12 +274,12 @@ def import_photos(
                     errors += 1
                     click.echo(f"\nError processing {image_file}: {str(e)}", err=True)
 
-        click.echo(f"\n✓ Import complete:")
+        click.echo("\n✓ Import complete:")
         click.echo(f"  Imported: {imported}")
         click.echo(f"  Skipped:  {skipped}")
         click.echo(f"  Errors:   {errors}")
         if dry_run:
-            click.echo(f"  (Dry run - no changes made)")
+            click.echo("  (Dry run - no changes made)")
 
     except Exception as e:
         db.rollback()
@@ -466,7 +464,7 @@ def parse_sidecar(sidecar_path: Path, format: str) -> Dict[str, Any]:
         import xml.etree.ElementTree as ET
 
         tree = ET.parse(sidecar_path)
-        root = tree.getroot()
+        tree.getroot()
 
         # Extract basic fields from XMP
         # This is a simplified implementation

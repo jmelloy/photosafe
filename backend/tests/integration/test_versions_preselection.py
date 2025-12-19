@@ -1,7 +1,6 @@
 """Tests for versions preselection and library filters"""
 
 import os
-from datetime import datetime
 import uuid
 
 import pytest
@@ -241,7 +240,7 @@ def test_available_filters_includes_libraries():
             json={
                 "uuid": str(uuid.uuid4()),
                 "original_filename": f"photo{i}.jpg",
-                "date": f"2024-01-0{i+1}T00:00:00",
+                "date": f"2024-01-0{i + 1}T00:00:00",
                 "library": f"Library{i % 2 + 1}",  # Library1 or Library2
             },
             headers={"Authorization": f"Bearer {token}"},

@@ -6,13 +6,11 @@ import uuid
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import Session, SQLModel, select, delete
-from datetime import datetime
 import os
 
 from app.main import app
 from app.database import get_db
 from app.models import User, Photo, Library, Version, Album, album_photos
-from sqlmodel import Session, SQLModel
 
 
 # Test database setup

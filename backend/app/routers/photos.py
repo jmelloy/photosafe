@@ -27,7 +27,6 @@ from ..models import (
 )
 from ..auth import get_current_active_user
 from ..utils import (
-    serialize_photo_json_fields,
     handle_library_upsert,
     create_photo_response,
 )
@@ -473,14 +472,10 @@ async def get_photo_blocks(
         func.extract("day", Photo.date).label("day"),
         func.count().label("count"),
         func.max(func.coalesce(Photo.date_modified, Photo.date)).label("max_date"),
-    ).where(or_(Photo.labels == None, func.array_length(Photo.labels, 1) == None))
+    )
 
     # Filter out soft-deleted photos
-    query = query.where(Photo.deleted_at.is_(None))
-
-    # Filter by owner if not superuser
-    if not current_user.is_superuser:
-        query = query.where(Photo.owner_id == current_user.id)
+    query = query.where(Photo.owner_id == current_user.id)
 
     results = db.exec(
         query.group_by(
@@ -597,7 +592,7 @@ async def upload_photo(
     db_photo = Photo(
         uuid=str(uuid_lib.uuid4()),
         original_filename=file.filename,
-        date=datetime.utcnow(),
+        date=datetime.now(timezone.utc),
         filename=filename,
         file_path=str(file_path),
         content_type=file.content_type,

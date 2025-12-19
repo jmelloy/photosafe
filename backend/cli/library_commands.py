@@ -94,7 +94,7 @@ def info(library_id: int):
             click.echo(f"Error: Library {library_id} not found", err=True)
             return
 
-        click.echo(f"\nLibrary Information:")
+        click.echo("\nLibrary Information:")
         click.echo(f"  ID:          {library.id}")
         click.echo(f"  Name:        {library.name}")
         click.echo(

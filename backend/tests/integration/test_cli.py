@@ -11,7 +11,6 @@ import tempfile
 import json
 import os
 
-from app.database import get_db
 from app.models import User, Library, Photo, Version, Album, album_photos
 from cli.user_commands import user
 from cli.library_commands import library

@@ -10,11 +10,13 @@ This script demonstrates:
 
 NOTE: Requires PostgreSQL database to be running.
 """
+
 import subprocess
 import sys
 import os
 from pathlib import Path
 from sqlalchemy import select
+from datetime import datetime, timezone
 
 # Change to backend directory
 backend_dir = Path(__file__).parent
@@ -23,9 +25,9 @@ os.chdir(backend_dir)
 
 def run_command(cmd, description):
     """Run a shell command and print the result"""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"▶ {description}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"Command: {cmd}")
     print()
 
@@ -38,7 +40,7 @@ def run_command(cmd, description):
         print(f"❌ Command failed with exit code {result.returncode}")
         return False
     else:
-        print(f"✅ Success")
+        print("✅ Success")
         return True
 
 
@@ -73,14 +75,13 @@ def main():
         return 1
 
     # 5. Create test data using Python
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("▶ Creating test data")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     from app.database import SessionLocal
     from app.models import User
     from app.auth import get_password_hash
-    from datetime import datetime
 
     db = SessionLocal()
     try:
@@ -97,7 +98,7 @@ def main():
                 name="Test User",
                 is_active=True,
                 is_superuser=False,
-                date_joined=datetime.utcnow(),
+                date_joined=datetime.now(timezone.utc),
             )
             db.add(test_user)
             db.commit()
@@ -123,9 +124,9 @@ def main():
     # if not run_command("alembic upgrade head", "Re-applying migration"):
     #     return 1
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("✅ All migration tests passed successfully!")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print("\nNext steps:")
     print("1. Start the FastAPI server: uvicorn app.main:app --reload")
     print(

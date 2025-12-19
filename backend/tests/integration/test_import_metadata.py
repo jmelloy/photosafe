@@ -10,7 +10,6 @@ import tempfile
 import json
 import os
 from PIL import Image
-from datetime import datetime
 
 from app.models import User, Library, Photo, Version, Album, album_photos
 from cli.import_commands import import_photos, extract_exif_data, parse_meta_json

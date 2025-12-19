@@ -2,7 +2,6 @@
 
 import os
 import uuid
-from datetime import datetime
 
 import pytest
 from app.database import get_db
@@ -109,7 +108,7 @@ def create_test_photo(token, photo_uuid=None):
 
 def test_create_album():
     """Test creating a new album"""
-    token = create_test_user_and_login()
+    create_test_user_and_login()
     album_uuid = str(uuid.uuid4())
 
     response = client.post(
@@ -130,7 +129,7 @@ def test_create_album():
 
 def test_create_album_duplicate_uuid():
     """Test creating an album with a duplicate UUID fails"""
-    token = create_test_user_and_login()
+    create_test_user_and_login()
     album_uuid = str(uuid.uuid4())
 
     # Create first album
@@ -186,7 +185,7 @@ def test_create_album_with_photos():
 
 def test_list_albums_empty():
     """Test listing albums when none exist"""
-    token = create_test_user_and_login()
+    create_test_user_and_login()
 
     response = client.get("/api/albums/")
 
@@ -198,7 +197,7 @@ def test_list_albums_empty():
 
 def test_list_albums():
     """Test listing multiple albums"""
-    token = create_test_user_and_login()
+    create_test_user_and_login()
 
     # Create multiple albums
     for i in range(3):
@@ -225,7 +224,7 @@ def test_list_albums():
 
 def test_list_albums_pagination():
     """Test album list pagination"""
-    token = create_test_user_and_login()
+    create_test_user_and_login()
 
     # Create 5 albums
     for i in range(5):
@@ -249,7 +248,7 @@ def test_list_albums_pagination():
 
 def test_get_album():
     """Test retrieving a specific album by UUID"""
-    token = create_test_user_and_login()
+    create_test_user_and_login()
     album_uuid = str(uuid.uuid4())
 
     # Create album
@@ -276,7 +275,7 @@ def test_get_album():
 
 def test_get_album_not_found():
     """Test retrieving a non-existent album returns 404"""
-    token = create_test_user_and_login()
+    create_test_user_and_login()
     nonexistent_uuid = str(uuid.uuid4())
 
     response = client.get(f"/api/albums/{nonexistent_uuid}/")
@@ -287,7 +286,7 @@ def test_get_album_not_found():
 
 def test_update_or_create_album_create():
     """Test PUT endpoint creates a new album when it doesn't exist"""
-    token = create_test_user_and_login()
+    create_test_user_and_login()
     album_uuid = str(uuid.uuid4())
 
     response = client.put(
@@ -307,7 +306,7 @@ def test_update_or_create_album_create():
 
 def test_update_or_create_album_update():
     """Test PUT endpoint updates an existing album"""
-    token = create_test_user_and_login()
+    create_test_user_and_login()
     album_uuid = str(uuid.uuid4())
 
     # Create album
@@ -381,7 +380,7 @@ def test_update_or_create_album_with_photos():
 
 def test_patch_album():
     """Test partially updating an album"""
-    token = create_test_user_and_login()
+    create_test_user_and_login()
     album_uuid = str(uuid.uuid4())
 
     # Create album
@@ -409,7 +408,7 @@ def test_patch_album():
 
 def test_patch_album_not_found():
     """Test patching a non-existent album returns 404"""
-    token = create_test_user_and_login()
+    create_test_user_and_login()
     nonexistent_uuid = str(uuid.uuid4())
 
     response = client.patch(
@@ -489,7 +488,7 @@ def test_patch_album_clear_photos():
 
 def test_delete_album():
     """Test deleting an album"""
-    token = create_test_user_and_login()
+    create_test_user_and_login()
     album_uuid = str(uuid.uuid4())
 
     # Create album
@@ -515,7 +514,7 @@ def test_delete_album():
 
 def test_delete_album_not_found():
     """Test deleting a non-existent album returns 404"""
-    token = create_test_user_and_login()
+    create_test_user_and_login()
     nonexistent_uuid = str(uuid.uuid4())
 
     response = client.delete(f"/api/albums/{nonexistent_uuid}/")
@@ -561,7 +560,7 @@ def test_delete_album_with_photos():
 
 def test_album_with_dates():
     """Test creating and retrieving album with start and end dates"""
-    token = create_test_user_and_login()
+    create_test_user_and_login()
     album_uuid = str(uuid.uuid4())
 
     response = client.post(
@@ -590,7 +589,7 @@ def test_album_with_dates():
 
 def test_album_with_nonexistent_photos():
     """Test creating album with references to non-existent photos"""
-    token = create_test_user_and_login()
+    create_test_user_and_login()
 
     # Create album with non-existent photo UUIDs
     album_uuid = str(uuid.uuid4())

@@ -99,7 +99,7 @@ def info(username: str):
             click.echo(f"Error: User '{username}' not found", err=True)
             return
 
-        click.echo(f"\nUser Information:")
+        click.echo("\nUser Information:")
         click.echo(f"  ID:          {user.id}")
         click.echo(f"  Username:    {user.username}")
         click.echo(f"  Email:       {user.email}")

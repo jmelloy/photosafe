@@ -1,7 +1,6 @@
 """Tests for photo filtering functionality"""
 
 import os
-from datetime import datetime
 from uuid import uuid4
 
 import pytest
@@ -176,7 +175,6 @@ def test_filter_photos_by_date():
 
 def test_album_patch_endpoint():
     """Test PATCH endpoint for albums"""
-    from app.models import Album
 
     # Register and login
     client.post(

@@ -1,7 +1,6 @@
 """Tests for authentication and user photo management"""
 
 import os
-from datetime import datetime
 import uuid
 
 import pytest
