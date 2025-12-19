@@ -34,13 +34,13 @@
         </select>
       </div>
 
-      <!-- Keywords -->
-      <div class="filter-section" v-if="keywords.length > 0">
-        <label class="filter-label">Keywords</label>
-        <select v-model="selectedKeyword" class="filter-select">
-          <option value="">All Keywords</option>
-          <option v-for="keyword in keywords" :key="keyword" :value="keyword">
-            {{ keyword }}
+      <!-- Libraries -->
+      <div class="filter-section" v-if="libraries.length > 0">
+        <label class="filter-label">Library</label>
+        <select v-model="selectedLibrary" class="filter-select">
+          <option value="">All Libraries</option>
+          <option v-for="library in libraries" :key="library" :value="library">
+            {{ library }}
           </option>
         </select>
       </div>
@@ -141,7 +141,7 @@ const currentPage = ref<number>(1);
 const hasMore = ref<boolean>(true);
 const searchQuery = ref<string>("");
 const selectedAlbum = ref<string>("");
-const selectedKeyword = ref<string>("");
+const selectedLibrary = ref<string>("");
 const selectedPerson = ref<string>("");
 const startDate = ref<string>("");
 const endDate = ref<string>("");
@@ -153,7 +153,7 @@ const filterPanoramas = ref<boolean>(false);
 const filterPortraits = ref<boolean>(false);
 const filterHasLocation = ref<boolean>(false);
 const albums = ref<string[]>([]);
-const keywords = ref<string[]>([]);
+const libraries = ref<string[]>([]);
 const persons = ref<string[]>([]);
 
 const buildFilters = (): PhotoFilters => {
@@ -161,7 +161,7 @@ const buildFilters = (): PhotoFilters => {
 
   if (searchQuery.value) filters.search = searchQuery.value;
   if (selectedAlbum.value) filters.album = selectedAlbum.value;
-  if (selectedKeyword.value) filters.keyword = selectedKeyword.value;
+  if (selectedLibrary.value) filters.library = selectedLibrary.value;
   if (selectedPerson.value) filters.person = selectedPerson.value;
   if (startDate.value) filters.start_date = startDate.value;
   if (endDate.value) filters.end_date = endDate.value;
@@ -209,7 +209,7 @@ const loadAvailableFilters = async () => {
   try {
     const filters = await getAvailableFilters();
     albums.value = filters.albums;
-    keywords.value = filters.keywords;
+    libraries.value = filters.libraries;
     persons.value = filters.persons;
   } catch (error) {
     console.error("Failed to load filters:", error);
@@ -229,7 +229,7 @@ const hasActiveFilters = computed(() => {
   return (
     searchQuery.value ||
     selectedAlbum.value ||
-    selectedKeyword.value ||
+    selectedLibrary.value ||
     selectedPerson.value ||
     startDate.value ||
     endDate.value ||
@@ -246,7 +246,7 @@ const hasActiveFilters = computed(() => {
 const clearFilters = () => {
   searchQuery.value = "";
   selectedAlbum.value = "";
-  selectedKeyword.value = "";
+  selectedLibrary.value = "";
   selectedPerson.value = "";
   startDate.value = "";
   endDate.value = "";
@@ -264,7 +264,7 @@ watch(
   [
     searchQuery,
     selectedAlbum,
-    selectedKeyword,
+    selectedLibrary,
     selectedPerson,
     startDate,
     endDate,

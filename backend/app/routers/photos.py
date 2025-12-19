@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import List, Optional, Dict
 
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, or_
 
 from ..database import get_db
@@ -286,6 +286,7 @@ async def list_photos(
     album: Optional[str] = None,
     keyword: Optional[str] = None,
     person: Optional[str] = None,
+    library: Optional[str] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     favorite: Optional[bool] = None,
@@ -313,6 +314,9 @@ async def list_photos(
     else:
         query = db.query(Photo).filter(Photo.owner_id == current_user.id)
 
+    # Eagerly load versions to avoid N+1 queries
+    query = query.options(joinedload(Photo.versions))
+
     # Filter out soft-deleted photos by default
     query = query.filter(Photo.deleted_at.is_(None))
 
@@ -339,6 +343,10 @@ async def list_photos(
     # Apply person filter
     if person:
         query = query.filter(Photo.persons.contains([person]))
+
+    # Apply library filter
+    if library:
+        query = query.filter(Photo.library == library)
 
     # Apply date range filters
     if start_date:
@@ -413,21 +421,22 @@ async def get_photo_filters(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> Dict[str, List[str]]:
-    """Get available filter values for albums, keywords, and persons"""
+    """Get available filter values for albums, keywords, persons, and libraries"""
     # Superusers can see all photos, regular users only see their own
     query = (
         db.query(Photo)
         .filter(Photo.owner_id == current_user.id)
         .filter(Photo.deleted_at.is_(None))
-    ).with_entities(Photo.albums, Photo.keywords, Photo.persons)
+    ).with_entities(Photo.albums, Photo.keywords, Photo.persons, Photo.library)
 
     # Get all photos for this user
     photos = query.distinct().all()
 
-    # Extract unique values from arrays
+    # Extract unique values from arrays and library field
     albums = set()
     keywords = set()
     persons = set()
+    libraries = set()
 
     for photo in photos:
         if photo.albums:
@@ -436,11 +445,14 @@ async def get_photo_filters(
             keywords.update(photo.keywords)
         if photo.persons:
             persons.update(photo.persons)
+        if photo.library:
+            libraries.add(photo.library)
 
     return {
         "albums": sorted(list(albums)),
         "keywords": sorted(list(keywords)),
         "persons": sorted(list(persons)),
+        "libraries": sorted(list(libraries)),
     }
 
 
