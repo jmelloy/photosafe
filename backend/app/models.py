@@ -5,14 +5,11 @@ from sqlalchemy import (
     String,
     Text,
     DateTime,
-    Integer,
-    Boolean,
-    Float,
     ForeignKey,
     Table,
 )
 from sqlalchemy.dialects.postgresql import JSONB, ARRAY, UUID
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 import uuid as pkg_uuid
@@ -43,7 +40,7 @@ class User(SQLModel, table=True):
     name: Optional[str] = Field(default=None, sa_type=String)
     is_active: bool = Field(default=True)
     is_superuser: bool = Field(default=False)
-    date_joined: datetime = Field(default_factory=datetime.utcnow)
+    date_joined: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     last_login: Optional[datetime] = None
 
     # Relationships
@@ -60,10 +57,14 @@ class Library(SQLModel, table=True):
     name: str = Field(sa_type=String)
     path: Optional[str] = Field(default=None, sa_type=Text)
     description: Optional[str] = Field(default=None, sa_type=Text)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(
-        default_factory=datetime.utcnow,
-        sa_column=Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow),
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(
+            DateTime,
+            default=lambda: datetime.now(timezone.utc),
+            onupdate=lambda: datetime.now(timezone.utc),
+        ),
     )
 
     # Owner relationship
@@ -179,7 +180,9 @@ class Photo(SQLModel, table=True):
     file_path: Optional[str] = Field(default=None, sa_type=String)
     content_type: Optional[str] = Field(default=None, sa_type=String)
     file_size: Optional[int] = None
-    uploaded_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    uploaded_at: Optional[datetime] = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
 
     # Soft delete support
     deleted_at: Optional[datetime] = None

@@ -2,7 +2,7 @@
 
 import pytest
 from click.testing import CliRunner
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, delete, select
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import Session, SQLModel
 from pathlib import Path
@@ -10,7 +10,6 @@ import tempfile
 import json
 import os
 from PIL import Image
-from datetime import datetime
 
 from app.models import User, Library, Photo, Version, Album, album_photos
 from cli.import_commands import import_photos, extract_exif_data, parse_meta_json
@@ -47,11 +46,11 @@ def setup_database():
     db = TestingSessionLocal()
     try:
         db.execute(album_photos.delete())
-        db.query(Version).delete()
-        db.query(Photo).delete()
-        db.query(Album).delete()
-        db.query(Library).delete()
-        db.query(User).delete()
+        db.exec(delete(Version))
+        db.exec(delete(Photo))
+        db.exec(delete(Album))
+        db.exec(delete(Library))
+        db.exec(delete(User))
         db.commit()
     finally:
         db.close()
@@ -242,7 +241,9 @@ class TestPhotoImportWithMetadata:
             # Verify photo was imported with metadata
             db = TestingSessionLocal()
             try:
-                photo = db.query(Photo).filter(Photo.owner_id == test_user.id).first()
+                photo = db.exec(
+                    select(Photo).where(Photo.owner_id == test_user.id)
+                ).scalar_one()
                 assert photo is not None
                 assert photo.original_filename == "test_photo.jpg"
 
@@ -289,7 +290,9 @@ class TestPhotoImportWithMetadata:
             # Verify photo has EXIF data
             db = TestingSessionLocal()
             try:
-                photo = db.query(Photo).filter(Photo.owner_id == test_user.id).first()
+                photo = db.exec(
+                    select(Photo).where(Photo.owner_id == test_user.id)
+                ).scalar_one()
                 assert photo is not None
 
                 # Check if EXIF data was stored

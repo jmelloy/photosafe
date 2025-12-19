@@ -2,6 +2,7 @@
 
 import click
 from sqlalchemy.orm import Session
+from sqlmodel import select
 from app.database import SessionLocal
 from app.models import User, Library
 
@@ -22,7 +23,7 @@ def create(username: str, name: str, path: str, description: str):
     db: Session = SessionLocal()
     try:
         # Check if user exists
-        user = db.query(User).filter(User.username == username).first()
+        user = db.exec(select(User).where(User.username == username)).first()
         if not user:
             click.echo(f"Error: User '{username}' not found", err=True)
             return
@@ -55,15 +56,15 @@ def list(username: str):
     """List all libraries"""
     db: Session = SessionLocal()
     try:
-        query = db.query(Library)
+        query = select(Library)
         if username:
-            user = db.query(User).filter(User.username == username).first()
+            user = db.exec(select(User).where(User.username == username)).first()
             if not user:
                 click.echo(f"Error: User '{username}' not found", err=True)
                 return
-            query = query.filter(Library.owner_id == user.id)
+            query = query.where(Library.owner_id == user.id)
 
-        libraries = query.all()
+        libraries = db.exec(query).all()
         if not libraries:
             click.echo("No libraries found")
             return
@@ -88,12 +89,12 @@ def info(library_id: int):
     """Show detailed library information"""
     db: Session = SessionLocal()
     try:
-        library = db.query(Library).filter(Library.id == library_id).first()
+        library = db.exec(select(Library).where(Library.id == library_id)).first()
         if not library:
             click.echo(f"Error: Library {library_id} not found", err=True)
             return
 
-        click.echo(f"\nLibrary Information:")
+        click.echo("\nLibrary Information:")
         click.echo(f"  ID:          {library.id}")
         click.echo(f"  Name:        {library.name}")
         click.echo(
@@ -118,7 +119,7 @@ def update(library_id: int, name: str, path: str, description: str):
     """Update a library"""
     db: Session = SessionLocal()
     try:
-        library = db.query(Library).filter(Library.id == library_id).first()
+        library = db.exec(select(Library).where(Library.id == library_id)).first()
         if not library:
             click.echo(f"Error: Library {library_id} not found", err=True)
             return

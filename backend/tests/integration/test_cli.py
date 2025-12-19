@@ -3,7 +3,7 @@
 import pytest
 import uuid
 from click.testing import CliRunner
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, select, delete
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import Session, SQLModel
 from pathlib import Path
@@ -11,7 +11,6 @@ import tempfile
 import json
 import os
 
-from app.database import get_db
 from app.models import User, Library, Photo, Version, Album, album_photos
 from cli.user_commands import user
 from cli.library_commands import library
@@ -57,11 +56,11 @@ def setup_database():
     db = TestingSessionLocal()
     try:
         db.execute(album_photos.delete())
-        db.query(Version).delete()
-        db.query(Photo).delete()
-        db.query(Album).delete()
-        db.query(Library).delete()
-        db.query(User).delete()
+        db.exec(delete(Version))
+        db.exec(delete(Photo))
+        db.exec(delete(Album))
+        db.exec(delete(Library))
+        db.exec(delete(User))
         db.commit()
 
         # Reset sequences so IDs start from 1 again
@@ -77,11 +76,11 @@ def setup_database():
     db = TestingSessionLocal()
     try:
         db.execute(album_photos.delete())
-        db.query(Version).delete()
-        db.query(Photo).delete()
-        db.query(Album).delete()
-        db.query(Library).delete()
-        db.query(User).delete()
+        db.exec(delete(Version))
+        db.exec(delete(Photo))
+        db.exec(delete(Album))
+        db.exec(delete(Library))
+        db.exec(delete(User))
         db.commit()
 
         # Reset sequences so IDs start from 1 again
@@ -125,7 +124,10 @@ class TestUserCommands:
         # Verify in database
         db = TestingSessionLocal()
         try:
-            db_user = db.query(User).filter(User.username == "testuser").first()
+            db_user = db.exec(
+                select(User).where(User.username == "testuser")
+            ).scalar_one()
+            print(db_user)
             assert db_user is not None
             assert db_user.email == "test@example.com"
             assert db_user.name == "Test User"
@@ -154,7 +156,7 @@ class TestUserCommands:
         # Verify in database
         db = TestingSessionLocal()
         try:
-            db_user = db.query(User).filter(User.username == "admin").first()
+            db_user = db.exec(select(User).where(User.username == "admin")).scalar_one()
             assert db_user.is_superuser is True
         finally:
             db.close()
@@ -293,7 +295,9 @@ class TestLibraryCommands:
         # Verify in database
         db = TestingSessionLocal()
         try:
-            db_library = db.query(Library).filter(Library.name == "My Photos").first()
+            db_library = db.exec(
+                select(Library).where(Library.name == "My Photos")
+            ).scalar_one()
             assert db_library is not None
             assert db_library.path == "/home/testuser/photos"
             assert db_library.description == "Test library"
@@ -454,7 +458,9 @@ class TestImportCommands:
             # Verify in database
             db = TestingSessionLocal()
             try:
-                photo = db.query(Photo).filter(Photo.uuid == test_uuid).first()
+                photo = db.exec(
+                    select(Photo).where(Photo.uuid == test_uuid)
+                ).scalar_one()
                 assert photo is not None
                 assert photo.title == "Test Photo"
                 assert photo.library_id == 1
@@ -507,7 +513,7 @@ class TestImportCommands:
             # Verify nothing was imported
             db = TestingSessionLocal()
             try:
-                count = db.query(Photo).count()
+                count = len(db.exec(select(Photo)).all())
                 assert count == 0
             finally:
                 db.close()

@@ -1,7 +1,6 @@
 """Tests for versions preselection and library filters"""
 
 import os
-from datetime import datetime
 import uuid
 
 import pytest
@@ -9,7 +8,7 @@ from app.database import get_db
 from app.main import app
 from app.models import Library, Photo, User, Version, Album, album_photos
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, delete
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import Session, SQLModel
 
@@ -50,11 +49,11 @@ def cleanup_db():
     db = TestingSessionLocal()
     try:
         db.execute(album_photos.delete())
-        db.query(Version).delete()
-        db.query(Photo).delete()
-        db.query(Album).delete()
-        db.query(Library).delete()
-        db.query(User).delete()
+        db.exec(delete(Version))
+        db.exec(delete(Photo))
+        db.exec(delete(Album))
+        db.exec(delete(Library))
+        db.exec(delete(User))
         db.commit()
     finally:
         db.close()
@@ -65,11 +64,11 @@ def cleanup_db():
     db = TestingSessionLocal()
     try:
         db.execute(album_photos.delete())
-        db.query(Version).delete()
-        db.query(Photo).delete()
-        db.query(Album).delete()
-        db.query(Library).delete()
-        db.query(User).delete()
+        db.exec(delete(Version))
+        db.exec(delete(Photo))
+        db.exec(delete(Album))
+        db.exec(delete(Library))
+        db.exec(delete(User))
         db.commit()
     finally:
         db.close()
@@ -241,7 +240,7 @@ def test_available_filters_includes_libraries():
             json={
                 "uuid": str(uuid.uuid4()),
                 "original_filename": f"photo{i}.jpg",
-                "date": f"2024-01-0{i+1}T00:00:00",
+                "date": f"2024-01-0{i + 1}T00:00:00",
                 "library": f"Library{i % 2 + 1}",  # Library1 or Library2
             },
             headers={"Authorization": f"Bearer {token}"},

@@ -2,6 +2,7 @@
 
 import click
 from sqlalchemy.orm import Session
+from sqlmodel import select
 from app.database import SessionLocal
 from app.models import User
 from app.auth import get_password_hash
@@ -30,12 +31,12 @@ def create(username: str, email: str, password: str, name: str, superuser: bool)
     db: Session = SessionLocal()
     try:
         # Check if user exists
-        existing_user = db.query(User).filter(User.username == username).first()
+        existing_user = db.exec(select(User).where(User.username == username)).first()
         if existing_user:
             click.echo(f"Error: User '{username}' already exists", err=True)
             return
 
-        existing_email = db.query(User).filter(User.email == email).first()
+        existing_email = db.exec(select(User).where(User.email == email)).first()
         if existing_email:
             click.echo(f"Error: Email '{email}' already exists", err=True)
             return
@@ -68,7 +69,7 @@ def list():
     """List all users"""
     db: Session = SessionLocal()
     try:
-        users = db.query(User).all()
+        users = db.exec(select(User)).all()
         if not users:
             click.echo("No users found")
             return
@@ -93,12 +94,12 @@ def info(username: str):
     """Show detailed user information"""
     db: Session = SessionLocal()
     try:
-        user = db.query(User).filter(User.username == username).first()
+        user = db.exec(select(User).where(User.username == username)).first()
         if not user:
             click.echo(f"Error: User '{username}' not found", err=True)
             return
 
-        click.echo(f"\nUser Information:")
+        click.echo("\nUser Information:")
         click.echo(f"  ID:          {user.id}")
         click.echo(f"  Username:    {user.username}")
         click.echo(f"  Email:       {user.email}")

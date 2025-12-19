@@ -194,6 +194,7 @@ import { useRouter } from "vue-router";
 import { getPhoto } from "../api/photos";
 import type { Photo } from "../types/api";
 import PhotoMap from "../components/PhotoMap.vue";
+import { formatPlace } from "../utils/formatPlace";
 
 interface PhotoDetailPageProps {
   uuid: string;
@@ -279,14 +280,6 @@ const formatFileSize = (bytes?: number): string => {
   if (!bytes) return "Unknown";
   const mb = bytes / (1024 * 1024);
   return `${mb.toFixed(2)} MB`;
-};
-
-const formatPlace = (place: unknown): string => {
-  if (typeof place === "string") return place;
-  if (place && typeof place === "object") {
-    return JSON.stringify(place);
-  }
-  return "";
 };
 
 const formatExifKey = (key: string): string => {

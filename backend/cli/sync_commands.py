@@ -4,7 +4,7 @@
 import concurrent.futures
 import json
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import timezone
 
 import boto3
 import click
@@ -419,7 +419,7 @@ def dump_macos(limit):
             break
 
         if (i + 1) % 1000 == 0:
-            click.echo(f"Processing photo {i+1}: {photo.filename}")
+            click.echo(f"Processing photo {i + 1}: {photo.filename}")
 
         p = photo.asdict()
         p["masterFingerprint"] = photo._info["masterFingerprint"]
@@ -493,10 +493,8 @@ def icloud(
     """Sync photos from iCloud"""
     import mimetypes
     import shutil
-    import sys
 
     import boto3
-    from pyicloud import PyiCloudService
     from tqdm import tqdm
 
     from .sync_tools import (
@@ -815,7 +813,6 @@ def list_libraries(icloud_username, icloud_password):
 @click.option("--limit", default=25, help="Number of photos to export")
 def dump_icloud(icloud_username, icloud_password, output, limit):
     """Dump sample photos from iCloud to a JSON fixtures file"""
-    import sys
 
     from .sync_tools import DateTimeEncoder, authenticate_icloud
 
@@ -832,7 +829,7 @@ def dump_icloud(icloud_username, icloud_password, output, limit):
             if len(sample_photos) >= limit:
                 break
 
-            click.echo(f"Processing photo {i+1}: {photo.filename}")
+            click.echo(f"Processing photo {i + 1}: {photo.filename}")
 
             date = photo.asset_date or photo.created
             data = {
