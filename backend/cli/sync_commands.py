@@ -92,6 +92,9 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
     photos_db = osxphotos.PhotosDB()
     base_path = photos_db.library_path
 
+    # Initialize S3 client
+    s3 = boto3.client("s3", "us-west-2")
+
     # Authenticate
     auth = PhotoSafeAuth(base_url, username, password)
 
@@ -292,6 +295,37 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
                     # Add versions to photo data
                     if versions:
                         p["versions"] = versions
+                    
+                    # Upload files to S3 before creating photo record
+                    try:
+                        # Upload original file
+                        if has_original and photo.path and os.path.exists(photo.path):
+                            base, ext = os.path.splitext(photo.path)
+                            s3_key = f"{username}/originals/{p['uuid'][0:1]}/{p['uuid']}{ext}"
+                            click.echo(f"Uploading original to S3: {s3_key}")
+                            s3.upload_file(photo.path, bucket, s3_key)
+                        
+                        # Upload edited file if available
+                        if hasattr(photo, 'path_edited') and photo.path_edited and os.path.exists(photo.path_edited):
+                            base, ext = os.path.splitext(photo.path_edited)
+                            s3_key = f"{username}/edited/{p['uuid'][0:1]}/{p['uuid']}{ext}"
+                            click.echo(f"Uploading edited to S3: {s3_key}")
+                            s3.upload_file(photo.path_edited, bucket, s3_key)
+                        
+                        # Upload derivative/thumbnail files if available
+                        if hasattr(photo, 'path_derivatives') and photo.path_derivatives:
+                            for i, deriv_path in enumerate(photo.path_derivatives):
+                                if os.path.exists(deriv_path):
+                                    base, ext = os.path.splitext(deriv_path)
+                                    s3_key = f"{username}/thumbnails/{p['uuid'][0:1]}/{p['uuid']}{ext}"
+                                    click.echo(f"Uploading thumbnail to S3: {s3_key}")
+                                    s3.upload_file(deriv_path, bucket, s3_key)
+                    except Exception as upload_error:
+                        click.echo(
+                            f"Error uploading files to S3 for {photo.uuid}: {str(upload_error)}",
+                            err=True,
+                        )
+                        # Continue to create photo even if upload fails
                     
                     # Try to create the photo
                     try:

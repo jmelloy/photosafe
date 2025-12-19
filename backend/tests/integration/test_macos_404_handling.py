@@ -61,43 +61,51 @@ class TestMacOS404Handling:
             mock_photos_db.photos.return_value = [mock_photo]
             
             # Mock boto3
-            with patch("cli.sync_commands.boto3"):
-                # Mock PhotoSafeAuth
-                with patch("cli.sync_tools.PhotoSafeAuth") as mock_auth:
-                    mock_auth_instance = MagicMock()
-                    mock_auth.return_value = mock_auth_instance
-                    
-                    # Mock blocks API
-                    mock_auth_instance.get.return_value.json.return_value = {}
-                    mock_auth_instance.get.return_value.status_code = 200
-                    mock_auth_instance.get.return_value.raise_for_status = MagicMock()
-                    
-                    # Mock the patch request to return 404
-                    mock_auth_instance.patch.return_value.status_code = 404
-                    mock_auth_instance.patch.return_value.raise_for_status = MagicMock()
-                    
-                    # Mock the post request (create photo)
-                    mock_auth_instance.post.return_value.status_code = 201
-                    mock_auth_instance.post.return_value.raise_for_status = MagicMock()
-                    
-                    # Run the sync command with skip-blocks-check to ensure it processes the photo
-                    result = runner.invoke(
-                        sync,
-                        [
-                            "macos",
-                            "--username", "test",
-                            "--password", "test",
-                            "--base-url", "http://localhost:8000",
-                            "--bucket", "test-bucket",
-                            "--skip-blocks-check"
-                        ],
-                    )
-                    
-                    assert result.exit_code == 0
-                    # Should have created the photo
-                    assert "Creating photo" in result.output
-                    # Verify POST was called to create photo
-                    mock_auth_instance.post.assert_called_once()
+            with patch("cli.sync_commands.boto3") as mock_boto3:
+                mock_s3 = MagicMock()
+                mock_boto3.client.return_value = mock_s3
+                
+                # Mock os.path.exists to return True for file uploads
+                with patch("cli.sync_commands.os.path.exists", return_value=True):
+                    # Mock PhotoSafeAuth
+                    with patch("cli.sync_tools.PhotoSafeAuth") as mock_auth:
+                        mock_auth_instance = MagicMock()
+                        mock_auth.return_value = mock_auth_instance
+                        
+                        # Mock blocks API
+                        mock_auth_instance.get.return_value.json.return_value = {}
+                        mock_auth_instance.get.return_value.status_code = 200
+                        mock_auth_instance.get.return_value.raise_for_status = MagicMock()
+                        
+                        # Mock the patch request to return 404
+                        mock_auth_instance.patch.return_value.status_code = 404
+                        mock_auth_instance.patch.return_value.raise_for_status = MagicMock()
+                        
+                        # Mock the post request (create photo)
+                        mock_auth_instance.post.return_value.status_code = 201
+                        mock_auth_instance.post.return_value.raise_for_status = MagicMock()
+                        
+                        # Run the sync command with skip-blocks-check to ensure it processes the photo
+                        result = runner.invoke(
+                            sync,
+                            [
+                                "macos",
+                                "--username", "test",
+                                "--password", "test",
+                                "--base-url", "http://localhost:8000",
+                                "--bucket", "test-bucket",
+                                "--skip-blocks-check"
+                            ],
+                        )
+                        
+                        assert result.exit_code == 0
+                        # Should have created the photo
+                        assert "Creating photo" in result.output
+                        # Verify POST was called to create photo
+                        mock_auth_instance.post.assert_called_once()
+                        
+                        # Verify S3 upload was called
+                        mock_s3.upload_file.assert_called()
                     
                     # Check the data passed to POST
                     call_args = mock_auth_instance.post.call_args
