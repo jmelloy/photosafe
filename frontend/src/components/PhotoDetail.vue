@@ -205,6 +205,7 @@
 import { computed } from "vue";
 import type { Photo } from "../types/api";
 import { S3_BASE_URL } from "../config";
+import { formatPlace } from "../utils/formatPlace";
 
 interface PhotoDetailProps {
   photo: Photo | null;
@@ -263,19 +264,6 @@ const formatFileSize = (bytes?: number): string => {
   if (bytes < 1024) return bytes + " B";
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
   return (bytes / (1024 * 1024)).toFixed(1) + " MB";
-};
-
-const formatPlace = (place: Record<string, any>): string => {
-  if (!place) return "";
-
-  // Try common place properties
-  const parts = [];
-  if (place.name) parts.push(place.name);
-  if (place.city) parts.push(place.city);
-  if (place.state) parts.push(place.state);
-  if (place.country) parts.push(place.country);
-
-  return parts.join(", ") || JSON.stringify(place);
 };
 
 const formatExifValue = (key: string, value: any): string => {
