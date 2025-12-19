@@ -235,8 +235,8 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
         if metadata_entries:
             p["metadata"] = metadata_entries
         
-        # Keep search_info for backward compatibility (will be converted to metadata by API)
-        p["search_info"] = search_info_dict
+        # Note: We don't send search_info anymore since we're sending metadata directly
+        # This avoids duplicate entries with different sources
         
         # Write JSON file if requested
         if output_json:

@@ -282,7 +282,7 @@ class PhotoMetadata(SQLModel, table=True):
     source: str = Field(sa_type=String, index=True)
 
     # Relationship
-    photo: Optional["Photo"] = Relationship(back_populates="metadata")
+    photo: Optional["Photo"] = Relationship(back_populates="photo_metadata")
 
 
 class Album(SQLModel, table=True):

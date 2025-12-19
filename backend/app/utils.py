@@ -3,7 +3,15 @@
 import json
 from typing import Dict, Any, List
 from sqlalchemy.orm import Session
-from .models import Photo, User, Library, VersionRead, PhotoRead, PhotoMetadata, PhotoMetadataRead
+from .models import (
+    Photo,
+    User,
+    Library,
+    VersionRead,
+    PhotoRead,
+    PhotoMetadata,
+    PhotoMetadataRead,
+)
 
 
 def serialize_json_field(value):
