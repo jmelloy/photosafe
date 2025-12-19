@@ -79,7 +79,7 @@ class TestUserCommands:
         try:
             db_user = db.exec(
                 select(User).where(User.username == "testuser")
-            ).one()
+            ).first()
             print(db_user)
             assert db_user is not None
             assert db_user.email == "test@example.com"
@@ -109,7 +109,7 @@ class TestUserCommands:
         # Verify in database
         db = setup_database()
         try:
-            db_user = db.exec(select(User).where(User.username == "admin")).one()
+            db_user = db.exec(select(User).where(User.username == "admin")).first()
             assert db_user.is_superuser is True
         finally:
             db.close()
@@ -250,7 +250,7 @@ class TestLibraryCommands:
         try:
             db_library = db.exec(
                 select(Library).where(Library.name == "My Photos")
-            ).one()
+            ).first()
             assert db_library is not None
             assert db_library.path == "/home/testuser/photos"
             assert db_library.description == "Test library"
@@ -413,7 +413,7 @@ class TestImportCommands:
             try:
                 photo = db.exec(
                     select(Photo).where(Photo.uuid == test_uuid)
-                ).one()
+                ).first()
                 assert photo is not None
                 assert photo.title == "Test Photo"
                 assert photo.library_id == 1
