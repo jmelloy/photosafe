@@ -125,7 +125,10 @@ class TestUserCommands:
         # Verify in database
         db = TestingSessionLocal()
         try:
-            db_user = db.exec(select(User).where(User.username == "testuser")).first()
+            db_user = db.exec(
+                select(User).where(User.username == "testuser")
+            ).scalar_one()
+            print(db_user)
             assert db_user is not None
             assert db_user.email == "test@example.com"
             assert db_user.name == "Test User"
@@ -154,7 +157,7 @@ class TestUserCommands:
         # Verify in database
         db = TestingSessionLocal()
         try:
-            db_user = db.exec(select(User).where(User.username == "admin")).first()
+            db_user = db.exec(select(User).where(User.username == "admin")).scalar_one()
             assert db_user.is_superuser is True
         finally:
             db.close()
@@ -295,7 +298,7 @@ class TestLibraryCommands:
         try:
             db_library = db.exec(
                 select(Library).where(Library.name == "My Photos")
-            ).first()
+            ).scalar_one()
             assert db_library is not None
             assert db_library.path == "/home/testuser/photos"
             assert db_library.description == "Test library"
@@ -456,7 +459,9 @@ class TestImportCommands:
             # Verify in database
             db = TestingSessionLocal()
             try:
-                photo = db.exec(select(Photo).where(Photo.uuid == test_uuid)).first()
+                photo = db.exec(
+                    select(Photo).where(Photo.uuid == test_uuid)
+                ).scalar_one()
                 assert photo is not None
                 assert photo.title == "Test Photo"
                 assert photo.library_id == 1

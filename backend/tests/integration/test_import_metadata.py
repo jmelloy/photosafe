@@ -2,7 +2,7 @@
 
 import pytest
 from click.testing import CliRunner
-from sqlalchemy import create_engine, delete
+from sqlalchemy import create_engine, delete, select
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import Session, SQLModel
 from pathlib import Path
@@ -244,7 +244,7 @@ class TestPhotoImportWithMetadata:
             try:
                 photo = db.exec(
                     select(Photo).where(Photo.owner_id == test_user.id)
-                ).first()
+                ).scalar_one()
                 assert photo is not None
                 assert photo.original_filename == "test_photo.jpg"
 
@@ -293,7 +293,7 @@ class TestPhotoImportWithMetadata:
             try:
                 photo = db.exec(
                     select(Photo).where(Photo.owner_id == test_user.id)
-                ).first()
+                ).scalar_one()
                 assert photo is not None
 
                 # Check if EXIF data was stored
