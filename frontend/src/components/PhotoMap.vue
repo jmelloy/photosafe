@@ -25,7 +25,7 @@ let map: L.Map | null = null;
 let marker: L.Marker | null = null;
 
 const initMap = () => {
-  if (!mapContainer.value || props.latitude === undefined || props.longitude === undefined) return;
+  if (!mapContainer.value || props.latitude == null || props.longitude == null) return;
 
   // Create map centered on the photo location
   map = L.map(mapContainer.value).setView(
@@ -49,7 +49,7 @@ const initMap = () => {
 };
 
 const updateMarker = () => {
-  if (map && marker && props.latitude !== undefined && props.longitude !== undefined) {
+  if (map && marker && props.latitude != null && props.longitude != null) {
     // Update marker position
     marker.setLatLng([props.latitude, props.longitude]);
     map.setView([props.latitude, props.longitude], props.zoom);

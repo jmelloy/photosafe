@@ -109,6 +109,14 @@ const loadPhotos = async () => {
   }
 };
 
+const createMarkerIcon = (photoCount: number): string => {
+  return `
+    <div class="custom-marker">
+      <div class="marker-count">${photoCount}</div>
+    </div>
+  `;
+};
+
 const initMap = () => {
   if (!mapContainer.value || photos.value.length === 0) return;
 
@@ -133,14 +141,8 @@ const initMap = () => {
 
     // Create custom icon with photo count
     const photoCount = groupPhotos.length;
-    const iconHtml = `
-      <div class="custom-marker">
-        <div class="marker-count">${photoCount}</div>
-      </div>
-    `;
-
     const customIcon = L.divIcon({
-      html: iconHtml,
+      html: createMarkerIcon(photoCount),
       className: "custom-marker-wrapper",
       iconSize: [40, 40],
       iconAnchor: [20, 40],
@@ -172,10 +174,10 @@ const initMap = () => {
     groupPhotos.slice(0, 4).forEach((photo) => {
       const imgWrapper = document.createElement("div");
       imgWrapper.className = "popup-thumbnail";
-      imgWrapper.onclick = () => {
+      imgWrapper.addEventListener("click", () => {
         selectedPhoto.value = photo;
         map?.closePopup();
-      };
+      });
 
       const img = document.createElement("img");
       img.src = photo.url || "";
