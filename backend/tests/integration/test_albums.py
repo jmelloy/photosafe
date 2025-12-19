@@ -1,80 +1,11 @@
 """Tests for album API endpoints"""
 
-import os
 import uuid
 
 import pytest
-from app.database import get_db
-from app.main import app
-from app.models import Library, Photo, User, Version, Album, album_photos
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, delete
-from sqlalchemy.orm import sessionmaker
-from sqlmodel import SQLModel, Session
-
-# Test database setup - PostgreSQL connection required
-SQLALCHEMY_DATABASE_URL = os.getenv(
-    "TEST_DATABASE_URL",
-    "postgresql://photosafe:photosafe@localhost:5432/photosafe_test",
-)
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
-TestingSessionLocal = sessionmaker(
-    autocommit=False, autoflush=False, bind=engine, class_=Session
-)
-
-# Create all tables once
-SQLModel.metadata.create_all(bind=engine)
 
 
-def override_get_db():
-    """Override database dependency for testing"""
-    try:
-        db = TestingSessionLocal()
-        yield db
-    finally:
-        db.close()
-
-
-# Override the database dependency
-app.dependency_overrides[get_db] = override_get_db
-
-# Create test client
-client = TestClient(app)
-
-
-@pytest.fixture(autouse=True)
-def cleanup_db():
-    """Clean up database between tests"""
-    # Clear all data before test
-    db = TestingSessionLocal()
-    try:
-        db.execute(album_photos.delete())
-        db.exec(delete(Version))
-        db.exec(delete(Photo))
-        db.exec(delete(Album))
-        db.exec(delete(Library))
-        db.exec(delete(User))
-        db.commit()
-    finally:
-        db.close()
-
-    yield
-
-    # Clear all data after test
-    db = TestingSessionLocal()
-    try:
-        db.execute(album_photos.delete())
-        db.exec(delete(Version))
-        db.exec(delete(Photo))
-        db.exec(delete(Album))
-        db.exec(delete(Library))
-        db.exec(delete(User))
-        db.commit()
-    finally:
-        db.close()
-
-
-def create_test_user_and_login():
+def create_test_user_and_login(client):
     """Helper function to create a user and return auth token"""
     client.post(
         "/api/auth/register",
@@ -90,7 +21,7 @@ def create_test_user_and_login():
     return login_response.json()["access_token"]
 
 
-def create_test_photo(token, photo_uuid=None):
+def create_test_photo(client, token, photo_uuid=None):
     """Helper function to create a test photo"""
     if photo_uuid is None:
         photo_uuid = str(uuid.uuid4())
@@ -106,9 +37,9 @@ def create_test_photo(token, photo_uuid=None):
     return response.json()
 
 
-def test_create_album():
+def test_create_album(client):
     """Test creating a new album"""
-    create_test_user_and_login()
+    create_test_user_and_login(client)
     album_uuid = str(uuid.uuid4())
 
     response = client.post(
@@ -127,9 +58,9 @@ def test_create_album():
     assert data["creation_date"] == "2024-01-01T00:00:00"
 
 
-def test_create_album_duplicate_uuid():
+def test_create_album_duplicate_uuid(client):
     """Test creating an album with a duplicate UUID fails"""
-    create_test_user_and_login()
+    create_test_user_and_login(client)
     album_uuid = str(uuid.uuid4())
 
     # Create first album
@@ -156,15 +87,15 @@ def test_create_album_duplicate_uuid():
     assert "already exists" in response.json()["detail"]
 
 
-def test_create_album_with_photos():
+def test_create_album_with_photos(client):
     """Test creating an album with associated photos"""
-    token = create_test_user_and_login()
+    token = create_test_user_and_login(client)
 
     # Create test photos
     photo_uuid_1 = str(uuid.uuid4())
     photo_uuid_2 = str(uuid.uuid4())
-    create_test_photo(token, photo_uuid_1)
-    create_test_photo(token, photo_uuid_2)
+    create_test_photo(client, token, photo_uuid_1)
+    create_test_photo(client, token, photo_uuid_2)
 
     album_uuid = str(uuid.uuid4())
     response = client.post(
@@ -183,9 +114,9 @@ def test_create_album_with_photos():
     assert data["title"] == "Album with Photos"
 
 
-def test_list_albums_empty():
+def test_list_albums_empty(client):
     """Test listing albums when none exist"""
-    create_test_user_and_login()
+    create_test_user_and_login(client)
 
     response = client.get("/api/albums/")
 
@@ -195,9 +126,9 @@ def test_list_albums_empty():
     assert len(data) == 0
 
 
-def test_list_albums():
+def test_list_albums(client):
     """Test listing multiple albums"""
-    create_test_user_and_login()
+    create_test_user_and_login(client)
 
     # Create multiple albums
     for i in range(3):
@@ -222,9 +153,9 @@ def test_list_albums():
     assert data[2]["title"] == "Test Album 2"
 
 
-def test_list_albums_pagination():
+def test_list_albums_pagination(client):
     """Test album list pagination"""
-    create_test_user_and_login()
+    create_test_user_and_login(client)
 
     # Create 5 albums
     for i in range(5):
@@ -246,9 +177,9 @@ def test_list_albums_pagination():
     assert len(data) == 2
 
 
-def test_get_album():
+def test_get_album(client):
     """Test retrieving a specific album by UUID"""
-    create_test_user_and_login()
+    create_test_user_and_login(client)
     album_uuid = str(uuid.uuid4())
 
     # Create album
@@ -273,9 +204,9 @@ def test_get_album():
     assert data["end_date"] == "2024-01-01T20:00:00"
 
 
-def test_get_album_not_found():
+def test_get_album_not_found(client):
     """Test retrieving a non-existent album returns 404"""
-    create_test_user_and_login()
+    create_test_user_and_login(client)
     nonexistent_uuid = str(uuid.uuid4())
 
     response = client.get(f"/api/albums/{nonexistent_uuid}/")
@@ -284,9 +215,9 @@ def test_get_album_not_found():
     assert "not found" in response.json()["detail"]
 
 
-def test_update_or_create_album_create():
+def test_update_or_create_album_create(client):
     """Test PUT endpoint creates a new album when it doesn't exist"""
-    create_test_user_and_login()
+    create_test_user_and_login(client)
     album_uuid = str(uuid.uuid4())
 
     response = client.put(
@@ -304,9 +235,9 @@ def test_update_or_create_album_create():
     assert data["title"] == "New Album via PUT"
 
 
-def test_update_or_create_album_update():
+def test_update_or_create_album_update(client):
     """Test PUT endpoint updates an existing album"""
-    create_test_user_and_login()
+    create_test_user_and_login(client)
     album_uuid = str(uuid.uuid4())
 
     # Create album
@@ -338,17 +269,17 @@ def test_update_or_create_album_update():
     assert data["start_date"] == "2024-01-02T10:00:00"
 
 
-def test_update_or_create_album_with_photos():
+def test_update_or_create_album_with_photos(client):
     """Test PUT endpoint updates album photos"""
-    token = create_test_user_and_login()
+    token = create_test_user_and_login(client)
 
     # Create test photos
     photo_uuid_1 = str(uuid.uuid4())
     photo_uuid_2 = str(uuid.uuid4())
     photo_uuid_3 = str(uuid.uuid4())
-    create_test_photo(token, photo_uuid_1)
-    create_test_photo(token, photo_uuid_2)
-    create_test_photo(token, photo_uuid_3)
+    create_test_photo(client, token, photo_uuid_1)
+    create_test_photo(client, token, photo_uuid_2)
+    create_test_photo(client, token, photo_uuid_3)
 
     # Create album with initial photos
     album_uuid = str(uuid.uuid4())
@@ -378,9 +309,9 @@ def test_update_or_create_album_with_photos():
     assert data["uuid"] == album_uuid
 
 
-def test_patch_album():
+def test_patch_album(client):
     """Test partially updating an album"""
-    create_test_user_and_login()
+    create_test_user_and_login(client)
     album_uuid = str(uuid.uuid4())
 
     # Create album
@@ -406,9 +337,9 @@ def test_patch_album():
     assert data["creation_date"] == "2024-01-01T00:00:00"
 
 
-def test_patch_album_not_found():
+def test_patch_album_not_found(client):
     """Test patching a non-existent album returns 404"""
-    create_test_user_and_login()
+    create_test_user_and_login(client)
     nonexistent_uuid = str(uuid.uuid4())
 
     response = client.patch(
@@ -420,17 +351,17 @@ def test_patch_album_not_found():
     assert "not found" in response.json()["detail"]
 
 
-def test_patch_album_photos():
+def test_patch_album_photos(client):
     """Test updating album photos via PATCH"""
-    token = create_test_user_and_login()
+    token = create_test_user_and_login(client)
 
     # Create test photos
     photo_uuid_1 = str(uuid.uuid4())
     photo_uuid_2 = str(uuid.uuid4())
     photo_uuid_3 = str(uuid.uuid4())
-    create_test_photo(token, photo_uuid_1)
-    create_test_photo(token, photo_uuid_2)
-    create_test_photo(token, photo_uuid_3)
+    create_test_photo(client, token, photo_uuid_1)
+    create_test_photo(client, token, photo_uuid_2)
+    create_test_photo(client, token, photo_uuid_3)
 
     # Create album with initial photos
     album_uuid = str(uuid.uuid4())
@@ -455,13 +386,13 @@ def test_patch_album_photos():
     assert data["uuid"] == album_uuid
 
 
-def test_patch_album_clear_photos():
+def test_patch_album_clear_photos(client):
     """Test clearing album photos via PATCH"""
-    token = create_test_user_and_login()
+    token = create_test_user_and_login(client)
 
     # Create test photo
     photo_uuid_1 = str(uuid.uuid4())
-    create_test_photo(token, photo_uuid_1)
+    create_test_photo(client, token, photo_uuid_1)
 
     # Create album with photos
     album_uuid = str(uuid.uuid4())
@@ -486,9 +417,9 @@ def test_patch_album_clear_photos():
     assert data["uuid"] == album_uuid
 
 
-def test_delete_album():
+def test_delete_album(client):
     """Test deleting an album"""
-    create_test_user_and_login()
+    create_test_user_and_login(client)
     album_uuid = str(uuid.uuid4())
 
     # Create album
@@ -512,9 +443,9 @@ def test_delete_album():
     assert get_response.status_code == 404
 
 
-def test_delete_album_not_found():
+def test_delete_album_not_found(client):
     """Test deleting a non-existent album returns 404"""
-    create_test_user_and_login()
+    create_test_user_and_login(client)
     nonexistent_uuid = str(uuid.uuid4())
 
     response = client.delete(f"/api/albums/{nonexistent_uuid}/")
@@ -523,15 +454,15 @@ def test_delete_album_not_found():
     assert "not found" in response.json()["detail"]
 
 
-def test_delete_album_with_photos():
+def test_delete_album_with_photos(client):
     """Test deleting an album with associated photos"""
-    token = create_test_user_and_login()
+    token = create_test_user_and_login(client)
 
     # Create test photos
     photo_uuid_1 = str(uuid.uuid4())
     photo_uuid_2 = str(uuid.uuid4())
-    create_test_photo(token, photo_uuid_1)
-    create_test_photo(token, photo_uuid_2)
+    create_test_photo(client, token, photo_uuid_1)
+    create_test_photo(client, token, photo_uuid_2)
 
     # Create album with photos
     album_uuid = str(uuid.uuid4())
@@ -558,9 +489,9 @@ def test_delete_album_with_photos():
     assert photo_response.status_code == 200
 
 
-def test_album_with_dates():
+def test_album_with_dates(client):
     """Test creating and retrieving album with start and end dates"""
-    create_test_user_and_login()
+    create_test_user_and_login(client)
     album_uuid = str(uuid.uuid4())
 
     response = client.post(
@@ -587,9 +518,9 @@ def test_album_with_dates():
     assert get_data["end_date"] == "2024-06-15T23:59:59"
 
 
-def test_album_with_nonexistent_photos():
+def test_album_with_nonexistent_photos(client):
     """Test creating album with references to non-existent photos"""
-    create_test_user_and_login()
+    create_test_user_and_login(client)
 
     # Create album with non-existent photo UUIDs
     album_uuid = str(uuid.uuid4())

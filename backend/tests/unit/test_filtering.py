@@ -4,78 +4,16 @@ import os
 from uuid import uuid4
 
 import pytest
-from app.database import get_db
-from app.main import app
-from app.models import Photo, User, Version, Album, Library, album_photos
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, delete
-from sqlalchemy.orm import sessionmaker
-from sqlmodel import Session, SQLModel
+
 
 # NOTE: These tests require a PostgreSQL test database
 # Test database setup - PostgreSQL connection required
 # For local testing, set up a test database: createdb photosafe_test
 # Set environment variable: export TEST_DATABASE_URL="postgresql://user:pass@localhost:5432/photosafe_test"
 # The default below is for Docker Compose development environment only
-SQLALCHEMY_DATABASE_URL = os.getenv(
-    "TEST_DATABASE_URL",
-    "postgresql://photosafe:photosafe@localhost:5432/photosafe_test",
-)
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
-TestingSessionLocal = sessionmaker(
-    autocommit=False, autoflush=False, bind=engine, class_=Session
-)
 
 
-SQLModel.metadata.create_all(bind=engine)
-
-
-def override_get_db():
-    """Override database dependency for testing"""
-    try:
-        db = TestingSessionLocal()
-        yield db
-    finally:
-        db.close()
-
-
-app.dependency_overrides[get_db] = override_get_db
-client = TestClient(app)
-
-
-@pytest.fixture(autouse=True)
-def cleanup_db():
-    """Clean up database between tests"""
-    # Clear all data before test
-    db = TestingSessionLocal()
-    try:
-        db.execute(album_photos.delete())
-        db.exec(delete(Version))
-        db.exec(delete(Photo))
-        db.exec(delete(Album))
-        db.exec(delete(Library))
-        db.exec(delete(User))
-        db.commit()
-    finally:
-        db.close()
-
-    yield
-
-    # Clear all data after test
-    db = TestingSessionLocal()
-    try:
-        db.execute(album_photos.delete())
-        db.exec(delete(Version))
-        db.exec(delete(Photo))
-        db.exec(delete(Album))
-        db.exec(delete(Library))
-        db.exec(delete(User))
-        db.commit()
-    finally:
-        db.close()
-
-
-def test_filter_photos_by_original_filename():
+def test_filter_photos_by_original_filename(client):
     """Test filtering photos by original_filename (legacy parameter)"""
     # Register and login
     client.post(
@@ -117,7 +55,7 @@ def test_filter_photos_by_original_filename():
     assert result["items"][0]["original_filename"] == "test1.jpg"
 
 
-def test_filter_photos_by_date():
+def test_filter_photos_by_date(client):
     """Test filtering photos by date range"""
     # Register and login
     client.post(
@@ -173,7 +111,7 @@ def test_filter_photos_by_date():
     assert "photo2.jpg" in filenames
 
 
-def test_album_patch_endpoint():
+def test_album_patch_endpoint(client):
     """Test PATCH endpoint for albums"""
 
     # Register and login
@@ -217,7 +155,7 @@ def test_album_patch_endpoint():
     assert updated_album["creation_date"] == "2024-01-01T00:00:00"
 
 
-def test_filter_photos_by_album():
+def test_filter_photos_by_album(client):
     """Test filtering photos by album"""
     # Register and login
     client.post(
@@ -261,7 +199,7 @@ def test_filter_photos_by_album():
     assert result["items"][0]["original_filename"] == "photo1.jpg"
 
 
-def test_filter_photos_by_keyword():
+def test_filter_photos_by_keyword(client):
     """Test filtering photos by keyword"""
     # Register and login
     client.post(
@@ -305,7 +243,7 @@ def test_filter_photos_by_keyword():
     assert result["items"][0]["original_filename"] == "photo1.jpg"
 
 
-def test_filter_photos_by_person():
+def test_filter_photos_by_person(client):
     """Test filtering photos by person"""
     # Register and login
     client.post(
@@ -349,7 +287,7 @@ def test_filter_photos_by_person():
     assert result["items"][0]["original_filename"] == "photo1.jpg"
 
 
-def test_get_available_filters():
+def test_get_available_filters(client):
     """Test getting available filter values"""
     # Register and login
     client.post(
@@ -401,7 +339,7 @@ def test_get_available_filters():
     assert set(filters["persons"]) == {"Alice", "Bob", "Charlie"}
 
 
-def test_filter_photos_by_photo_type():
+def test_filter_photos_by_photo_type(client):
     """Test filtering photos by photo type (favorite, isphoto, etc.)"""
     # Register and login
     client.post(

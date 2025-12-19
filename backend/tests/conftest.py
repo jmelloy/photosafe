@@ -9,7 +9,7 @@ from alembic import command
 from alembic.config import Config
 from app.database import get_db
 from app.main import app
-from app.models import Album, Library, Photo, User, Version, album_photos
+from app.models import Album, Library, Photo, User, Version
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -25,8 +25,8 @@ TEST_DATABASE_URL = os.getenv(
 )
 
 
-def run_migrations(database_url: str):
-    """Run alembic migrations for the test database."""
+def reset_database(database_url: str):
+    """Reset database using migrations (downgrade to base, then upgrade to head)."""
     # Save the current DATABASE_URL and temporarily override it
     old_database_url = os.environ.get("DATABASE_URL")
     os.environ["DATABASE_URL"] = database_url
@@ -40,7 +40,10 @@ def run_migrations(database_url: str):
         alembic_cfg = Config(str(alembic_ini_path))
         alembic_cfg.set_main_option("sqlalchemy.url", database_url)
 
-        # Run migrations to head
+        # Downgrade to base (removes all tables)
+        command.downgrade(alembic_cfg, "base")
+
+        # Upgrade to head (creates all tables fresh)
         command.upgrade(alembic_cfg, "head")
     finally:
         # Restore the original DATABASE_URL
@@ -50,26 +53,18 @@ def run_migrations(database_url: str):
             os.environ.pop("DATABASE_URL", None)
 
 
-def drop_all_tables(engine):
-    """Drop all tables in the database."""
-    SQLModel.metadata.drop_all(bind=engine)
-
-
 @pytest.fixture(scope="session")
 def engine():
     """Create a test database engine for the entire test session."""
     test_engine = create_engine(TEST_DATABASE_URL, echo=False)
 
-    # Drop all tables first to ensure clean state
-    drop_all_tables(test_engine)
-
-    # Run migrations to create all tables
-    run_migrations(TEST_DATABASE_URL)
+    # Reset database first to ensure clean state using migrations
+    reset_database(TEST_DATABASE_URL)
 
     yield test_engine
 
-    # Drop all tables at the end of the test session
-    drop_all_tables(test_engine)
+    # Reset database at the end of the test session using migrations
+    reset_database(TEST_DATABASE_URL)
     test_engine.dispose()
 
 
@@ -79,7 +74,7 @@ def db_session(engine):
 
     This fixture:
     - Creates a new session for each test
-    - Cleans up all data after each test
+    - Cleans up all data after each test using migrations
     - Ensures tests are isolated from each other
     """
     SessionLocal = sessionmaker(
@@ -92,12 +87,9 @@ def db_session(engine):
     # Clean up after the test
     session.close()
 
-    # Clear all data from tables
-    with engine.begin() as connection:
-        # Delete in order to respect foreign key constraints
-        connection.execute(album_photos.delete())
-        for table in [Version, Photo, Album, Library, User]:
-            connection.execute(table.__table__.delete())
+    # Reset database using migrations (downgrade to base, then upgrade to head)
+    # This ensures all data is cleared and schema is consistent with migrations
+    reset_database(TEST_DATABASE_URL)
 
 
 @pytest.fixture(scope="function")
