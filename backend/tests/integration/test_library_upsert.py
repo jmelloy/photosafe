@@ -2,6 +2,7 @@
 
 import pytest
 from fastapi.testclient import TestClient
+import uuid
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
@@ -78,11 +79,13 @@ def test_patch_photo_creates_library_if_not_exists():
     )
     token = login_response.json()["access_token"]
 
+    new_uuid = str(uuid.uuid4())
+
     # Create a photo without library
     response = client.post(
         "/api/photos/",
         json={
-            "uuid": "test-photo-123",
+            "uuid": new_uuid,
             "original_filename": "test.jpg",
             "date": "2024-01-01T00:00:00",
         },
@@ -100,7 +103,7 @@ def test_patch_photo_creates_library_if_not_exists():
 
     # Patch the photo with a library name
     patch_response = client.patch(
-        "/api/photos/test-photo-123/",
+        f"/api/photos/{new_uuid}/",
         json={"library": "My Photos"},
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -114,7 +117,7 @@ def test_patch_photo_creates_library_if_not_exists():
         assert libraries[0].name == "My Photos"
 
         # Verify photo has library_id set
-        photo = db.query(Photo).filter(Photo.uuid == "test-photo-123").first()
+        photo = db.query(Photo).filter(Photo.uuid == new_uuid).first()
         assert photo is not None
         assert photo.library_id == libraries[0].id
         assert photo.library == "My Photos"
@@ -140,10 +143,11 @@ def test_patch_photo_reuses_existing_library():
     token = login_response.json()["access_token"]
 
     # Create first photo with library
+    photo_uuid_1 = str(uuid.uuid4())
     client.post(
         "/api/photos/",
         json={
-            "uuid": "photo-1",
+            "uuid": photo_uuid_1,
             "original_filename": "test1.jpg",
             "date": "2024-01-01T00:00:00",
         },
@@ -151,16 +155,17 @@ def test_patch_photo_reuses_existing_library():
     )
 
     client.patch(
-        "/api/photos/photo-1/",
+        f"/api/photos/{photo_uuid_1}/",
         json={"library": "My Photos"},
         headers={"Authorization": f"Bearer {token}"},
     )
 
     # Create second photo
+    photo_uuid_2 = str(uuid.uuid4())
     client.post(
         "/api/photos/",
         json={
-            "uuid": "photo-2",
+            "uuid": photo_uuid_2,
             "original_filename": "test2.jpg",
             "date": "2024-01-02T00:00:00",
         },
@@ -169,7 +174,7 @@ def test_patch_photo_reuses_existing_library():
 
     # Patch second photo with same library name
     client.patch(
-        "/api/photos/photo-2/",
+        f"/api/photos/{photo_uuid_2}/",
         json={"library": "My Photos"},
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -182,8 +187,8 @@ def test_patch_photo_reuses_existing_library():
         assert libraries[0].name == "My Photos"
 
         # Verify both photos reference the same library
-        photo1 = db.query(Photo).filter(Photo.uuid == "photo-1").first()
-        photo2 = db.query(Photo).filter(Photo.uuid == "photo-2").first()
+        photo1 = db.query(Photo).filter(Photo.uuid == photo_uuid_1).first()
+        photo2 = db.query(Photo).filter(Photo.uuid == photo_uuid_2).first()
         assert photo1.library_id == libraries[0].id
         assert photo2.library_id == libraries[0].id
     finally:
@@ -223,33 +228,35 @@ def test_patch_photo_library_user_isolation():
     token2 = login2.json()["access_token"]
 
     # User1 creates a photo with library
+    user1_photo_uuid = str(uuid.uuid4())
     client.post(
         "/api/photos/",
         json={
-            "uuid": "user1-photo",
+            "uuid": user1_photo_uuid,
             "original_filename": "user1.jpg",
             "date": "2024-01-01T00:00:00",
         },
         headers={"Authorization": f"Bearer {token1}"},
     )
     client.patch(
-        "/api/photos/user1-photo/",
+        f"/api/photos/{user1_photo_uuid}/",
         json={"library": "Shared Name"},
         headers={"Authorization": f"Bearer {token1}"},
     )
 
     # User2 creates a photo with same library name
+    user2_photo_uuid = str(uuid.uuid4())
     client.post(
         "/api/photos/",
         json={
-            "uuid": "user2-photo",
+            "uuid": user2_photo_uuid,
             "original_filename": "user2.jpg",
             "date": "2024-01-01T00:00:00",
         },
         headers={"Authorization": f"Bearer {token2}"},
     )
     client.patch(
-        "/api/photos/user2-photo/",
+        f"/api/photos/{user2_photo_uuid}/",
         json={"library": "Shared Name"},
         headers={"Authorization": f"Bearer {token2}"},
     )
@@ -292,12 +299,12 @@ def test_patch_photo_without_library_no_change():
         "/api/auth/login", data={"username": "testuser", "password": "testpassword123"}
     )
     token = login_response.json()["access_token"]
-
+    new_uuid = str(uuid.uuid4())
     # Create a photo
     client.post(
         "/api/photos/",
         json={
-            "uuid": "test-photo",
+            "uuid": new_uuid,
             "original_filename": "test.jpg",
             "date": "2024-01-01T00:00:00",
         },
@@ -306,7 +313,7 @@ def test_patch_photo_without_library_no_change():
 
     # Patch with other fields but no library
     client.patch(
-        "/api/photos/test-photo/",
+        f"/api/photos/{new_uuid}/",
         json={"title": "Updated Title"},
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -318,7 +325,7 @@ def test_patch_photo_without_library_no_change():
         assert len(libraries) == 0
 
         # Verify photo title was updated
-        photo = db.query(Photo).filter(Photo.uuid == "test-photo").first()
+        photo = db.query(Photo).filter(Photo.uuid == new_uuid).first()
         assert photo.title == "Updated Title"
         assert photo.library_id is None
     finally:

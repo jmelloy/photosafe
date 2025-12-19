@@ -181,6 +181,9 @@ class Photo(SQLModel, table=True):
     file_size: Optional[int] = None
     uploaded_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
+    # Soft delete support
+    deleted_at: Optional[datetime] = None
+
     # Owner relationship - matching Django Photo model
     owner_id: Optional[int] = Field(default=None, foreign_key="users.id", index=True)
 
@@ -413,6 +416,7 @@ class PhotoRead(SQLModel):
     content_type: Optional[str] = None
     file_size: Optional[int] = None
     uploaded_at: Optional[datetime] = None
+    deleted_at: Optional[datetime] = None
     url: Optional[str] = None  # Computed property
     versions: Optional[List[VersionRead]] = None
 

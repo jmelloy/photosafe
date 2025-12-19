@@ -630,8 +630,9 @@ def create_photo_from_file(
     # Generate UUID or ULID if not in metadata
     photo_uuid = metadata.get("uuid")
     if not photo_uuid:
-        # Generate ULID based on the date
-        photo_uuid = str(ULID.from_datetime(date_for_ulid))
+        # Generate ULID based on the date and convert to UUID
+        ulid_obj = ULID.from_datetime(date_for_ulid)
+        photo_uuid = str(ulid_obj.to_uuid())
 
     # Detect MIME type
     suffix = file_path.suffix.lower()

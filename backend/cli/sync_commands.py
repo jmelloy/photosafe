@@ -14,6 +14,41 @@ from dateutil import parser
 MACOS_LIBRARY_NAME = "macOS Photos"
 
 
+def clean_photo_data(photo_dict):
+    """Clean up None values in photo data to prevent null insertions.
+
+    This function modifies the input dictionary in place to clean up None values
+    that could be serialized as JSON null in fields where they are not appropriate.
+
+    Args:
+        photo_dict: Dictionary of photo data from osxphotos
+
+    Returns:
+        The same dictionary with None values cleaned up (for chaining convenience)
+    """
+    # Filter None values from persons list
+    persons = photo_dict.get("persons")
+    if persons is None:
+        photo_dict["persons"] = []
+    elif isinstance(persons, list):
+        # Remove None values from the persons list
+        photo_dict["persons"] = [person for person in persons if person is not None]
+
+    # Ensure place is an empty dict instead of None
+    if photo_dict.get("place") is None:
+        photo_dict["place"] = {}
+
+    # Clean up face_info - filter out None values and empty/invalid entries
+    face_info = photo_dict.get("face_info")
+    if face_info is None:
+        photo_dict["face_info"] = []
+    elif isinstance(face_info, list):
+        # Filter out None items from face_info list
+        photo_dict["face_info"] = [face for face in face_info if face is not None]
+
+    return photo_dict
+
+
 @click.group()
 def sync():
     """Sync photos from various sources"""
@@ -52,10 +87,12 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
         click.echo("Install with: pip install osxphotos>=0.60")
         raise click.Abort()
 
-    from .sync_tools import DateTimeEncoder, PhotoSafeAuth
+    from cli.sync_tools import DateTimeEncoder, PhotoSafeAuth
 
     photos_db = osxphotos.PhotosDB()
     base_path = photos_db.library_path
+
+    # Initialize S3 client
     s3 = boto3.client("s3", "us-west-2")
 
     # Authenticate
@@ -84,7 +121,7 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
 
     # Find discrepancies
     photos_to_process = []
-    
+
     if skip_blocks_check:
         # Skip blocks check and process all photos
         click.echo("Skipping blocks check, processing all photos")
@@ -97,7 +134,7 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
         r = auth.get("/api/photos/blocks")
         r.raise_for_status()
         server_blocks = r.json()
-        
+
         for year, months in sorted(blocks.items()):
             for month, days in sorted(months.items()):
                 for day, photos in sorted(days.items()):
@@ -123,7 +160,7 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
                                 server_date = server_date.replace(tzinfo=timezone.utc)
                             if server_date < date:
                                 has_discrepancy = True
-                    
+
                     if has_discrepancy:
                         click.echo(
                             f"Discrepancy {year}/{month}/{day}, {vals} vs {count}/{date}"
@@ -144,6 +181,37 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
             if v and type(v) is str and base_path in v:
                 p[k] = v.replace(base_path, "")
 
+        # Clean up None values to prevent null insertions
+        p = clean_photo_data(p)
+        
+        # Check if photo files are deleted locally
+        # If all paths are None or point to non-existent files, mark as deleted
+        paths = [
+            photo.path,
+            getattr(photo, 'path_edited', None),
+            getattr(photo, 'path_live_photo', None)
+        ]
+        has_any_file = any(path and os.path.exists(path) for path in paths if path)
+        
+        # If photo is in trash and all files are gone, soft delete it
+        if photo.intrash:
+            try:
+                r = auth.delete(f"/api/photos/{p['uuid']}/")
+                if r.status_code == 404:
+                    click.echo(
+                        f"Photo {p['uuid'].lower()} already deleted on server"
+                    )
+                elif r.status_code == 200:
+                    click.echo(
+                        f"Deleted photo {p['uuid'].lower()} {photo.original_filename} (file missing locally)"
+                    )
+                else:
+                    r.raise_for_status()
+                return
+            except Exception as e:
+                click.echo(f"Error deleting photo {photo.uuid}: {str(e)}", err=True)
+                return
+
         # Write JSON file if requested
         if output_json:
             dt = photo.date.astimezone(timezone.utc)
@@ -153,6 +221,7 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
             with open(json_path, "w", encoding="utf-8") as f:
                 f.write(json.dumps(p, cls=DateTimeEncoder, indent=2))
 
+        p["search_info"] = photo.search_info.asdict()
         try:
             r = auth.patch(
                 f"/api/photos/{p['uuid']}/",
@@ -161,11 +230,128 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
             )
 
             if r.status_code == 404:
+                # Photo not found on server
+                # Check if we should create it with versions
+                should_create = False
+                has_original = False
+                
+                # Check if photo is not in trash
+                if not p.get("intrash", False):
+                    # Check if we have an original path (looking for /originals/ directory)
+                    if photo.path and "/originals/" in photo.path.lower():
+                        should_create = True
+                        has_original = True
+                
+                if should_create:
+                    click.echo(
+                        f"Creating photo {p['uuid'].lower()} {photo.original_filename} with versions"
+                    )
+                    
+                    # Build versions list
+                    versions = []
+                    
+                    # Add original version if available
+                    if has_original and photo.path:
+                        base, ext = os.path.splitext(photo.path)
+                        versions.append({
+                            "version": "original",
+                            "s3_path": f"{username}/originals/{p['uuid'][0:1]}/{p['uuid']}{ext}",
+                            "filename": photo.original_filename,
+                            "width": p.get("width"),
+                            "height": p.get("height"),
+                            "size": p.get("original_filesize"),
+                            "type": ext.lstrip(".").lower(),
+                        })
+                    
+                    # Add edited version if available
+                    if hasattr(photo, 'path_edited') and photo.path_edited:
+                        base, ext = os.path.splitext(photo.path_edited)
+                        versions.append({
+                            "version": "edited",
+                            "s3_path": f"{username}/edited/{p['uuid'][0:1]}/{p['uuid']}{ext}",
+                            "filename": f"{os.path.splitext(photo.original_filename)[0]}_edited{ext}",
+                            "width": p.get("width"),
+                            "height": p.get("height"),
+                            "size": None,
+                            "type": ext.lstrip(".").lower(),
+                        })
+                    
+                    # Add derivative/thumbnail versions if available
+                    # osxphotos doesn't expose path_derivatives directly in the public API,
+                    # but we can check for common derivative paths
+                    if hasattr(photo, 'path_derivatives') and photo.path_derivatives:
+                        for i, deriv_path in enumerate(photo.path_derivatives):
+                            base, ext = os.path.splitext(deriv_path)
+                            versions.append({
+                                "version": f"derivative_{i}",
+                                "s3_path": f"{username}/thumbnails/{p['uuid'][0:1]}/{p['uuid']}_{i}{ext}",
+                                "filename": f"{os.path.splitext(photo.original_filename)[0]}_thumb_{i}{ext}",
+                                "width": None,
+                                "height": None,
+                                "size": None,
+                                "type": ext.lstrip(".").lower(),
+                            })
+                    
+                    # Add versions to photo data
+                    if versions:
+                        p["versions"] = versions
+                    
+                    # Upload files to S3 before creating photo record
+                    try:
+                        # Upload original file
+                        if has_original and photo.path and os.path.exists(photo.path):
+                            base, ext = os.path.splitext(photo.path)
+                            s3_key = f"{username}/originals/{p['uuid'][0:1]}/{p['uuid']}{ext}"
+                            click.echo(f"Uploading original to S3: {s3_key}")
+                            s3.upload_file(photo.path, bucket, s3_key)
+                        
+                        # Upload edited file if available
+                        if hasattr(photo, 'path_edited') and photo.path_edited and os.path.exists(photo.path_edited):
+                            base, ext = os.path.splitext(photo.path_edited)
+                            s3_key = f"{username}/edited/{p['uuid'][0:1]}/{p['uuid']}{ext}"
+                            click.echo(f"Uploading edited to S3: {s3_key}")
+                            s3.upload_file(photo.path_edited, bucket, s3_key)
+                        
+                        # Upload derivative/thumbnail files if available
+                        if hasattr(photo, 'path_derivatives') and photo.path_derivatives:
+                            for i, deriv_path in enumerate(photo.path_derivatives):
+                                if os.path.exists(deriv_path):
+                                    base, ext = os.path.splitext(deriv_path)
+                                    s3_key = f"{username}/thumbnails/{p['uuid'][0:1]}/{p['uuid']}_{i}{ext}"
+                                    click.echo(f"Uploading thumbnail to S3: {s3_key}")
+                                    s3.upload_file(deriv_path, bucket, s3_key)
+                    except Exception as upload_error:
+                        click.echo(
+                            f"Error uploading files to S3 for {photo.uuid}: {str(upload_error)}",
+                            err=True,
+                        )
+                        # Continue to create photo even if upload fails
+                    
+                    # Try to create the photo
+                    try:
+                        r = auth.post(
+                            "/api/photos/",
+                            data=json.dumps(p, cls=DateTimeEncoder),
+                            headers={"Content-Type": "application/json"},
+                        )
+                        r.raise_for_status()
+                        click.echo(
+                            f"Created photo {p['uuid'].lower()} {photo.original_filename} ({r.status_code})"
+                        )
+                    except Exception as create_error:
+                        click.echo(
+                            f"Error creating photo {photo.uuid}: {str(create_error)}",
+                            err=True,
+                        )
+                else:
+                    click.echo(
+                        f"Skipping missing photo {p['uuid'].lower()} {photo.original_filename} (in trash or no original path)"
+                    )
                 return
-            click.echo(
-                f"Synced {photo.uuid} {photo.original_filename} ({r.status_code})..."
-            )
             r.raise_for_status()
+            click.echo(
+                f"Synced {p['uuid'].lower()} {photo.original_filename} ({r.status_code})..."
+            )
         except Exception as e:
             click.echo(f"Error syncing photo {photo.uuid}: {str(e)}", err=True)
             return
@@ -212,6 +398,9 @@ def dump_macos(limit):
         for k, v in p.items():
             if v and type(v) is str and base_path in v:
                 p[k] = v.replace(base_path, "")
+
+        # Clean up None values to prevent null insertions
+        p = clean_photo_data(p)
 
         directory = os.path.join(
             p["library"] or "PrimarySync", photo.date.strftime("%Y/%m/%d")
