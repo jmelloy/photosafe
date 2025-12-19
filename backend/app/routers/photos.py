@@ -9,7 +9,7 @@ from typing import List, Optional, Dict
 
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, cast, String
 
 from ..database import get_db
 from ..models import (
@@ -316,7 +316,7 @@ async def list_photos(
     # Filter out soft-deleted photos by default
     query = query.filter(Photo.deleted_at.is_(None))
 
-    # Apply search filter - search in original_filename, title, and description
+    # Apply search filter - search in original_filename, title, description, and search_info
     if search:
         search_pattern = f"%{search}%"
         query = query.filter(
@@ -324,6 +324,9 @@ async def list_photos(
                 Photo.original_filename.ilike(search_pattern),
                 Photo.title.ilike(search_pattern),
                 Photo.description.ilike(search_pattern),
+                # Search within search_info JSONB field by casting to text
+                # This searches across all values in the search_info JSON structure
+                cast(Photo.search_info, String).ilike(search_pattern),
             )
         )
 

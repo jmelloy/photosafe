@@ -467,5 +467,100 @@ def test_filter_photos_by_photo_type():
     assert result["items"][0]["original_filename"] == "screenshot1.png"
 
 
+def test_search_in_search_info():
+    """Test searching within the search_info JSONB field"""
+    # Register and login
+    client.post(
+        "/api/auth/register",
+        json={
+            "username": "testuser9",
+            "email": "test9@test.com",
+            "password": "testpass123",
+        },
+    )
+    login_response = client.post(
+        "/api/auth/login", data={"username": "testuser9", "password": "testpass123"}
+    )
+    token = login_response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Create photos with search_info containing various metadata
+    photo1_data = {
+        "uuid": str(uuid4()),
+        "original_filename": "vacation1.jpg",
+        "date": "2024-06-01T00:00:00",
+        "search_info": {
+            "labels": ["Beach", "Ocean", "Sunset"],
+            "activities": ["Vacation", "Travel"],
+            "city": "Miami",
+            "country": "USA",
+            "season": "Summer",
+        },
+    }
+    photo2_data = {
+        "uuid": str(uuid4()),
+        "original_filename": "mountains.jpg",
+        "date": "2024-07-01T00:00:00",
+        "search_info": {
+            "labels": ["Mountain", "Hiking", "Nature"],
+            "activities": ["Outdoor", "Adventure"],
+            "city": "Denver",
+            "country": "USA",
+            "season": "Summer",
+        },
+    }
+    photo3_data = {
+        "uuid": str(uuid4()),
+        "original_filename": "city.jpg",
+        "date": "2024-08-01T00:00:00",
+        "search_info": {
+            "labels": ["Building", "Urban", "Architecture"],
+            "activities": ["Tourism"],
+            "city": "New York",
+            "country": "USA",
+        },
+    }
+
+    client.post("/api/photos/", json=photo1_data, headers=headers)
+    client.post("/api/photos/", json=photo2_data, headers=headers)
+    client.post("/api/photos/", json=photo3_data, headers=headers)
+
+    # Search for photos with "Beach" in search_info
+    response = client.get("/api/photos/?search=Beach", headers=headers)
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["items"]) == 1
+    assert result["items"][0]["original_filename"] == "vacation1.jpg"
+
+    # Search for photos with "Hiking" in search_info
+    response = client.get("/api/photos/?search=Hiking", headers=headers)
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["items"]) == 1
+    assert result["items"][0]["original_filename"] == "mountains.jpg"
+
+    # Search for photos with "Miami" (city) in search_info
+    response = client.get("/api/photos/?search=Miami", headers=headers)
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["items"]) == 1
+    assert result["items"][0]["original_filename"] == "vacation1.jpg"
+
+    # Search for photos with "Summer" (season) in search_info - should return 2 photos
+    response = client.get("/api/photos/?search=Summer", headers=headers)
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["items"]) == 2
+    filenames = [p["original_filename"] for p in result["items"]]
+    assert "vacation1.jpg" in filenames
+    assert "mountains.jpg" in filenames
+
+    # Search for non-existent term should return no results
+    response = client.get("/api/photos/?search=NonExistentTerm", headers=headers)
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["items"]) == 0
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
