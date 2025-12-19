@@ -9,7 +9,7 @@ from typing import List, Optional, Dict
 
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_, cast, String
+from sqlalchemy import func, or_, cast, Text
 
 from ..database import get_db
 from ..models import (
@@ -326,7 +326,7 @@ async def list_photos(
                 Photo.description.ilike(search_pattern),
                 # Search within search_info JSONB field by casting to text
                 # This searches across all values in the search_info JSON structure
-                cast(Photo.search_info, String).ilike(search_pattern),
+                cast(Photo.search_info, Text).ilike(search_pattern),
             )
         )
 
