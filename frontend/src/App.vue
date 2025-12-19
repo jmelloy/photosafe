@@ -23,6 +23,14 @@
             <h1>📷 PhotoSafe Gallery</h1>
             <p>Your personal photo collection</p>
           </div>
+          <nav class="nav-menu">
+            <RouterLink to="/" class="nav-link">
+              <span>🏠 Gallery</span>
+            </RouterLink>
+            <RouterLink to="/map" class="nav-link">
+              <span>📍 Map</span>
+            </RouterLink>
+          </nav>
           <div class="user-info">
             <span v-if="currentUser" class="username">{{
               currentUser.username
@@ -104,7 +112,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
 .header h1 {
@@ -146,5 +154,42 @@ onMounted(() => {
 
 .logout-button:hover {
   background: #5568d3;
+}
+
+.nav-menu {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.nav-link {
+  padding: 0.6rem 1.2rem;
+  background: #2a2a2a;
+  color: #e0e0e0;
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  border: 1px solid #3a3a3a;
+}
+
+.nav-link:hover {
+  background: #3a3a3a;
+  border-color: #667eea;
+}
+
+.nav-link.router-link-active {
+  background: #667eea;
+  border-color: #667eea;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .nav-menu {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+  }
 }
 </style>
