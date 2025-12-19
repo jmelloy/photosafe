@@ -7,7 +7,9 @@ from pathlib import Path
 import tempfile
 import json
 import os
+from sqlmodel import select
 
+from app.models import User, Library, Photo
 from cli.user_commands import user
 from cli.library_commands import library
 from cli.import_commands import import_photos
@@ -37,7 +39,7 @@ def setup_database(engine, db_session):
     library_commands.SessionLocal = TestingSessionLocal
     import_commands.SessionLocal = TestingSessionLocal
 
-    yield
+    yield TestingSessionLocal
 
     # Note: cleanup is handled by db_session fixture which resets the database via migrations
 
@@ -73,11 +75,11 @@ class TestUserCommands:
         assert "testuser" in result.output
 
         # Verify in database
-        db = TestingSessionLocal()
+        db = setup_database()
         try:
             db_user = db.exec(
                 select(User).where(User.username == "testuser")
-            ).scalar_one()
+            ).one()
             print(db_user)
             assert db_user is not None
             assert db_user.email == "test@example.com"
@@ -105,9 +107,9 @@ class TestUserCommands:
         assert "Superuser privileges granted" in result.output
 
         # Verify in database
-        db = TestingSessionLocal()
+        db = setup_database()
         try:
-            db_user = db.exec(select(User).where(User.username == "admin")).scalar_one()
+            db_user = db.exec(select(User).where(User.username == "admin")).one()
             assert db_user.is_superuser is True
         finally:
             db.close()
@@ -244,11 +246,11 @@ class TestLibraryCommands:
         assert "My Photos" in result.output
 
         # Verify in database
-        db = TestingSessionLocal()
+        db = setup_database()
         try:
             db_library = db.exec(
                 select(Library).where(Library.name == "My Photos")
-            ).scalar_one()
+            ).one()
             assert db_library is not None
             assert db_library.path == "/home/testuser/photos"
             assert db_library.description == "Test library"
@@ -407,11 +409,11 @@ class TestImportCommands:
             assert "Imported: 1" in result.output
 
             # Verify in database
-            db = TestingSessionLocal()
+            db = setup_database()
             try:
                 photo = db.exec(
                     select(Photo).where(Photo.uuid == test_uuid)
-                ).scalar_one()
+                ).one()
                 assert photo is not None
                 assert photo.title == "Test Photo"
                 assert photo.library_id == 1
@@ -462,7 +464,7 @@ class TestImportCommands:
             assert "Dry run - no changes made" in result.output
 
             # Verify nothing was imported
-            db = TestingSessionLocal()
+            db = setup_database()
             try:
                 count = len(db.exec(select(Photo)).all())
                 assert count == 0
