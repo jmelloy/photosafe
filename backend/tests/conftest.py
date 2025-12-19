@@ -114,7 +114,6 @@ def db_session(engine):
 
     # Fast cleanup: delete all data from tables (much faster than migrations)
     # This preserves the schema but removes all data
-    from sqlalchemy import text
     with engine.begin() as connection:
         # Delete in reverse order to respect foreign key constraints
         for table in reversed(SQLModel.metadata.sorted_tables):
