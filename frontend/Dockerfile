@@ -15,7 +15,8 @@ COPY . .
 ARG GIT_SHA=unknown
 ENV GIT_SHA=${GIT_SHA}
 
-# Build the app (git SHA will be captured by vite.config.ts)
+# Build the app
+# Note: GIT_SHA is captured from build arg by vite.config.ts (no git needed)
 RUN npm run build
 
 # Production stage
@@ -27,11 +28,12 @@ WORKDIR /app
 COPY package*.json ./
 
 # Vite version can be overridden via build arg, defaults to version in package.json
-ARG VITE_VERSION=7.3.0
+ARG VITE_VERSION=^7.3.0
 
 # Install only production dependencies and vite (needed for preview server)
-# Using ci for production ensures lock file is respected
-RUN npm ci --omit=dev --no-save && npm install --no-save vite@^${VITE_VERSION}
+# Separate commands to maintain lockfile integrity
+RUN npm ci --omit=dev --no-save
+RUN npm install --no-save vite@${VITE_VERSION}
 
 # Copy built files from builder stage
 COPY --from=builder /app/dist ./dist
