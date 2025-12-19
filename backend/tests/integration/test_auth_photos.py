@@ -260,7 +260,7 @@ def test_create_photo_authenticated():
     response = client.post(
         "/api/photos/",
         json={
-            "uuid": "test-uuid-123",
+            "uuid": "1e692e8c-4b9a-4e6a-ae0e-8a0bf0e8ad44",
             "original_filename": "test.jpg",
             "date": "2024-01-01T00:00:00",
         },
@@ -268,7 +268,7 @@ def test_create_photo_authenticated():
     )
     assert response.status_code == 201
     data = response.json()
-    assert data["uuid"] == "test-uuid-123"
+    assert data["uuid"] == "1e692e8c-4b9a-4e6a-ae0e-8a0bf0e8ad44"
     assert data["original_filename"] == "test.jpg"
 
 
@@ -277,7 +277,7 @@ def test_create_photo_unauthenticated():
     response = client.post(
         "/api/photos/",
         json={
-            "uuid": "test-uuid-123",
+            "uuid": "1e692e8c-4b9a-4e6a-ae0e-8a0bf0e8ad44",
             "original_filename": "test.jpg",
             "date": "2024-01-01T00:00:00",
         },
@@ -311,10 +311,11 @@ def test_list_photos_only_owned():
     )
     token1 = login1.json()["access_token"]
 
+    user1_photo_uuid = str(uuid.uuid4())
     client.post(
         "/api/photos/",
         json={
-            "uuid": "user1-photo",
+            "uuid": user1_photo_uuid,
             "original_filename": "user1.jpg",
             "date": "2024-01-01T00:00:00",
         },
@@ -327,10 +328,11 @@ def test_list_photos_only_owned():
     )
     token2 = login2.json()["access_token"]
 
+    user2_photo_uuid = str(uuid.uuid4())
     client.post(
         "/api/photos/",
         json={
-            "uuid": "user2-photo",
+            "uuid": user2_photo_uuid,
             "original_filename": "user2.jpg",
             "date": "2024-01-01T00:00:00",
         },
@@ -344,7 +346,7 @@ def test_list_photos_only_owned():
     assert response1.status_code == 200
     photos1 = response1.json()["items"]
     assert len(photos1) == 1
-    assert photos1[0]["uuid"] == "user1-photo"
+    assert photos1[0]["uuid"] == user1_photo_uuid
 
     # User2 should only see their photo
     response2 = client.get(
@@ -353,7 +355,7 @@ def test_list_photos_only_owned():
     assert response2.status_code == 200
     photos2 = response2.json()["items"]
     assert len(photos2) == 1
-    assert photos2[0]["uuid"] == "user2-photo"
+    assert photos2[0]["uuid"] == user2_photo_uuid
 
 
 def test_update_photo_ownership():
@@ -385,7 +387,7 @@ def test_update_photo_ownership():
     client.post(
         "/api/photos/",
         json={
-            "uuid": "user1-photo",
+            "uuid": "b2ae6737-e14c-4798-82b8-da99a34410ea",
             "original_filename": "user1.jpg",
             "date": "2024-01-01T00:00:00",
         },
@@ -399,7 +401,7 @@ def test_update_photo_ownership():
     token2 = login2.json()["access_token"]
 
     response = client.patch(
-        "/api/photos/user1-photo/",
+        "/api/photos/b2ae6737-e14c-4798-82b8-da99a34410ea/",
         json={"title": "Hacked!"},
         headers={"Authorization": f"Bearer {token2}"},
     )
@@ -435,7 +437,7 @@ def test_delete_photo_ownership():
     client.post(
         "/api/photos/",
         json={
-            "uuid": "user1-photo",
+            "uuid": "b2ae6737-e14c-4798-82b8-da99a34410ea",
             "original_filename": "user1.jpg",
             "date": "2024-01-01T00:00:00",
         },
@@ -449,7 +451,7 @@ def test_delete_photo_ownership():
     token2 = login2.json()["access_token"]
 
     response = client.delete(
-        "/api/photos/user1-photo/", headers={"Authorization": f"Bearer {token2}"}
+        "/api/photos/b2ae6737-e14c-4798-82b8-da99a34410ea/", headers={"Authorization": f"Bearer {token2}"}
     )
     assert response.status_code == 403
 
@@ -474,17 +476,17 @@ def test_batch_create_photos():
     batch_data = {
         "photos": [
             {
-                "uuid": "batch-photo-1",
+                "uuid": "ca63a0c0-a5d7-4ea1-ae3d-15e0095913d9",
                 "original_filename": "photo1.jpg",
                 "date": "2024-01-01T00:00:00",
             },
             {
-                "uuid": "batch-photo-2",
+                "uuid": "82b2a65a-cf6c-49da-9bab-840eccc355d0",
                 "original_filename": "photo2.jpg",
                 "date": "2024-01-02T00:00:00",
             },
             {
-                "uuid": "batch-photo-3",
+                "uuid": "bed6c326-c3b0-4127-8753-610462ef521e",
                 "original_filename": "photo3.jpg",
                 "date": "2024-01-03T00:00:00",
             },
@@ -535,11 +537,14 @@ def test_batch_update_photos():
     token = login_response.json()["access_token"]
 
     # Create initial photos
+    photo_uuids = []
     for i in range(1, 4):
+        photo_uuid = str(uuid.uuid4())
+        photo_uuids.append(photo_uuid)
         client.post(
             "/api/photos/",
             json={
-                "uuid": f"update-photo-{i}",
+                "uuid": photo_uuid,
                 "original_filename": f"photo{i}.jpg",
                 "date": f"2024-01-0{i}T00:00:00",
             },
@@ -550,14 +555,14 @@ def test_batch_update_photos():
     batch_data = {
         "photos": [
             {
-                "uuid": "update-photo-1",
+                "uuid": photo_uuids[0],
                 "original_filename": "photo1.jpg",
                 "date": "2024-01-01T00:00:00",
                 "title": "Updated Photo 1",
                 "favorite": True,
             },
             {
-                "uuid": "update-photo-2",
+                "uuid": photo_uuids[1],
                 "original_filename": "photo2.jpg",
                 "date": "2024-01-02T00:00:00",
                 "title": "Updated Photo 2",
@@ -580,7 +585,7 @@ def test_batch_update_photos():
 
     # Verify updates were applied
     photo1 = client.get(
-        "/api/photos/update-photo-1/", headers={"Authorization": f"Bearer {token}"}
+        f"/api/photos/{photo_uuids[0]}/", headers={"Authorization": f"Bearer {token}"}
     )
     assert photo1.json()["title"] == "Updated Photo 1"
     assert photo1.json()["favorite"] is True
@@ -606,7 +611,7 @@ def test_batch_mixed_create_and_update():
     client.post(
         "/api/photos/",
         json={
-            "uuid": "existing-photo",
+            "uuid": "1b0b7da3-d5e2-4dcf-bbd5-7e66dd012b8b",
             "original_filename": "existing.jpg",
             "date": "2024-01-01T00:00:00",
         },
@@ -617,18 +622,18 @@ def test_batch_mixed_create_and_update():
     batch_data = {
         "photos": [
             {
-                "uuid": "existing-photo",
+                "uuid": "1b0b7da3-d5e2-4dcf-bbd5-7e66dd012b8b",
                 "original_filename": "existing.jpg",
                 "date": "2024-01-01T00:00:00",
                 "title": "Updated",
             },
             {
-                "uuid": "new-photo-1",
+                "uuid": "4ba4f82c-60ce-48e0-a676-303b8d1b4a1f",
                 "original_filename": "new1.jpg",
                 "date": "2024-01-02T00:00:00",
             },
             {
-                "uuid": "new-photo-2",
+                "uuid": "08ab2d7f-0a61-4746-b774-b19b04f96cd7",
                 "original_filename": "new2.jpg",
                 "date": "2024-01-03T00:00:00",
             },
@@ -726,8 +731,9 @@ def test_get_photo_not_found():
     )
     token = login_response.json()["access_token"]
 
+    nonexistent_uuid = str(uuid.uuid4())
     response = client.get(
-        "/api/photos/nonexistent-uuid/",
+        f"/api/photos/{nonexistent_uuid}/",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 404
@@ -769,7 +775,7 @@ def test_get_photo_unauthorized():
     client.post(
         "/api/photos/",
         json={
-            "uuid": "user1-photo",
+            "uuid": "b2ae6737-e14c-4798-82b8-da99a34410ea",
             "original_filename": "user1.jpg",
             "date": "2024-01-01T00:00:00",
         },
@@ -778,7 +784,7 @@ def test_get_photo_unauthorized():
 
     # User2 tries to get user1's photo
     response = client.get(
-        "/api/photos/user1-photo/",
+        "/api/photos/b2ae6737-e14c-4798-82b8-da99a34410ea/",
         headers={"Authorization": f"Bearer {token2}"},
     )
     assert response.status_code == 403

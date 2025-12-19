@@ -1,6 +1,7 @@
 """Tests for album API endpoints"""
 
 import os
+import uuid
 from datetime import datetime
 
 import pytest
@@ -88,13 +89,15 @@ def create_test_user_and_login():
     return login_response.json()["access_token"]
 
 
-def create_test_photo(token, uuid="photo-uuid-1"):
+def create_test_photo(token, photo_uuid=None):
     """Helper function to create a test photo"""
+    if photo_uuid is None:
+        photo_uuid = str(uuid.uuid4())
     response = client.post(
         "/api/photos/",
         json={
-            "uuid": uuid,
-            "original_filename": f"test-{uuid}.jpg",
+            "uuid": photo_uuid,
+            "original_filename": f"test-{photo_uuid}.jpg",
             "date": "2024-01-01T00:00:00",
         },
         headers={"Authorization": f"Bearer {token}"},
@@ -105,11 +108,12 @@ def create_test_photo(token, uuid="photo-uuid-1"):
 def test_create_album():
     """Test creating a new album"""
     token = create_test_user_and_login()
+    album_uuid = str(uuid.uuid4())
 
     response = client.post(
         "/api/albums/",
         json={
-            "uuid": "album-uuid-1",
+            "uuid": album_uuid,
             "title": "Test Album",
             "creation_date": "2024-01-01T00:00:00",
         },
@@ -117,7 +121,7 @@ def test_create_album():
 
     assert response.status_code == 201
     data = response.json()
-    assert data["uuid"] == "album-uuid-1"
+    assert data["uuid"] == album_uuid
     assert data["title"] == "Test Album"
     assert data["creation_date"] == "2024-01-01T00:00:00"
 
@@ -125,12 +129,13 @@ def test_create_album():
 def test_create_album_duplicate_uuid():
     """Test creating an album with a duplicate UUID fails"""
     token = create_test_user_and_login()
+    album_uuid = str(uuid.uuid4())
 
     # Create first album
     client.post(
         "/api/albums/",
         json={
-            "uuid": "album-uuid-1",
+            "uuid": album_uuid,
             "title": "Test Album",
             "creation_date": "2024-01-01T00:00:00",
         },
@@ -140,7 +145,7 @@ def test_create_album_duplicate_uuid():
     response = client.post(
         "/api/albums/",
         json={
-            "uuid": "album-uuid-1",
+            "uuid": album_uuid,
             "title": "Different Album",
             "creation_date": "2024-01-02T00:00:00",
         },
@@ -155,22 +160,25 @@ def test_create_album_with_photos():
     token = create_test_user_and_login()
 
     # Create test photos
-    create_test_photo(token, "photo-uuid-1")
-    create_test_photo(token, "photo-uuid-2")
+    photo_uuid_1 = str(uuid.uuid4())
+    photo_uuid_2 = str(uuid.uuid4())
+    create_test_photo(token, photo_uuid_1)
+    create_test_photo(token, photo_uuid_2)
 
+    album_uuid = str(uuid.uuid4())
     response = client.post(
         "/api/albums/",
         json={
-            "uuid": "album-uuid-1",
+            "uuid": album_uuid,
             "title": "Album with Photos",
             "creation_date": "2024-01-01T00:00:00",
-            "photos": ["photo-uuid-1", "photo-uuid-2"],
+            "photos": [photo_uuid_1, photo_uuid_2],
         },
     )
 
     assert response.status_code == 201
     data = response.json()
-    assert data["uuid"] == "album-uuid-1"
+    assert data["uuid"] == album_uuid
     assert data["title"] == "Album with Photos"
 
 
@@ -192,10 +200,11 @@ def test_list_albums():
 
     # Create multiple albums
     for i in range(3):
+        album_uuid = str(uuid.uuid4())
         client.post(
             "/api/albums/",
             json={
-                "uuid": f"album-uuid-{i}",
+                "uuid": album_uuid,
                 "title": f"Test Album {i}",
                 "creation_date": "2024-01-01T00:00:00",
             },
@@ -218,10 +227,11 @@ def test_list_albums_pagination():
 
     # Create 5 albums
     for i in range(5):
+        album_uuid = str(uuid.uuid4())
         client.post(
             "/api/albums/",
             json={
-                "uuid": f"album-uuid-{i}",
+                "uuid": album_uuid,
                 "title": f"Test Album {i}",
                 "creation_date": "2024-01-01T00:00:00",
             },
@@ -238,12 +248,13 @@ def test_list_albums_pagination():
 def test_get_album():
     """Test retrieving a specific album by UUID"""
     token = create_test_user_and_login()
+    album_uuid = str(uuid.uuid4())
 
     # Create album
     client.post(
         "/api/albums/",
         json={
-            "uuid": "album-uuid-1",
+            "uuid": album_uuid,
             "title": "Test Album",
             "creation_date": "2024-01-01T00:00:00",
             "start_date": "2024-01-01T10:00:00",
@@ -251,11 +262,11 @@ def test_get_album():
         },
     )
 
-    response = client.get("/api/albums/album-uuid-1/")
+    response = client.get(f"/api/albums/{album_uuid}/")
 
     assert response.status_code == 200
     data = response.json()
-    assert data["uuid"] == "album-uuid-1"
+    assert data["uuid"] == album_uuid
     assert data["title"] == "Test Album"
     assert data["start_date"] == "2024-01-01T10:00:00"
     assert data["end_date"] == "2024-01-01T20:00:00"
@@ -264,8 +275,9 @@ def test_get_album():
 def test_get_album_not_found():
     """Test retrieving a non-existent album returns 404"""
     token = create_test_user_and_login()
+    nonexistent_uuid = str(uuid.uuid4())
 
-    response = client.get("/api/albums/nonexistent-uuid/")
+    response = client.get(f"/api/albums/{nonexistent_uuid}/")
 
     assert response.status_code == 404
     assert "not found" in response.json()["detail"]
@@ -274,11 +286,12 @@ def test_get_album_not_found():
 def test_update_or_create_album_create():
     """Test PUT endpoint creates a new album when it doesn't exist"""
     token = create_test_user_and_login()
+    album_uuid = str(uuid.uuid4())
 
     response = client.put(
-        "/api/albums/album-uuid-1/",
+        f"/api/albums/{album_uuid}/",
         json={
-            "uuid": "album-uuid-1",
+            "uuid": album_uuid,
             "title": "New Album via PUT",
             "creation_date": "2024-01-01T00:00:00",
         },
@@ -286,19 +299,20 @@ def test_update_or_create_album_create():
 
     assert response.status_code == 200
     data = response.json()
-    assert data["uuid"] == "album-uuid-1"
+    assert data["uuid"] == album_uuid
     assert data["title"] == "New Album via PUT"
 
 
 def test_update_or_create_album_update():
     """Test PUT endpoint updates an existing album"""
     token = create_test_user_and_login()
+    album_uuid = str(uuid.uuid4())
 
     # Create album
     client.post(
         "/api/albums/",
         json={
-            "uuid": "album-uuid-1",
+            "uuid": album_uuid,
             "title": "Original Title",
             "creation_date": "2024-01-01T00:00:00",
         },
@@ -306,9 +320,9 @@ def test_update_or_create_album_update():
 
     # Update via PUT
     response = client.put(
-        "/api/albums/album-uuid-1/",
+        f"/api/albums/{album_uuid}/",
         json={
-            "uuid": "album-uuid-1",
+            "uuid": album_uuid,
             "title": "Updated Title",
             "creation_date": "2024-01-02T00:00:00",
             "start_date": "2024-01-02T10:00:00",
@@ -317,7 +331,7 @@ def test_update_or_create_album_update():
 
     assert response.status_code == 200
     data = response.json()
-    assert data["uuid"] == "album-uuid-1"
+    assert data["uuid"] == album_uuid
     assert data["title"] == "Updated Title"
     assert data["creation_date"] == "2024-01-02T00:00:00"
     assert data["start_date"] == "2024-01-02T10:00:00"
@@ -328,46 +342,51 @@ def test_update_or_create_album_with_photos():
     token = create_test_user_and_login()
 
     # Create test photos
-    create_test_photo(token, "photo-uuid-1")
-    create_test_photo(token, "photo-uuid-2")
-    create_test_photo(token, "photo-uuid-3")
+    photo_uuid_1 = str(uuid.uuid4())
+    photo_uuid_2 = str(uuid.uuid4())
+    photo_uuid_3 = str(uuid.uuid4())
+    create_test_photo(token, photo_uuid_1)
+    create_test_photo(token, photo_uuid_2)
+    create_test_photo(token, photo_uuid_3)
 
     # Create album with initial photos
+    album_uuid = str(uuid.uuid4())
     client.post(
         "/api/albums/",
         json={
-            "uuid": "album-uuid-1",
+            "uuid": album_uuid,
             "title": "Test Album",
             "creation_date": "2024-01-01T00:00:00",
-            "photos": ["photo-uuid-1", "photo-uuid-2"],
+            "photos": [photo_uuid_1, photo_uuid_2],
         },
     )
 
     # Update with different photos
     response = client.put(
-        "/api/albums/album-uuid-1/",
+        f"/api/albums/{album_uuid}/",
         json={
-            "uuid": "album-uuid-1",
+            "uuid": album_uuid,
             "title": "Test Album",
             "creation_date": "2024-01-01T00:00:00",
-            "photos": ["photo-uuid-2", "photo-uuid-3"],
+            "photos": [photo_uuid_2, photo_uuid_3],
         },
     )
 
     assert response.status_code == 200
     data = response.json()
-    assert data["uuid"] == "album-uuid-1"
+    assert data["uuid"] == album_uuid
 
 
 def test_patch_album():
     """Test partially updating an album"""
     token = create_test_user_and_login()
+    album_uuid = str(uuid.uuid4())
 
     # Create album
     client.post(
         "/api/albums/",
         json={
-            "uuid": "album-uuid-1",
+            "uuid": album_uuid,
             "title": "Original Title",
             "creation_date": "2024-01-01T00:00:00",
         },
@@ -375,13 +394,13 @@ def test_patch_album():
 
     # Partial update - only title
     response = client.patch(
-        "/api/albums/album-uuid-1/",
+        f"/api/albums/{album_uuid}/",
         json={"title": "Updated Title Only"},
     )
 
     assert response.status_code == 200
     data = response.json()
-    assert data["uuid"] == "album-uuid-1"
+    assert data["uuid"] == album_uuid
     assert data["title"] == "Updated Title Only"
     assert data["creation_date"] == "2024-01-01T00:00:00"
 
@@ -389,9 +408,10 @@ def test_patch_album():
 def test_patch_album_not_found():
     """Test patching a non-existent album returns 404"""
     token = create_test_user_and_login()
+    nonexistent_uuid = str(uuid.uuid4())
 
     response = client.patch(
-        "/api/albums/nonexistent-uuid/",
+        f"/api/albums/{nonexistent_uuid}/",
         json={"title": "New Title"},
     )
 
@@ -404,30 +424,34 @@ def test_patch_album_photos():
     token = create_test_user_and_login()
 
     # Create test photos
-    create_test_photo(token, "photo-uuid-1")
-    create_test_photo(token, "photo-uuid-2")
-    create_test_photo(token, "photo-uuid-3")
+    photo_uuid_1 = str(uuid.uuid4())
+    photo_uuid_2 = str(uuid.uuid4())
+    photo_uuid_3 = str(uuid.uuid4())
+    create_test_photo(token, photo_uuid_1)
+    create_test_photo(token, photo_uuid_2)
+    create_test_photo(token, photo_uuid_3)
 
     # Create album with initial photos
+    album_uuid = str(uuid.uuid4())
     client.post(
         "/api/albums/",
         json={
-            "uuid": "album-uuid-1",
+            "uuid": album_uuid,
             "title": "Test Album",
             "creation_date": "2024-01-01T00:00:00",
-            "photos": ["photo-uuid-1"],
+            "photos": [photo_uuid_1],
         },
     )
 
     # Update photos via PATCH
     response = client.patch(
-        "/api/albums/album-uuid-1/",
-        json={"photos": ["photo-uuid-2", "photo-uuid-3"]},
+        f"/api/albums/{album_uuid}/",
+        json={"photos": [photo_uuid_2, photo_uuid_3]},
     )
 
     assert response.status_code == 200
     data = response.json()
-    assert data["uuid"] == "album-uuid-1"
+    assert data["uuid"] == album_uuid
 
 
 def test_patch_album_clear_photos():
@@ -435,60 +459,64 @@ def test_patch_album_clear_photos():
     token = create_test_user_and_login()
 
     # Create test photo
-    create_test_photo(token, "photo-uuid-1")
+    photo_uuid_1 = str(uuid.uuid4())
+    create_test_photo(token, photo_uuid_1)
 
     # Create album with photos
+    album_uuid = str(uuid.uuid4())
     client.post(
         "/api/albums/",
         json={
-            "uuid": "album-uuid-1",
+            "uuid": album_uuid,
             "title": "Test Album",
             "creation_date": "2024-01-01T00:00:00",
-            "photos": ["photo-uuid-1"],
+            "photos": [photo_uuid_1],
         },
     )
 
     # Clear photos via PATCH
     response = client.patch(
-        "/api/albums/album-uuid-1/",
+        f"/api/albums/{album_uuid}/",
         json={"photos": []},
     )
 
     assert response.status_code == 200
     data = response.json()
-    assert data["uuid"] == "album-uuid-1"
+    assert data["uuid"] == album_uuid
 
 
 def test_delete_album():
     """Test deleting an album"""
     token = create_test_user_and_login()
+    album_uuid = str(uuid.uuid4())
 
     # Create album
     client.post(
         "/api/albums/",
         json={
-            "uuid": "album-uuid-1",
+            "uuid": album_uuid,
             "title": "Test Album",
             "creation_date": "2024-01-01T00:00:00",
         },
     )
 
     # Delete album
-    response = client.delete("/api/albums/album-uuid-1/")
+    response = client.delete(f"/api/albums/{album_uuid}/")
 
     assert response.status_code == 200
     assert "deleted successfully" in response.json()["message"]
 
     # Verify album is deleted
-    get_response = client.get("/api/albums/album-uuid-1/")
+    get_response = client.get(f"/api/albums/{album_uuid}/")
     assert get_response.status_code == 404
 
 
 def test_delete_album_not_found():
     """Test deleting a non-existent album returns 404"""
     token = create_test_user_and_login()
+    nonexistent_uuid = str(uuid.uuid4())
 
-    response = client.delete("/api/albums/nonexistent-uuid/")
+    response = client.delete(f"/api/albums/{nonexistent_uuid}/")
 
     assert response.status_code == 404
     assert "not found" in response.json()["detail"]
@@ -499,28 +527,31 @@ def test_delete_album_with_photos():
     token = create_test_user_and_login()
 
     # Create test photos
-    create_test_photo(token, "photo-uuid-1")
-    create_test_photo(token, "photo-uuid-2")
+    photo_uuid_1 = str(uuid.uuid4())
+    photo_uuid_2 = str(uuid.uuid4())
+    create_test_photo(token, photo_uuid_1)
+    create_test_photo(token, photo_uuid_2)
 
     # Create album with photos
+    album_uuid = str(uuid.uuid4())
     client.post(
         "/api/albums/",
         json={
-            "uuid": "album-uuid-1",
+            "uuid": album_uuid,
             "title": "Test Album",
             "creation_date": "2024-01-01T00:00:00",
-            "photos": ["photo-uuid-1", "photo-uuid-2"],
+            "photos": [photo_uuid_1, photo_uuid_2],
         },
     )
 
     # Delete album
-    response = client.delete("/api/albums/album-uuid-1/")
+    response = client.delete(f"/api/albums/{album_uuid}/")
 
     assert response.status_code == 200
 
     # Verify photos still exist
     photo_response = client.get(
-        "/api/photos/photo-uuid-1/",
+        f"/api/photos/{photo_uuid_1}/",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert photo_response.status_code == 200
@@ -529,11 +560,12 @@ def test_delete_album_with_photos():
 def test_album_with_dates():
     """Test creating and retrieving album with start and end dates"""
     token = create_test_user_and_login()
+    album_uuid = str(uuid.uuid4())
 
     response = client.post(
         "/api/albums/",
         json={
-            "uuid": "album-uuid-1",
+            "uuid": album_uuid,
             "title": "Vacation Album",
             "creation_date": "2024-01-01T00:00:00",
             "start_date": "2024-06-01T00:00:00",
@@ -547,7 +579,7 @@ def test_album_with_dates():
     assert data["end_date"] == "2024-06-15T23:59:59"
 
     # Verify dates are preserved on retrieval
-    get_response = client.get("/api/albums/album-uuid-1/")
+    get_response = client.get(f"/api/albums/{album_uuid}/")
     assert get_response.status_code == 200
     get_data = get_response.json()
     assert get_data["start_date"] == "2024-06-01T00:00:00"
@@ -559,17 +591,20 @@ def test_album_with_nonexistent_photos():
     token = create_test_user_and_login()
 
     # Create album with non-existent photo UUIDs
+    album_uuid = str(uuid.uuid4())
+    nonexistent_photo_1 = str(uuid.uuid4())
+    nonexistent_photo_2 = str(uuid.uuid4())
     response = client.post(
         "/api/albums/",
         json={
-            "uuid": "album-uuid-1",
+            "uuid": album_uuid,
             "title": "Test Album",
             "creation_date": "2024-01-01T00:00:00",
-            "photos": ["nonexistent-photo-1", "nonexistent-photo-2"],
+            "photos": [nonexistent_photo_1, nonexistent_photo_2],
         },
     )
 
     # Should succeed but silently ignore non-existent photos
     assert response.status_code == 201
     data = response.json()
-    assert data["uuid"] == "album-uuid-1"
+    assert data["uuid"] == album_uuid
