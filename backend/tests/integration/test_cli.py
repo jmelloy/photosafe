@@ -414,9 +414,11 @@ class TestImportCommands:
             test_image.write_text("test image data")
 
             # Create sidecar JSON
+            import uuid
+            test_uuid = str(uuid.uuid4())
             sidecar = tmpdir / "test.json"
             sidecar_data = {
-                "uuid": "TEST-UUID-1234",
+                "uuid": test_uuid,
                 "fingerprint": "test-fingerprint",
                 "original_filename": "test.jpg",
                 "date": "2024-01-01T12:00:00-08:00",
@@ -452,7 +454,7 @@ class TestImportCommands:
             # Verify in database
             db = TestingSessionLocal()
             try:
-                photo = db.query(Photo).filter(Photo.uuid == "TEST-UUID-1234").first()
+                photo = db.query(Photo).filter(Photo.uuid == test_uuid).first()
                 assert photo is not None
                 assert photo.title == "Test Photo"
                 assert photo.library_id == 1

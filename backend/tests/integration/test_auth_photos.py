@@ -311,10 +311,11 @@ def test_list_photos_only_owned():
     )
     token1 = login1.json()["access_token"]
 
+    user1_photo_uuid = str(uuid.uuid4())
     client.post(
         "/api/photos/",
         json={
-            "uuid": "b2ae6737-e14c-4798-82b8-da99a34410ea",
+            "uuid": user1_photo_uuid,
             "original_filename": "user1.jpg",
             "date": "2024-01-01T00:00:00",
         },
@@ -327,10 +328,11 @@ def test_list_photos_only_owned():
     )
     token2 = login2.json()["access_token"]
 
+    user2_photo_uuid = str(uuid.uuid4())
     client.post(
         "/api/photos/",
         json={
-            "uuid": "de1fad49-86af-4b62-8adf-2f8f072c15ea",
+            "uuid": user2_photo_uuid,
             "original_filename": "user2.jpg",
             "date": "2024-01-01T00:00:00",
         },
@@ -344,7 +346,7 @@ def test_list_photos_only_owned():
     assert response1.status_code == 200
     photos1 = response1.json()["items"]
     assert len(photos1) == 1
-    assert photos1[0]["uuid"] == "user1-photo"
+    assert photos1[0]["uuid"] == user1_photo_uuid
 
     # User2 should only see their photo
     response2 = client.get(
@@ -353,7 +355,7 @@ def test_list_photos_only_owned():
     assert response2.status_code == 200
     photos2 = response2.json()["items"]
     assert len(photos2) == 1
-    assert photos2[0]["uuid"] == "user2-photo"
+    assert photos2[0]["uuid"] == user2_photo_uuid
 
 
 def test_update_photo_ownership():
@@ -583,7 +585,7 @@ def test_batch_update_photos():
 
     # Verify updates were applied
     photo1 = client.get(
-        "/api/photos/update-photo-1/", headers={"Authorization": f"Bearer {token}"}
+        f"/api/photos/{photo_uuids[0]}/", headers={"Authorization": f"Bearer {token}"}
     )
     assert photo1.json()["title"] == "Updated Photo 1"
     assert photo1.json()["favorite"] is True
@@ -729,8 +731,9 @@ def test_get_photo_not_found():
     )
     token = login_response.json()["access_token"]
 
+    nonexistent_uuid = str(uuid.uuid4())
     response = client.get(
-        "/api/photos/nonexistent-uuid/",
+        f"/api/photos/{nonexistent_uuid}/",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 404
