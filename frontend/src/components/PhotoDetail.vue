@@ -252,14 +252,30 @@ const formatFileSize = (bytes?: number): string => {
 const formatPlace = (place: Record<string, any>): string => {
   if (!place) return "";
 
-  // Try common place properties
-  const parts = [];
-  if (place.name) parts.push(place.name);
-  if (place.city) parts.push(place.city);
-  if (place.state) parts.push(place.state);
-  if (place.country) parts.push(place.country);
-
-  return parts.join(", ") || JSON.stringify(place);
+  // Only show top-level fields, excluding nested objects like "names" and "address"
+  const parts: string[] = [];
+  
+  // Show the main name if available
+  if (place.name) {
+    parts.push(place.name);
+  }
+  
+  // Show address_str if available (more readable than nested address object)
+  if (place.address_str) {
+    parts.push(`Address: ${place.address_str}`);
+  }
+  
+  // Show if it's home
+  if (place.ishome === true) {
+    parts.push("(Home)");
+  }
+  
+  // Show country code
+  if (place.country_code) {
+    parts.push(`Country: ${place.country_code}`);
+  }
+  
+  return parts.join(" | ") || "Location information available";
 };
 
 const formatExifValue = (key: string, value: any): string => {

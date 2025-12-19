@@ -284,7 +284,31 @@ const formatFileSize = (bytes?: number): string => {
 const formatPlace = (place: unknown): string => {
   if (typeof place === "string") return place;
   if (place && typeof place === "object") {
-    return JSON.stringify(place);
+    // Only show top-level fields, excluding nested objects like "names" and "address"
+    const placeObj = place as Record<string, any>;
+    const parts: string[] = [];
+    
+    // Show the main name if available
+    if (placeObj.name) {
+      parts.push(placeObj.name);
+    }
+    
+    // Show address_str if available (more readable than nested address object)
+    if (placeObj.address_str) {
+      parts.push(`Address: ${placeObj.address_str}`);
+    }
+    
+    // Show if it's home
+    if (placeObj.ishome === true) {
+      parts.push("(Home)");
+    }
+    
+    // Show country code
+    if (placeObj.country_code) {
+      parts.push(`Country: ${placeObj.country_code}`);
+    }
+    
+    return parts.join(" | ") || "Location information available";
   }
   return "";
 };
