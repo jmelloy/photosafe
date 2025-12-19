@@ -859,3 +859,127 @@ def test_upload_photo_unauthenticated():
 
     response = client.post("/api/photos/upload", files=files)
     assert response.status_code == 401
+
+
+def test_create_photo_with_score_data():
+    """Test creating a photo with score data from macOS Photos"""
+    # Register and login
+    client.post(
+        "/api/auth/register",
+        json={
+            "username": "scoreuser",
+            "email": "score@example.com",
+            "password": "testpassword123",
+        },
+    )
+
+    login_response = client.post(
+        "/api/auth/login", data={"username": "scoreuser", "password": "testpassword123"}
+    )
+    token = login_response.json()["access_token"]
+
+    # Create photo with score data (from macOS Photos aesthetic scores)
+    score_data = {
+        "overall": 0.391845703125,
+        "curation": 0.6556488037109375,
+        "promotion": 0.0,
+        "highlight_visibility": 0.05043452336237981,
+        "behavioral": None,
+        "failure": -0.009765625,
+        "harmonious_color": -0.0020751953125,
+        "immersiveness": 0.006103515625,
+        "interaction": None,
+        "interesting_subject": -0.17138671875,
+        "intrusive_object_presence": -0.03564453125,
+        "lively_color": 0.1524658203125,
+        "low_light": 0.145263671875,
+        "noise": -0.13916015625,
+        "pleasant_composition": -3.0517578125e-05,
+        "pleasant_lighting": 0.016387939453125,
+        "sharply_focused_subject": 0.03271484375,
+        "well_framed_subject": 0.468994140625,
+    }
+
+    response = client.post(
+        "/api/photos/",
+        json={
+            "uuid": "2e692e8c-4b9a-4e6a-ae0e-8a0bf0e8ad55",
+            "original_filename": "photo_with_score.jpg",
+            "date": "2024-01-01T00:00:00",
+            "score": score_data,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["uuid"] == "2e692e8c-4b9a-4e6a-ae0e-8a0bf0e8ad55"
+    assert "score" in data
+    assert data["score"] is not None
+    assert data["score"]["overall"] == score_data["overall"]
+    assert data["score"]["curation"] == score_data["curation"]
+    assert "pleasant_composition" in data["score"]
+    assert "well_framed_subject" in data["score"]
+
+
+def test_update_photo_with_score_data():
+    """Test updating a photo to add/modify score data"""
+    # Register and login
+    client.post(
+        "/api/auth/register",
+        json={
+            "username": "updatescoreuser",
+            "email": "updatescore@example.com",
+            "password": "testpassword123",
+        },
+    )
+
+    login_response = client.post(
+        "/api/auth/login",
+        data={"username": "updatescoreuser", "password": "testpassword123"},
+    )
+    token = login_response.json()["access_token"]
+
+    # Create photo without score
+    photo_uuid = "3e692e8c-4b9a-4e6a-ae0e-8a0bf0e8ad66"
+    create_response = client.post(
+        "/api/photos/",
+        json={
+            "uuid": photo_uuid,
+            "original_filename": "photo_no_score.jpg",
+            "date": "2024-01-01T00:00:00",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert create_response.status_code == 201
+
+    # Update photo with score data
+    updated_score_data = {
+        "overall": 0.630859375,
+        "curation": 0.5,
+        "promotion": 0.0,
+        "pleasant_composition": 0.27197265625,
+        "sharply_focused_subject": 0.010498046875,
+        "well_framed_subject": 0.054718017578125,
+    }
+
+    update_response = client.patch(
+        f"/api/photos/{photo_uuid}/",
+        json={"score": updated_score_data},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert update_response.status_code == 200
+    updated_data = update_response.json()
+    assert "score" in updated_data
+    assert updated_data["score"] is not None
+    assert updated_data["score"]["overall"] == updated_score_data["overall"]
+    assert updated_data["score"]["curation"] == updated_score_data["curation"]
+    assert "pleasant_composition" in updated_data["score"]
+
+    # Verify the score persisted by fetching the photo
+    get_response = client.get(
+        f"/api/photos/{photo_uuid}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert get_response.status_code == 200
+    fetched_data = get_response.json()
+    assert fetched_data["score"]["overall"] == updated_score_data["overall"]
