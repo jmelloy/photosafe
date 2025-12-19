@@ -1,18 +1,19 @@
 """Shared test fixtures and configuration."""
 
 import os
-import pytest
+from datetime import datetime, timezone
 from pathlib import Path
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlmodel import SQLModel, Session
-from fastapi.testclient import TestClient
-from alembic.config import Config
-from alembic import command
 
+import pytest
+from alembic import command
+from alembic.config import Config
 from app.database import get_db
 from app.main import app
-from app.models import User, Library, Photo, Version, Album, album_photos
+from app.models import Album, Library, Photo, User, Version, album_photos
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlmodel import Session, SQLModel
 
 # Define the fixtures directory
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
@@ -134,7 +135,6 @@ def sample_fixture_path(fixtures_dir):
 def test_user(db_session):
     """Create a test user for authentication tests."""
     from app.auth import get_password_hash
-    from datetime import datetime
 
     user = User(
         username="testuser",
@@ -143,7 +143,7 @@ def test_user(db_session):
         name="Test User",
         is_active=True,
         is_superuser=False,
-        date_joined=datetime.utcnow(),
+        date_joined=datetime.now(timezone.utc),
     )
     db_session.add(user)
     db_session.commit()

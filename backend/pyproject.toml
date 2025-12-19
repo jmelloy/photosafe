@@ -29,6 +29,7 @@ dependencies = [
     "python-dateutil>=2.8.0",
     "tqdm>=4.66",
     "pytz>=2024.1",
+    "ruff>=0.14.10",
 ]
 
 [project.optional-dependencies]
@@ -53,3 +54,124 @@ include-package-data = true
 
 [tool.setuptools.package-dir]
 "" = "."
+
+[tool.pylint.main]
+# Use multiple processes to speed up Pylint
+jobs = 0
+
+# Pickle collected data for later comparisons
+persistent = true
+
+# Minimum Python version to use for version dependent checks
+py-version = "3.8"
+
+# Discover python modules and packages in the file system subtree
+recursive = true
+
+[tool.pylint.messages_control]
+# Disable specific warnings that are common in FastAPI/CLI apps
+disable = [
+    "missing-module-docstring",
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "too-few-public-methods",  # Common with Pydantic models
+    "too-many-arguments",  # Common with CLI commands and FastAPI endpoints
+    "too-many-locals",
+    "too-many-branches",
+    "too-many-statements",
+    "fixme",  # Allow TODO comments
+    "broad-exception-caught",  # Sometimes needed for API error handling
+    "import-outside-toplevel",  # Sometimes needed for optional dependencies
+]
+
+[tool.pylint.format]
+# Maximum number of characters on a single line
+max-line-length = 100
+
+# Maximum number of lines in a module
+max-module-lines = 1000
+
+# String used as indentation unit
+indent-string = "    "
+
+[tool.pylint.basic]
+# Good variable names which should always be accepted
+good-names = ["i", "j", "k", "ex", "Run", "_", "id", "db", "app"]
+
+# Regular expression matching correct function names
+function-rgx = "[a-z_][a-z0-9_]{2,30}$"
+
+# Regular expression matching correct variable names
+variable-rgx = "[a-z_][a-z0-9_]{2,30}$"
+
+# Regular expression matching correct constant names
+const-rgx = "(([A-Z_][A-Z0-9_]*)|(__.*__))$"
+
+# Regular expression matching correct attribute names
+attr-rgx = "[a-z_][a-z0-9_]{2,30}$"
+
+# Regular expression matching correct argument names
+argument-rgx = "[a-z_][a-z0-9_]{2,30}$"
+
+[tool.pylint.design]
+# Maximum number of arguments for function / method
+max-args = 8
+
+# Maximum number of attributes for a class
+max-attributes = 10
+
+# Maximum number of boolean expressions in an if statement
+max-bool-expr = 5
+
+# Maximum number of branch for function / method body
+max-branches = 15
+
+# Maximum number of locals for function / method body
+max-locals = 20
+
+# Maximum number of parents for a class
+max-parents = 7
+
+# Maximum number of public methods for a class
+max-public-methods = 20
+
+# Maximum number of return / yield for function / method body
+max-returns = 6
+
+# Maximum number of statements in function / method body
+max-statements = 60
+
+# Minimum number of public methods for a class
+min-public-methods = 0
+
+[tool.pylint.imports]
+# Allow wildcard imports from specific modules (use sparingly)
+allow-wildcard-with-all = false
+
+[tool.pylint.similarities]
+# Minimum lines number of a similarity
+min-similarity-lines = 4
+
+# Ignore comments when computing similarities
+ignore-comments = true
+
+# Ignore docstrings when computing similarities
+ignore-docstrings = true
+
+# Ignore imports when computing similarities
+ignore-imports = true
+
+[tool.pylint.typecheck]
+# List of members which are set dynamically and missed by pylint inference
+generated-members = ["REQUEST", "acl_users", "aq_parent"]
+
+[tool.pylint.variables]
+# Tells whether we should check for unused import in __init__ files
+init-import = false
+
+# A regular expression matching the name of dummy variables
+dummy-variables-rgx = "_+$|(_[a-zA-Z0-9_]*[a-zA-Z0-9]+?$)|dummy|^ignored_|^unused_"
+
+[tool.pylint.exceptions]
+# Exceptions that will emit a warning when caught
+overgeneral-exceptions = ["builtins.BaseException", "builtins.Exception"]

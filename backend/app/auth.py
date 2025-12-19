@@ -8,6 +8,7 @@ from jose import JWTError, jwt, ExpiredSignatureError
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+from sqlmodel import select
 from .database import get_db
 from .models import User
 
@@ -22,29 +23,31 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its hash.
-    
+
     Args:
         plain_password: The plain text password to verify
         hashed_password: The bcrypt hash string (stored in database as string)
-    
+
     Returns:
         True if password matches the hash, False otherwise
     """
-    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    return bcrypt.checkpw(
+        plain_password.encode("utf-8"), hashed_password.encode("utf-8")
+    )
 
 
 def get_password_hash(password: str) -> str:
     """Hash a password using bcrypt.
-    
+
     Args:
         password: The plain text password to hash
-    
+
     Returns:
         The bcrypt hash as a string (suitable for database storage)
     """
     salt = bcrypt.gensalt()
-    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
-    return hashed.decode('utf-8')
+    hashed = bcrypt.hashpw(password.encode("utf-8"), salt)
+    return hashed.decode("utf-8")
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -93,7 +96,7 @@ def verify_refresh_token(token: str) -> Optional[str]:
 
 def authenticate_user(db: Session, username: str, password: str) -> Optional[User]:
     """Authenticate a user by username and password"""
-    user = db.query(User).filter(User.username == username).first()
+    user = db.exec(select(User).where(User.username == username)).first()
     if not user:
         return None
     if not verify_password(password, user.hashed_password):
@@ -118,7 +121,7 @@ def get_current_user(
     except JWTError:
         raise credentials_exception
 
-    user = db.query(User).filter(User.username == username).first()
+    user = db.exec(select(User).where(User.username == username)).first()
     if user is None:
         raise credentials_exception
     return user

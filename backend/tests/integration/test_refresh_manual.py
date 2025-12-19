@@ -2,8 +2,8 @@
 Manual test script for refresh token functionality
 This can be run manually when the backend server is running
 """
+
 import requests
-import time
 
 BASE_URL = "http://localhost:8000/api"
 
@@ -35,7 +35,7 @@ def test_refresh_token_flow():
                         f"   ✗ Registration failed: {response.status_code} - {error_detail}"
                     )
                     return
-            except:
+            except Exception as e:
                 print("   ✓ User already exists (continuing)")
         else:
             print(f"   ✗ Registration failed: {response.status_code} - {response.text}")
@@ -149,7 +149,7 @@ def test_refresh_token_flow():
         )
 
         if response.status_code == 401:
-            print(f"   ✓ Invalid token correctly rejected")
+            print("   ✓ Invalid token correctly rejected")
         else:
             print(f"   ✗ Expected 401, got: {response.status_code} - {response.text}")
             return

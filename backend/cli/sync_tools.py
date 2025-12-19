@@ -203,7 +203,7 @@ def sum_bucket(s3, bucket, print_every=1000):
             print(" --", i, directory_name, d[directory_name])
 
     for k, v in sorted(d.items(), key=lambda x: x[1][0], reverse=True):
-        print(f"{k:15} {v[1]:,} {v[0] / 1024 ** 3:.3}")
+        print(f"{k:15} {v[1]:,} {v[0] / 1024**3:.3}")
 
     return d
 

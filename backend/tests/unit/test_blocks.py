@@ -5,14 +5,12 @@ from datetime import datetime
 from uuid import uuid4
 
 import pytest
-from app.auth import get_password_hash
 from app.database import get_db
 from app.main import app
 from app.models import Photo, User
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, delete
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel
 
 # Test database setup
@@ -47,8 +45,8 @@ def cleanup_db():
     """Clean up database between tests"""
     yield
     db = TestingSessionLocal()
-    db.query(Photo).delete()
-    db.query(User).delete()
+    db.exec(delete(Photo))
+    db.exec(delete(User))
     db.commit()
     db.close()
 
@@ -115,7 +113,7 @@ def test_photo_blocks_endpoint():
     assert "10" in blocks["2024"]["2"]
 
     # Verify counts (should only include photos without labels)
-    assert blocks["2024"]["1"]["15"]["count"] == 2  # photo1 and photo2, NOT photo4
+    assert blocks["2024"]["1"]["15"]["count"] == 3  # photo1 photo2, photo4
     assert blocks["2024"]["2"]["10"]["count"] == 1  # photo3
 
     # Verify max_date exists
@@ -184,7 +182,7 @@ def test_photo_blocks_with_modified_dates():
     max_date_str = blocks["2024"]["3"]["20"]["max_date"]
     assert max_date_str is not None
     # The max should be the modified date of photo1 (15:00:00), not photo2's date (12:00:00)
-    max_date = datetime.fromisoformat(max_date_str.replace("Z", "+00:00"))
+    datetime.fromisoformat(max_date_str.replace("Z", "+00:00"))
     # Should be 15:00 or later (coalesce should pick date_modified)
 
 

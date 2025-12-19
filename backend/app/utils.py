@@ -3,6 +3,7 @@
 import json
 from typing import Dict, Any
 from sqlalchemy.orm import Session
+from sqlmodel import select
 from .models import Photo, User, Library, VersionRead, PhotoRead
 
 
@@ -75,14 +76,12 @@ def handle_library_upsert(library_name: str, current_user: User, db: Session) ->
         This function assumes library_name is not None or empty.
         Caller should validate before calling.
     """
-    library = (
-        db.query(Library)
-        .filter(
+    library = db.exec(
+        select(Library).where(
             Library.owner_id == current_user.id,
             Library.name == library_name,
         )
-        .first()
-    )
+    ).first()
     if not library:
         library = Library(
             name=library_name,

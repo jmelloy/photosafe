@@ -1,9 +1,10 @@
 """Authentication API endpoints"""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from sqlmodel import select
 
 from ..database import get_db
 from ..models import User, UserCreate, UserRead, Token, RefreshTokenRequest
@@ -25,12 +26,14 @@ router = APIRouter(prefix="/api/auth", tags=["authentication"])
 async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     """Register a new user"""
     # Check if username already exists
-    existing_user = db.query(User).filter(User.username == user_data.username).first()
+    existing_user = db.exec(
+        select(User).where(User.username == user_data.username)
+    ).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Username already registered")
 
     # Check if email already exists
-    existing_email = db.query(User).filter(User.email == user_data.email).first()
+    existing_email = db.exec(select(User).where(User.email == user_data.email)).first()
     if existing_email:
         raise HTTPException(status_code=400, detail="Email already registered")
 
@@ -63,7 +66,7 @@ async def login(
         )
 
     # Update last login
-    user.last_login = datetime.utcnow()
+    user.last_login = datetime.now(timezone.utc)
     db.commit()
 
     # Create access token
@@ -96,7 +99,7 @@ async def refresh_token(request: RefreshTokenRequest, db: Session = Depends(get_
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    user = db.query(User).filter(User.username == username).first()
+    user = db.exec(select(User).where(User.username == username)).first()
     if not user or not user.is_active:
         raise HTTPException(
             status_code=401,

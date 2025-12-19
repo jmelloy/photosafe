@@ -70,7 +70,7 @@ def download_s3_csv(s3_url: str) -> str:
 
         return temp_path
 
-    except Exception as e:
+    except Exception:
         if os.path.exists(temp_path):
             os.remove(temp_path)
         raise
