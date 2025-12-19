@@ -21,7 +21,6 @@ dependencies = [
     "pillow>=11.0.0",
     "python-jose[cryptography]>=3.4.0",
     "bcrypt>=4,<6",
-    "passlib[bcrypt]",
     "pydantic-settings>=2.6.1",
     "alembic>=1.17.2",
     "psycopg2-binary>=2.9.10",
