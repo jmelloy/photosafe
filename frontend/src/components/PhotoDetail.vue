@@ -153,14 +153,30 @@
             v-if="photo.exif && Object.keys(photo.exif).length > 0"
           >
             <h3>EXIF Data</h3>
+            <!-- Important fields -->
             <div
               class="metadata-item"
-              v-for="(value, key) in formatExif(photo.exif)"
+              v-for="(value, key) in formattedExif.important"
               :key="key"
             >
               <span class="label">{{ key }}:</span>
               <span class="value">{{ value }}</span>
             </div>
+            <!-- Less important fields (collapsible) -->
+            <details
+              v-if="formattedExif.additional && Object.keys(formattedExif.additional).length > 0"
+              class="exif-details"
+            >
+              <summary>Additional EXIF Data</summary>
+              <div
+                class="metadata-item"
+                v-for="(value, key) in formattedExif.additional"
+                :key="key"
+              >
+                <span class="label">{{ key }}:</span>
+                <span class="value">{{ value }}</span>
+              </div>
+            </details>
           </div>
 
           <!-- Technical Details -->
@@ -265,6 +281,59 @@ const formatPlace = (place: Record<string, any>): string => {
 const formatExifValue = (key: string, value: any): string => {
   if (value === null || value === undefined || value === "") {
     return "";
+  }
+
+  // Format dates - convert from "2025:12:15 14:03:35" to readable format
+  if (
+    key === "DateTimeOriginal" ||
+    key === "DateTimeDigitized" ||
+    key === "DateTime"
+  ) {
+    try {
+      // Replace colons in date part with hyphens for proper parsing
+      const dateStr = String(value).replace(/^(\d{4}):(\d{2}):(\d{2})/, "$1-$2-$3");
+      const date = new Date(dateStr);
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        });
+      }
+    } catch (e) {
+      // Fall back to original value if parsing fails
+    }
+  }
+
+  // Format LensSpecification - convert nested array to readable format
+  if (key === "LensSpecification" && Array.isArray(value)) {
+    try {
+      // LensSpecification is typically [[min_focal, ratio], [max_focal, ratio], [min_aperture, ratio], [max_aperture, ratio]]
+      // Extract the actual values from the nested arrays
+      const values = value.map((v) => (Array.isArray(v) && v.length >= 2 ? v[1] : v));
+      if (values.length >= 4) {
+        const minFocal = parseFloat(values[0]);
+        const maxFocal = parseFloat(values[1]);
+        const minAperture = parseFloat(values[2]);
+        const maxAperture = parseFloat(values[3]);
+        
+        if (!isNaN(minFocal) && !isNaN(maxFocal) && !isNaN(minAperture) && !isNaN(maxAperture)) {
+          // Format as "min-max mm, f/aperture-aperture"
+          const focalRange = minFocal === maxFocal 
+            ? `${minFocal.toFixed(1)}mm`
+            : `${minFocal.toFixed(1)}-${maxFocal.toFixed(1)}mm`;
+          const apertureRange = minAperture === maxAperture
+            ? `f/${minAperture.toFixed(1)}`
+            : `f/${minAperture.toFixed(1)}-${maxAperture.toFixed(1)}`;
+          return `${focalRange}, ${apertureRange}`;
+        }
+      }
+    } catch (e) {
+      // Fall back to string representation
+    }
   }
 
   // Format exposure time (shutter speed)
@@ -383,8 +452,9 @@ const formatExifValue = (key: string, value: any): string => {
   return String(value);
 };
 
-const formatExif = (exif: Record<string, any>): Record<string, string> => {
-  const formatted: Record<string, string> = {};
+const formatExif = (exif: Record<string, any>): { important: Record<string, string>; additional: Record<string, string> } => {
+  const important: Record<string, string> = {};
+  const additional: Record<string, string> = {};
 
   // Common EXIF fields with friendly names
   const fieldMappings: Record<string, string> = {
@@ -392,6 +462,7 @@ const formatExif = (exif: Record<string, any>): Record<string, string> => {
     Model: "Camera Model",
     LensModel: "Lens Model",
     LensMake: "Lens Make",
+    LensSpecification: "Lens Specification",
     FNumber: "Aperture",
     ApertureValue: "Aperture",
     ExposureTime: "Shutter Speed",
@@ -400,9 +471,10 @@ const formatExif = (exif: Record<string, any>): Record<string, string> => {
     ISOSpeedRatings: "ISO",
     PhotographicSensitivity: "ISO",
     FocalLength: "Focal Length",
-    FocalLengthIn35mmFilm: "Focal Length (35mm equiv)",
+    FocalLenIn35mmFilm: "Focal Length (35mm equiv)",
     DateTimeOriginal: "Date Taken",
     DateTime: "Modified",
+    DateTimeDigitized: "Date Digitized",
     Flash: "Flash",
     WhiteBalance: "White Balance",
     ExposureProgram: "Exposure Mode",
@@ -419,13 +491,15 @@ const formatExif = (exif: Record<string, any>): Record<string, string> => {
     YResolution: "Y Resolution",
   };
 
-  // Process EXIF data with priority on more important fields
-  const priorityOrder = [
+  // Most important fields - shown by default
+  const importantFields = [
+    "DateTimeOriginal",
     "Make",
     "Model",
     "LensModel",
+    "LensSpecification",
     "FocalLength",
-    "FocalLengthIn35mmFilm",
+    "FocalLenIn35mmFilm",
     "FNumber",
     "ApertureValue",
     "ExposureTime",
@@ -433,38 +507,41 @@ const formatExif = (exif: Record<string, any>): Record<string, string> => {
     "ISO",
     "ISOSpeedRatings",
     "PhotographicSensitivity",
-    "ExposureProgram",
-    "ExposureMode",
-    "MeteringMode",
-    "ExposureBiasValue",
     "Flash",
     "WhiteBalance",
-    "DateTimeOriginal",
+    "ExposureProgram",
+    "MeteringMode",
   ];
 
-  // Add priority fields first
-  for (const key of priorityOrder) {
+  // Create a set for quick lookup
+  const importantFieldsSet = new Set(importantFields);
+
+  // Add important fields first
+  for (const key of importantFields) {
     if (exif[key] !== null && exif[key] !== undefined && exif[key] !== "") {
       const displayKey = fieldMappings[key] || key;
       const formattedValue = formatExifValue(key, exif[key]);
-      if (formattedValue && !formatted[displayKey]) {
-        formatted[displayKey] = formattedValue;
+      if (formattedValue && !important[displayKey]) {
+        important[displayKey] = formattedValue;
       }
     }
   }
 
-  // Add remaining fields
+  // Add remaining fields to additional
   for (const [key, value] of Object.entries(exif)) {
     if (value !== null && value !== undefined && value !== "") {
       const displayKey = fieldMappings[key] || key;
-      if (!formatted[displayKey]) {
+      // Skip if already in important fields
+      if (!importantFieldsSet.has(key) && !important[displayKey]) {
         const formattedValue = formatExifValue(key, value);
-        formatted[displayKey] = formattedValue;
+        if (formattedValue) {
+          additional[displayKey] = formattedValue;
+        }
       }
     }
   }
 
-  return formatted;
+  return { important, additional };
 };
 
 const hasPhotoProperties = computed(() => {
@@ -483,6 +560,13 @@ const hasPhotoProperties = computed(() => {
     props.photo?.selfie ||
     props.photo?.panorama
   );
+});
+
+const formattedExif = computed(() => {
+  if (!props.photo?.exif) {
+    return { important: {}, additional: {} };
+  }
+  return formatExif(props.photo.exif);
 });
 </script>
 
@@ -683,5 +767,49 @@ const hasPhotoProperties = computed(() => {
 
 .metadata-section::-webkit-scrollbar-thumb:hover {
   background: #4a4a4a;
+}
+
+/* EXIF details disclosure */
+.exif-details {
+  margin-top: 1rem;
+}
+
+.exif-details summary {
+  cursor: pointer;
+  color: #667eea;
+  font-weight: 500;
+  padding: 0.5rem 0;
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+}
+
+.exif-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.exif-details summary::before {
+  content: "▶";
+  display: inline-block;
+  margin-right: 0.5rem;
+  transition: transform 0.2s;
+  font-size: 0.75rem;
+}
+
+.exif-details[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.exif-details summary:hover {
+  color: #7c8ef8;
+}
+
+.exif-details[open] {
+  margin-bottom: 0.5rem;
+}
+
+.exif-details[open] .metadata-item:first-of-type {
+  margin-top: 0.75rem;
 }
 </style>
