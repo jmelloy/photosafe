@@ -29,6 +29,8 @@ from ..utils import (
     serialize_photo_json_fields,
     handle_library_upsert,
     create_photo_response,
+    process_search_info_to_metadata,
+    extend_photo_metadata,
 )
 
 router = APIRouter(prefix="/api/photos", tags=["photos"])
@@ -53,9 +55,18 @@ async def create_photo(
             detail=f"A photo with this uuid already exists: {photo_data.uuid}",
         )
 
-    # Extract versions data
+    # Extract versions data and metadata
     versions_data = photo_data.versions or []
-    photo_dict = photo_data.model_dump(exclude={"versions"})
+    metadata_entries = photo_data.metadata or []
+    photo_dict = photo_data.model_dump(exclude={"versions", "metadata"})
+
+    # Handle search_info for backward compatibility - convert to metadata
+    if "search_info" in photo_dict and photo_dict["search_info"]:
+        search_info = photo_dict.pop("search_info")
+        metadata_from_search_info = process_search_info_to_metadata(
+            search_info, source="legacy"
+        )
+        metadata_entries.extend(metadata_from_search_info)
 
     # Serialize JSON fields
     # photo_dict = serialize_photo_json_fields(photo_dict)
@@ -69,6 +80,10 @@ async def create_photo(
     for version_data in versions_data:
         db_version = Version(photo_uuid=db_photo.uuid, **version_data.model_dump())
         db.add(db_version)
+
+    # Create metadata entries
+    if metadata_entries:
+        extend_photo_metadata(db_photo, metadata_entries, db)
 
     db.commit()
     db.refresh(db_photo)
@@ -98,9 +113,20 @@ async def update_photo(
             status_code=403, detail="Not authorized to update this photo"
         )
 
-    # Extract versions data
+    # Extract versions data and metadata
     versions_data = photo_data.versions or []
-    update_dict = photo_data.model_dump(exclude={"versions"}, exclude_unset=True)
+    metadata_entries = photo_data.metadata or []
+    update_dict = photo_data.model_dump(exclude={"versions", "metadata"}, exclude_unset=True)
+
+    # Handle search_info for backward compatibility - convert to metadata
+    if "search_info" in update_dict and update_dict["search_info"]:
+        search_info = update_dict.pop("search_info")
+        # Determine source - default to "unknown", but could be "macos" if from macOS sync
+        # The source will be set by the sync script in the metadata field
+        metadata_from_search_info = process_search_info_to_metadata(
+            search_info, source="legacy"
+        )
+        metadata_entries.extend(metadata_from_search_info)
 
     # Handle library name - upsert into libraries table
     if "library" in update_dict and update_dict["library"]:
@@ -133,6 +159,10 @@ async def update_photo(
             else:
                 db_version = Version(photo_uuid=uuid, **version_data.model_dump())
                 db.add(db_version)
+
+    # Extend metadata (upsert based on key+source)
+    if metadata_entries:
+        extend_photo_metadata(db_photo, metadata_entries, db)
 
     db.commit()
     db.refresh(db_photo)
@@ -176,11 +206,20 @@ async def batch_create_or_update_photos(
                     error_count += 1
                     continue
 
-                # Extract versions data
+                # Extract versions data and metadata
                 versions_data = photo_data.versions or []
+                metadata_entries = photo_data.metadata or []
                 update_dict = photo_data.model_dump(
-                    exclude={"versions"}, exclude_unset=True
+                    exclude={"versions", "metadata"}, exclude_unset=True
                 )
+
+                # Handle search_info for backward compatibility - convert to metadata
+                if "search_info" in update_dict and update_dict["search_info"]:
+                    search_info = update_dict.pop("search_info")
+                    metadata_from_search_info = process_search_info_to_metadata(
+                        search_info, source="legacy"
+                    )
+                    metadata_entries.extend(metadata_from_search_info)
 
                 # Handle library name - upsert into libraries table
                 if "library" in update_dict and update_dict["library"]:
@@ -217,6 +256,10 @@ async def batch_create_or_update_photos(
                             )
                             db.add(db_version)
 
+                # Extend metadata
+                if metadata_entries:
+                    extend_photo_metadata(existing, metadata_entries, db)
+
                 db.flush()
                 results.append(
                     BatchPhotoResult(
@@ -227,9 +270,18 @@ async def batch_create_or_update_photos(
 
             else:
                 # Create new photo
-                # Extract versions data
+                # Extract versions data and metadata
                 versions_data = photo_data.versions or []
-                photo_dict = photo_data.model_dump(exclude={"versions"})
+                metadata_entries = photo_data.metadata or []
+                photo_dict = photo_data.model_dump(exclude={"versions", "metadata"})
+
+                # Handle search_info for backward compatibility - convert to metadata
+                if "search_info" in photo_dict and photo_dict["search_info"]:
+                    search_info = photo_dict.pop("search_info")
+                    metadata_from_search_info = process_search_info_to_metadata(
+                        search_info, source="legacy"
+                    )
+                    metadata_entries.extend(metadata_from_search_info)
 
                 # Serialize JSON fields
                 # photo_dict = serialize_photo_json_fields(photo_dict)
@@ -245,6 +297,10 @@ async def batch_create_or_update_photos(
                         photo_uuid=db_photo.uuid, **version_data.model_dump()
                     )
                     db.add(db_version)
+
+                # Create metadata entries
+                if metadata_entries:
+                    extend_photo_metadata(db_photo, metadata_entries, db)
 
                 db.flush()
                 results.append(

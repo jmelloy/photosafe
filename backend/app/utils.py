@@ -1,9 +1,9 @@
 """Utility functions for photo processing"""
 
 import json
-from typing import Dict, Any
+from typing import Dict, Any, List
 from sqlalchemy.orm import Session
-from .models import Photo, User, Library, VersionRead, PhotoRead
+from .models import Photo, User, Library, VersionRead, PhotoRead, PhotoMetadata, PhotoMetadataRead
 
 
 def serialize_json_field(value):
@@ -93,6 +93,86 @@ def handle_library_upsert(library_name: str, current_user: User, db: Session) ->
     return library.id
 
 
+def process_search_info_to_metadata(
+    search_info: Dict[str, Any], source: str = "unknown"
+) -> List[Dict[str, str]]:
+    """Convert search_info dictionary to list of metadata entries.
+    
+    Args:
+        search_info: Dictionary of search info data
+        source: Source identifier for the metadata (e.g., "macos", "icloud")
+    
+    Returns:
+        List of metadata dictionaries with key, value, and source
+    """
+    metadata_list = []
+    
+    if not search_info:
+        return metadata_list
+    
+    for key, value in search_info.items():
+        if value is None:
+            continue
+            
+        # Handle list values by converting to JSON string
+        if isinstance(value, list):
+            if not value:  # Skip empty lists
+                continue
+            value_str = json.dumps(value)
+        # Handle dict values by converting to JSON string
+        elif isinstance(value, dict):
+            if not value:  # Skip empty dicts
+                continue
+            value_str = json.dumps(value)
+        # Handle other types
+        else:
+            value_str = str(value)
+        
+        metadata_list.append({
+            "key": key,
+            "value": value_str,
+            "source": source,
+        })
+    
+    return metadata_list
+
+
+def extend_photo_metadata(
+    photo: Photo, metadata_entries: List[Dict[str, str]], db: Session
+) -> None:
+    """Extend photo metadata with new entries, updating existing keys from the same source.
+    
+    Args:
+        photo: Photo database model instance
+        metadata_entries: List of metadata dictionaries with key, value, and source
+        db: Database session
+    """
+    for entry in metadata_entries:
+        # Check if metadata with this key and source already exists
+        existing = (
+            db.query(PhotoMetadata)
+            .filter(
+                PhotoMetadata.photo_uuid == photo.uuid,
+                PhotoMetadata.key == entry["key"],
+                PhotoMetadata.source == entry["source"],
+            )
+            .first()
+        )
+        
+        if existing:
+            # Update existing metadata
+            existing.value = entry["value"]
+        else:
+            # Create new metadata entry
+            new_metadata = PhotoMetadata(
+                photo_uuid=photo.uuid,
+                key=entry["key"],
+                value=entry["value"],
+                source=entry["source"],
+            )
+            db.add(new_metadata)
+
+
 def create_photo_response(photo: Photo) -> PhotoRead:
     """Helper function to create PhotoRead from Photo model
 
@@ -170,6 +250,20 @@ def create_photo_response(photo: Photo) -> PhotoRead:
                 for v in photo.versions
             ]
             if photo.versions
+            else None
+        ),
+        "metadata": (
+            [
+                PhotoMetadataRead(
+                    id=m.id,
+                    photo_uuid=m.photo_uuid,
+                    key=m.key,
+                    value=m.value,
+                    source=m.source,
+                )
+                for m in photo.metadata
+            ]
+            if photo.metadata
             else None
         ),
     }

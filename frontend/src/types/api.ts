@@ -15,6 +15,14 @@ export interface Version {
   type?: string;
 }
 
+export interface PhotoMetadata {
+  id: number;
+  photo_uuid?: string;
+  key: string;
+  value: string;
+  source: string;
+}
+
 export interface Photo {
   uuid: string;
   masterFingerprint?: string;
@@ -62,6 +70,7 @@ export interface Photo {
   library?: string;
   uploaded_at?: string;
   versions?: Version[];
+  metadata?: PhotoMetadata[];
   // Backwards compatibility fields
   filename?: string;
   file_path?: string;

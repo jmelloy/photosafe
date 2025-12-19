@@ -202,7 +202,42 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
                 click.echo(f"Error deleting photo {photo.uuid}: {str(e)}", err=True)
                 return
 
-        p["search_info"] = photo.search_info.asdict()
+        # Convert search_info to metadata with source="macos"
+        search_info_dict = photo.search_info.asdict()
+        metadata_entries = []
+        
+        if search_info_dict:
+            for key, value in search_info_dict.items():
+                if value is None:
+                    continue
+                
+                # Handle list values by converting to JSON string
+                if isinstance(value, list):
+                    if not value:  # Skip empty lists
+                        continue
+                    value_str = json.dumps(value)
+                # Handle dict values by converting to JSON string
+                elif isinstance(value, dict):
+                    if not value:  # Skip empty dicts
+                        continue
+                    value_str = json.dumps(value)
+                # Handle other types
+                else:
+                    value_str = str(value)
+                
+                metadata_entries.append({
+                    "key": key,
+                    "value": value_str,
+                    "source": "macos",
+                })
+        
+        # Add metadata to the photo data
+        if metadata_entries:
+            p["metadata"] = metadata_entries
+        
+        # Keep search_info for backward compatibility (will be converted to metadata by API)
+        p["search_info"] = search_info_dict
+        
         # Write JSON file if requested
         if output_json:
             dt = photo.date.astimezone(timezone.utc)

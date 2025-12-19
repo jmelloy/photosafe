@@ -193,6 +193,9 @@ class Photo(SQLModel, table=True):
     versions: List["Version"] = Relationship(
         back_populates="photo", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
+    metadata: List["PhotoMetadata"] = Relationship(
+        back_populates="photo", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
 
     @property
     def url(self) -> Optional[str]:
@@ -263,6 +266,23 @@ class Version(SQLModel, table=True):
 
     # Relationship
     photo: Optional["Photo"] = Relationship(back_populates="versions")
+
+
+class PhotoMetadata(SQLModel, table=True):
+    """Photo metadata model - stores key-value pairs with source tracking"""
+
+    __tablename__ = "photo_metadata"
+
+    id: Optional[int] = Field(default=None, primary_key=True, index=True)
+    photo_uuid: Optional[pkg_uuid.UUID] = Field(
+        default=None, foreign_key="photos.uuid", index=True, sa_type=UUID(as_uuid=True)
+    )
+    key: str = Field(sa_type=String, index=True)
+    value: str = Field(sa_type=Text)
+    source: str = Field(sa_type=String, index=True)
+
+    # Relationship
+    photo: Optional["Photo"] = Relationship(back_populates="metadata")
 
 
 class Album(SQLModel, table=True):
@@ -364,6 +384,24 @@ class VersionCreate(SQLModel):
     type: Optional[str] = None
 
 
+class PhotoMetadataRead(SQLModel):
+    """PhotoMetadata read schema - for API responses"""
+
+    id: int
+    photo_uuid: Optional[pkg_uuid.UUID] = None
+    key: str
+    value: str
+    source: str
+
+
+class PhotoMetadataCreate(SQLModel):
+    """PhotoMetadata create schema - for API requests"""
+
+    key: str
+    value: str
+    source: str = "unknown"
+
+
 class PhotoRead(SQLModel):
     """Photo read schema - for API responses"""
 
@@ -419,6 +457,7 @@ class PhotoRead(SQLModel):
     deleted_at: Optional[datetime] = None
     url: Optional[str] = None  # Computed property
     versions: Optional[List[VersionRead]] = None
+    metadata: Optional[List[PhotoMetadataRead]] = None
 
     class Config:
         from_attributes = True
@@ -472,6 +511,7 @@ class PhotoCreate(SQLModel):
     s3_live_path: Optional[str] = None
     library: Optional[str] = None
     versions: Optional[List[VersionCreate]] = None
+    metadata: Optional[List[PhotoMetadataCreate]] = None
 
 
 class PhotoUpdate(SQLModel):
@@ -521,6 +561,7 @@ class PhotoUpdate(SQLModel):
     s3_live_path: Optional[str] = None
     library: Optional[str] = None
     versions: Optional[List[VersionCreate]] = None
+    metadata: Optional[List[PhotoMetadataCreate]] = None
 
 
 class AlbumRead(SQLModel):
