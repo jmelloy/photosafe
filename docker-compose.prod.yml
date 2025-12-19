@@ -17,7 +17,6 @@ services:
       - ./backend/uploads:/app/uploads
       
   frontend:
-    volumes:
-      # Remove all volume mounts for production
-      # The built files are baked into the Docker image
-      []
+    # Remove all volume mounts for production
+    # The built files are baked into the Docker image
+    volumes: ~

@@ -23,8 +23,12 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install vite for preview server (minimal production setup)
-RUN npm install vite@^7.3.0
+# Copy package files
+COPY package*.json ./
+
+# Install only production dependencies and vite (needed for preview server)
+# Using ci for production ensures lock file is respected
+RUN npm ci --omit=dev && npm install --no-save vite@^7.3.0
 
 # Copy built files from builder stage
 COPY --from=builder /app/dist ./dist
@@ -33,4 +37,4 @@ COPY --from=builder /app/dist ./dist
 EXPOSE 5173
 
 # Run the preview server
-CMD ["npx", "vite", "preview", "--host", "0.0.0.0", "--port", "5173"]
+CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0", "--port", "5173"]
