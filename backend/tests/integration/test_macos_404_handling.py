@@ -193,6 +193,7 @@ class TestMacOS404Handling:
             mock_photo.path = None  # No path
             mock_photo.path_edited = None
             mock_photo.path_live_photo = None
+            mock_photo.intrash = True
             mock_photo._info = {
                 "cloudAssetGUID": photo_data["uuid"],
                 "masterFingerprint": photo_data.get("masterFingerprint")
