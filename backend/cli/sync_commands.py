@@ -16,13 +16,13 @@ MACOS_LIBRARY_NAME = "macOS Photos"
 
 def clean_photo_data(photo_dict):
     """Clean up None values in photo data to prevent null insertions.
-    
+
     This function modifies the input dictionary in place to clean up None values
     that could be serialized as JSON null in fields where they are not appropriate.
-    
+
     Args:
         photo_dict: Dictionary of photo data from osxphotos
-        
+
     Returns:
         The same dictionary with None values cleaned up (for chaining convenience)
     """
@@ -45,7 +45,7 @@ def clean_photo_data(photo_dict):
     elif isinstance(face_info, list):
         # Filter out None items from face_info list
         photo_dict["face_info"] = [face for face in face_info if face is not None]
-    
+
     return photo_dict
 
 
@@ -91,7 +91,6 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
 
     photos_db = osxphotos.PhotosDB()
     base_path = photos_db.library_path
-    s3 = boto3.client("s3", "us-west-2")
 
     # Authenticate
     auth = PhotoSafeAuth(base_url, username, password)
@@ -190,8 +189,7 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
             json_path = os.path.join(directory, f"{p['uuid']}.json")
             with open(json_path, "w", encoding="utf-8") as f:
                 f.write(json.dumps(p, cls=DateTimeEncoder, indent=2))
-        
-        # Fix typo: saerch_info -> search_info
+
         p["search_info"] = photo.search_info.asdict()
         try:
             r = auth.patch(
@@ -201,11 +199,14 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
             )
 
             if r.status_code == 404:
+                click.echo(
+                    f"Missing photo {p['uuid'].lower()} {photo.original_filename} ({r.status_code})"
+                )
                 return
-            click.echo(
-                f"Synced {photo.uuid} {photo.original_filename} ({r.status_code})..."
-            )
             r.raise_for_status()
+            click.echo(
+                f"Synced {p['uuid'].lower()} {photo.original_filename} ({r.status_code})..."
+            )
         except Exception as e:
             click.echo(f"Error syncing photo {photo.uuid}: {str(e)}", err=True)
             return

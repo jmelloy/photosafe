@@ -2,6 +2,7 @@
 
 import pytest
 from fastapi.testclient import TestClient
+from shortuuid import uuid
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
@@ -78,11 +79,13 @@ def test_patch_photo_creates_library_if_not_exists():
     )
     token = login_response.json()["access_token"]
 
+    new_uuid = str(uuid.uuid4())
+
     # Create a photo without library
     response = client.post(
         "/api/photos/",
         json={
-            "uuid": "test-photo-123",
+            "uuid": new_uuid,
             "original_filename": "test.jpg",
             "date": "2024-01-01T00:00:00",
         },
@@ -100,7 +103,7 @@ def test_patch_photo_creates_library_if_not_exists():
 
     # Patch the photo with a library name
     patch_response = client.patch(
-        "/api/photos/test-photo-123/",
+        f"/api/photos/{new_uuid}/",
         json={"library": "My Photos"},
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -114,7 +117,7 @@ def test_patch_photo_creates_library_if_not_exists():
         assert libraries[0].name == "My Photos"
 
         # Verify photo has library_id set
-        photo = db.query(Photo).filter(Photo.uuid == "test-photo-123").first()
+        photo = db.query(Photo).filter(Photo.uuid == new_uuid).first()
         assert photo is not None
         assert photo.library_id == libraries[0].id
         assert photo.library == "My Photos"
@@ -292,12 +295,12 @@ def test_patch_photo_without_library_no_change():
         "/api/auth/login", data={"username": "testuser", "password": "testpassword123"}
     )
     token = login_response.json()["access_token"]
-
+    new_uuid = str(uuid.uuid4())
     # Create a photo
     client.post(
         "/api/photos/",
         json={
-            "uuid": "test-photo",
+            "uuid": new_uuid,
             "original_filename": "test.jpg",
             "date": "2024-01-01T00:00:00",
         },
@@ -306,7 +309,7 @@ def test_patch_photo_without_library_no_change():
 
     # Patch with other fields but no library
     client.patch(
-        "/api/photos/test-photo/",
+        f"/api/photos/{new_uuid}/",
         json={"title": "Updated Title"},
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -318,7 +321,7 @@ def test_patch_photo_without_library_no_change():
         assert len(libraries) == 0
 
         # Verify photo title was updated
-        photo = db.query(Photo).filter(Photo.uuid == "test-photo").first()
+        photo = db.query(Photo).filter(Photo.uuid == new_uuid).first()
         assert photo.title == "Updated Title"
         assert photo.library_id is None
     finally:

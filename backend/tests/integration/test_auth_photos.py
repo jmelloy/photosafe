@@ -2,6 +2,7 @@
 
 import os
 from datetime import datetime
+import uuid
 
 import pytest
 from app.database import get_db
@@ -650,10 +651,11 @@ def test_batch_mixed_create_and_update():
 
 def test_batch_unauthenticated():
     """Test batch endpoint requires authentication"""
+    new_uuid = uuid.uuid4()
     batch_data = {
         "photos": [
             {
-                "uuid": "test-photo",
+                "uuid": str(new_uuid),
                 "original_filename": "test.jpg",
                 "date": "2024-01-01T00:00:00",
             }
@@ -680,11 +682,13 @@ def test_get_photo():
     )
     token = login_response.json()["access_token"]
 
+    new_uuid = uuid.uuid4()
+
     # Create a photo
     create_response = client.post(
         "/api/photos/",
         json={
-            "uuid": "test-photo-uuid",
+            "uuid": str(new_uuid),
             "original_filename": "test.jpg",
             "date": "2024-01-01T00:00:00",
             "title": "Test Photo",
@@ -696,12 +700,12 @@ def test_get_photo():
 
     # Get the photo
     response = client.get(
-        "/api/photos/test-photo-uuid/",
+        f"/api/photos/{new_uuid}/",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
     data = response.json()
-    assert data["uuid"] == "test-photo-uuid"
+    assert data["uuid"] == str(new_uuid)
     assert data["original_filename"] == "test.jpg"
     assert data["title"] == "Test Photo"
 
