@@ -14,6 +14,7 @@ import subprocess
 import sys
 import os
 from pathlib import Path
+from sqlalchemy import select
 
 # Change to backend directory
 backend_dir = Path(__file__).parent
@@ -84,7 +85,7 @@ def main():
     db = SessionLocal()
     try:
         # Check if user already exists
-        existing_user = db.query(User).filter(User.username == "testuser").first()
+        existing_user = db.exec(select(User).where(User.username == "testuser")).first()
         if existing_user:
             print("User 'testuser' already exists")
         else:
@@ -103,7 +104,7 @@ def main():
             print(f"✅ Created test user: {test_user.username}")
 
         # Verify data
-        user_count = db.query(User).count()
+        user_count = len(db.exec(select(User)).all())
         print(f"✅ Total users in database: {user_count}")
 
     except Exception as e:

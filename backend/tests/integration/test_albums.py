@@ -9,9 +9,9 @@ from app.database import get_db
 from app.main import app
 from app.models import Library, Photo, User, Version, Album, album_photos
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, delete
 from sqlalchemy.orm import sessionmaker
-from sqlmodel import SQLModel
+from sqlmodel import SQLModel, Session
 
 # Test database setup - PostgreSQL connection required
 SQLALCHEMY_DATABASE_URL = os.getenv(
@@ -19,7 +19,9 @@ SQLALCHEMY_DATABASE_URL = os.getenv(
     "postgresql://photosafe:photosafe@localhost:5432/photosafe_test",
 )
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+TestingSessionLocal = sessionmaker(
+    autocommit=False, autoflush=False, bind=engine, class_=Session
+)
 
 # Create all tables once
 SQLModel.metadata.create_all(bind=engine)
@@ -48,11 +50,11 @@ def cleanup_db():
     db = TestingSessionLocal()
     try:
         db.execute(album_photos.delete())
-        db.query(Version).delete()
-        db.query(Photo).delete()
-        db.query(Album).delete()
-        db.query(Library).delete()
-        db.query(User).delete()
+        db.exec(delete(Version))
+        db.exec(delete(Photo))
+        db.exec(delete(Album))
+        db.exec(delete(Library))
+        db.exec(delete(User))
         db.commit()
     finally:
         db.close()
@@ -63,11 +65,11 @@ def cleanup_db():
     db = TestingSessionLocal()
     try:
         db.execute(album_photos.delete())
-        db.query(Version).delete()
-        db.query(Photo).delete()
-        db.query(Album).delete()
-        db.query(Library).delete()
-        db.query(User).delete()
+        db.exec(delete(Version))
+        db.exec(delete(Photo))
+        db.exec(delete(Album))
+        db.exec(delete(Library))
+        db.exec(delete(User))
         db.commit()
     finally:
         db.close()

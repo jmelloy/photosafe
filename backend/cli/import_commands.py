@@ -11,6 +11,7 @@ from typing import Optional, Dict, Any
 import uuid as uuid_module
 import dateutil
 from sqlalchemy.orm import Session
+from sqlmodel import select
 from PIL import Image
 from PIL.ExifTags import TAGS, GPSTAGS
 from ulid import ULID
@@ -58,7 +59,7 @@ def import_photos(
 
     try:
         # Get user
-        user = db.query(User).filter(User.username == username).first()
+        user = db.exec(select(User).where(User.username == username)).first()
         if not user:
             click.echo(f"Error: User '{username}' not found", err=True)
             return
@@ -66,16 +67,16 @@ def import_photos(
         # Get or create library
         library = None
         if library_id:
-            library = db.query(Library).filter(Library.id == library_id).first()
+            library = db.exec(select(Library).where(Library.id == library_id)).first()
             if not library:
                 click.echo(f"Error: Library {library_id} not found", err=True)
                 return
         elif library_name:
-            library = (
-                db.query(Library)
-                .filter(Library.owner_id == user.id, Library.name == library_name)
-                .first()
-            )
+            library = db.exec(
+                select(Library).where(
+                    Library.owner_id == user.id, Library.name == library_name
+                )
+            ).first()
             if not library and not dry_run:
                 library = Library(
                     name=library_name,
@@ -200,11 +201,9 @@ def import_photos(
 
                     if not dry_run:
                         # Check if photo already exists
-                        existing = (
-                            db.query(Photo)
-                            .filter(Photo.uuid == photo_data["uuid"])
-                            .first()
-                        )
+                        existing = db.exec(
+                            select(Photo).where(Photo.uuid == photo_data["uuid"])
+                        ).first()
                         if existing:
                             skipped += 1
                             continue
@@ -216,14 +215,12 @@ def import_photos(
 
                         # Create version record if it doesn't exist
                         try:
-                            existing_version = (
-                                db.query(Version)
-                                .filter(
+                            existing_version = db.exec(
+                                select(Version).where(
                                     Version.photo_uuid == db_photo.uuid,
                                     Version.version == "original",
                                 )
-                                .first()
-                            )
+                            ).first()
                             if not existing_version:
                                 # Determine version type
                                 content_type = photo_data.get("content_type", "")

@@ -10,6 +10,7 @@ from typing import List, Optional, Dict
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, or_
+from sqlmodel import select
 
 from ..database import get_db
 from ..models import (
@@ -46,7 +47,7 @@ async def create_photo(
 ):
     """Create a new photo (for sync_photos_linux compatibility)"""
     # Check if photo already exists
-    existing = db.query(Photo).filter(Photo.uuid == photo_data.uuid).first()
+    existing = db.exec(select(Photo).where(Photo.uuid == photo_data.uuid)).first()
     if existing:
         raise HTTPException(
             status_code=400,
@@ -84,7 +85,7 @@ async def update_photo(
     current_user: User = Depends(get_current_active_user),
 ):
     """Update a photo (for sync_photos_linux compatibility)"""
-    db_photo = db.query(Photo).filter(Photo.uuid == uuid).first()
+    db_photo = db.exec(select(Photo).where(Photo.uuid == uuid)).first()
     if not db_photo:
         raise HTTPException(status_code=404, detail="Photo not found")
 
@@ -119,13 +120,11 @@ async def update_photo(
     # Update or create versions
     if versions_data:
         for version_data in versions_data:
-            existing_version = (
-                db.query(Version)
-                .filter(
+            existing_version = db.exec(
+                select(Version).where(
                     Version.photo_uuid == uuid, Version.version == version_data.version
                 )
-                .first()
-            )
+            ).first()
 
             if existing_version:
                 for key, value in version_data.model_dump().items():
@@ -155,7 +154,9 @@ async def batch_create_or_update_photos(
     for photo_data in batch_data.photos:
         try:
             # Check if photo already exists
-            existing = db.query(Photo).filter(Photo.uuid == photo_data.uuid).first()
+            existing = db.exec(
+                select(Photo).where(Photo.uuid == photo_data.uuid)
+            ).first()
 
             if existing:
                 # Update existing photo
@@ -199,14 +200,12 @@ async def batch_create_or_update_photos(
                 # Update or create versions
                 if versions_data:
                     for version_data in versions_data:
-                        existing_version = (
-                            db.query(Version)
-                            .filter(
+                        existing_version = db.exec(
+                            select(Version).where(
                                 Version.photo_uuid == photo_data.uuid,
                                 Version.version == version_data.version,
                             )
-                            .first()
-                        )
+                        ).first()
 
                         if existing_version:
                             for key, value in version_data.model_dump().items():
@@ -310,20 +309,20 @@ async def list_photos(
 
     # Superusers can see all photos, regular users only see their own
     if current_user.is_superuser:
-        query = db.query(Photo)
+        query = select(Photo)
     else:
-        query = db.query(Photo).filter(Photo.owner_id == current_user.id)
+        query = select(Photo).where(Photo.owner_id == current_user.id)
 
     # Eagerly load versions to avoid N+1 queries
     query = query.options(joinedload(Photo.versions))
 
     # Filter out soft-deleted photos by default
-    query = query.filter(Photo.deleted_at.is_(None))
+    query = query.where(Photo.deleted_at.is_(None))
 
     # Apply search filter - search in original_filename, title, and description
     if search:
         search_pattern = f"%{search}%"
-        query = query.filter(
+        query = query.where(
             or_(
                 Photo.original_filename.ilike(search_pattern),
                 Photo.title.ilike(search_pattern),
@@ -334,25 +333,25 @@ async def list_photos(
     # Apply album filter
     if album:
         # Check if albums array contains the value (PostgreSQL)
-        query = query.filter(Photo.albums.contains([album]))
+        query = query.where(Photo.albums.contains([album]))
 
     # Apply keyword filter
     if keyword:
-        query = query.filter(Photo.keywords.contains([keyword]))
+        query = query.where(Photo.keywords.contains([keyword]))
 
     # Apply person filter
     if person:
-        query = query.filter(Photo.persons.contains([person]))
+        query = query.where(Photo.persons.contains([person]))
 
     # Apply library filter
     if library:
-        query = query.filter(Photo.library == library)
+        query = query.where(Photo.library == library)
 
     # Apply date range filters
     if start_date:
         try:
             start_dt = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
-            query = query.filter(Photo.date >= start_dt)
+            query = query.where(Photo.date >= start_dt)
         except ValueError:
             pass  # Skip invalid date format
 
@@ -361,37 +360,35 @@ async def list_photos(
             end_dt = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
             # Include the entire end date
             end_dt = end_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
-            query = query.filter(Photo.date <= end_dt)
+            query = query.where(Photo.date <= end_dt)
         except ValueError:
             pass  # Skip invalid date format
 
     # Apply photo type filters
     if favorite is not None:
-        query = query.filter(Photo.favorite == favorite)
+        query = query.where(Photo.favorite == favorite)
 
     if isphoto is not None:
-        query = query.filter(Photo.isphoto == isphoto)
+        query = query.where(Photo.isphoto == isphoto)
 
     if ismovie is not None:
-        query = query.filter(Photo.ismovie == ismovie)
+        query = query.where(Photo.ismovie == ismovie)
 
     if screenshot is not None:
-        query = query.filter(Photo.screenshot == screenshot)
+        query = query.where(Photo.screenshot == screenshot)
 
     if panorama is not None:
-        query = query.filter(Photo.panorama == panorama)
+        query = query.where(Photo.panorama == panorama)
 
     if portrait is not None:
-        query = query.filter(Photo.portrait == portrait)
+        query = query.where(Photo.portrait == portrait)
 
     # Apply location filter
     if has_location is not None:
         if has_location:
-            query = query.filter(
-                Photo.latitude.isnot(None), Photo.longitude.isnot(None)
-            )
+            query = query.where(Photo.latitude.isnot(None), Photo.longitude.isnot(None))
         else:
-            query = query.filter(
+            query = query.where(
                 or_(Photo.latitude.is_(None), Photo.longitude.is_(None))
             )
 
@@ -402,7 +399,11 @@ async def list_photos(
     skip = (page - 1) * page_size
 
     # Get photos with pagination
-    photos = query.order_by(Photo.date.desc()).offset(skip).limit(page_size + 1).all()
+    photos = (
+        db.exec(query.order_by(Photo.date.desc()).offset(skip).limit(page_size + 1))
+        .unique()
+        .all()
+    )
 
     # Check if there are more pages
     has_more = len(photos) > page_size
@@ -424,13 +425,13 @@ async def get_photo_filters(
     """Get available filter values for albums, keywords, persons, and libraries"""
     # Superusers can see all photos, regular users only see their own
     query = (
-        db.query(Photo)
-        .filter(Photo.owner_id == current_user.id)
-        .filter(Photo.deleted_at.is_(None))
-    ).with_entities(Photo.albums, Photo.keywords, Photo.persons, Photo.library)
+        select(Photo.albums, Photo.keywords, Photo.persons, Photo.library)
+        .where(Photo.owner_id == current_user.id)
+        .where(Photo.deleted_at.is_(None))
+    ).distinct()
 
     # Get all photos for this user
-    photos = query.distinct().all()
+    photos = db.exec(query).all()
 
     # Extract unique values from arrays and library field
     albums = set()
@@ -466,25 +467,27 @@ async def get_photo_blocks(
     This endpoint groups photos without labels by date and returns a nested structure.
     """
 
-    query = db.query(
+    query = select(
         func.extract("year", Photo.date).label("year"),
         func.extract("month", Photo.date).label("month"),
         func.extract("day", Photo.date).label("day"),
         func.count().label("count"),
         func.max(func.coalesce(Photo.date_modified, Photo.date)).label("max_date"),
-    ).filter(or_(Photo.labels == None, func.array_length(Photo.labels, 1) == None))
+    ).where(or_(Photo.labels == None, func.array_length(Photo.labels, 1) == None))
 
     # Filter out soft-deleted photos
-    query = query.filter(Photo.deleted_at.is_(None))
+    query = query.where(Photo.deleted_at.is_(None))
 
     # Filter by owner if not superuser
     if not current_user.is_superuser:
-        query = query.filter(Photo.owner_id == current_user.id)
+        query = query.where(Photo.owner_id == current_user.id)
 
-    results = query.group_by(
-        func.extract("year", Photo.date),
-        func.extract("month", Photo.date),
-        func.extract("day", Photo.date),
+    results = db.exec(
+        query.group_by(
+            func.extract("year", Photo.date),
+            func.extract("month", Photo.date),
+            func.extract("day", Photo.date),
+        )
     ).all()
 
     # Build nested dictionary structure
@@ -512,7 +515,7 @@ async def get_photo(
     current_user: User = Depends(get_current_active_user),
 ):
     """Get a specific photo by UUID"""
-    photo = db.query(Photo).filter(Photo.uuid == uuid).first()
+    photo = db.exec(select(Photo).where(Photo.uuid == uuid)).first()
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
 
@@ -535,7 +538,7 @@ async def delete_photo(
     current_user: User = Depends(get_current_active_user),
 ):
     """Delete a photo by UUID (soft delete by default, use hard_delete=true for permanent deletion)"""
-    photo = db.query(Photo).filter(Photo.uuid == uuid).first()
+    photo = db.exec(select(Photo).where(Photo.uuid == uuid)).first()
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
 

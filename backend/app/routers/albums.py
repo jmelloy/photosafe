@@ -3,6 +3,7 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlmodel import select
 
 from ..database import get_db
 from ..models import (
@@ -20,7 +21,7 @@ router = APIRouter(prefix="/api/albums", tags=["albums"])
 async def create_album(album_data: AlbumCreate, db: Session = Depends(get_db)):
     """Create a new album (for sync_photos_linux compatibility)"""
     # Check if album already exists
-    existing = db.query(Album).filter(Album.uuid == album_data.uuid).first()
+    existing = db.exec(select(Album).where(Album.uuid == album_data.uuid)).first()
     if existing:
         raise HTTPException(
             status_code=400,
@@ -38,7 +39,7 @@ async def create_album(album_data: AlbumCreate, db: Session = Depends(get_db)):
 
     # Add photos to album
     for photo_uuid in photo_uuids:
-        photo = db.query(Photo).filter(Photo.uuid == photo_uuid).first()
+        photo = db.exec(select(Photo).where(Photo.uuid == photo_uuid)).first()
         if photo:
             db_album.photos.append(photo)
 
@@ -59,7 +60,7 @@ async def update_or_create_album(
     uuid: str, album_data: AlbumCreate, db: Session = Depends(get_db)
 ):
     """Update or create an album (for sync_photos_linux compatibility)"""
-    db_album = db.query(Album).filter(Album.uuid == uuid).first()
+    db_album = db.exec(select(Album).where(Album.uuid == uuid)).first()
 
     # Extract photos list
     photo_uuids = album_data.photos or []
@@ -74,7 +75,7 @@ async def update_or_create_album(
         # Clear and re-add photos
         db_album.photos.clear()
         for photo_uuid in photo_uuids:
-            photo = db.query(Photo).filter(Photo.uuid == photo_uuid).first()
+            photo = db.exec(select(Photo).where(Photo.uuid == photo_uuid)).first()
             if photo:
                 db_album.photos.append(photo)
     else:
@@ -87,7 +88,7 @@ async def update_or_create_album(
 
         # Add photos to album
         for photo_uuid in photo_uuids:
-            photo = db.query(Photo).filter(Photo.uuid == photo_uuid).first()
+            photo = db.exec(select(Photo).where(Photo.uuid == photo_uuid)).first()
             if photo:
                 db_album.photos.append(photo)
 
@@ -108,7 +109,7 @@ async def patch_album(
     uuid: str, album_data: AlbumUpdate, db: Session = Depends(get_db)
 ):
     """Partially update an album (Django DRF compatibility)"""
-    db_album = db.query(Album).filter(Album.uuid == uuid).first()
+    db_album = db.exec(select(Album).where(Album.uuid == uuid)).first()
     if not db_album:
         raise HTTPException(status_code=404, detail="Album not found")
 
@@ -124,7 +125,7 @@ async def patch_album(
     if photo_uuids is not None:
         db_album.photos.clear()
         for photo_uuid in photo_uuids:
-            photo = db.query(Photo).filter(Photo.uuid == photo_uuid).first()
+            photo = db.exec(select(Photo).where(Photo.uuid == photo_uuid)).first()
             if photo:
                 db_album.photos.append(photo)
 
@@ -143,7 +144,7 @@ async def patch_album(
 @router.get("/", response_model=List[AlbumRead])
 async def list_albums(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """List all albums"""
-    albums = db.query(Album).offset(skip).limit(limit).all()
+    albums = db.exec(select(Album).offset(skip).limit(limit)).all()
     return [
         AlbumRead(
             uuid=album.uuid,
@@ -159,7 +160,7 @@ async def list_albums(skip: int = 0, limit: int = 100, db: Session = Depends(get
 @router.get("/{uuid}/", response_model=AlbumRead)
 async def get_album(uuid: str, db: Session = Depends(get_db)):
     """Get a specific album by UUID"""
-    album = db.query(Album).filter(Album.uuid == uuid).first()
+    album = db.exec(select(Album).where(Album.uuid == uuid)).first()
     if not album:
         raise HTTPException(status_code=404, detail="Album not found")
 
@@ -175,7 +176,7 @@ async def get_album(uuid: str, db: Session = Depends(get_db)):
 @router.delete("/{uuid}/")
 async def delete_album(uuid: str, db: Session = Depends(get_db)):
     """Delete an album by UUID"""
-    album = db.query(Album).filter(Album.uuid == uuid).first()
+    album = db.exec(select(Album).where(Album.uuid == uuid)).first()
     if not album:
         raise HTTPException(status_code=404, detail="Album not found")
 
