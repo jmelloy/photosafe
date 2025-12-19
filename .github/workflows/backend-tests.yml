@@ -3,12 +3,12 @@ name: Backend Tests
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    branches: ["master", "main"]
+    branches: [ "main"]
     paths:
       - 'backend/**'
       - '.github/workflows/backend-tests.yml'
   push:
-    branches: ["master", "main"]
+    branches: [ "main"]
     paths:
       - 'backend/**'
       - '.github/workflows/backend-tests.yml'
@@ -73,7 +73,7 @@ jobs:
     needs: test
     if: |
       github.event_name == 'push' &&
-      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+      (github.ref == 'refs/heads/main')
 
     permissions:
       contents: write  # Required to push version bump commits
