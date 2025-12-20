@@ -11,10 +11,10 @@ RUN apt-get update && apt-get install -y \
 
 # Install dependencies
 COPY pyproject.toml .
+RUN uv pip install --system .[icloud]
+
 COPY app ./app
 COPY cli ./cli
-
-RUN uv pip install --system .[icloud]
 
 # Copy application
 COPY alembic ./alembic
