@@ -94,7 +94,7 @@ def lookup_places(limit: Optional[int], dry_run: bool):
     and populate the place field with location information.
     """
     try:
-        from gazetteer import GeoNames
+        from gazetteer import Gazetteer
     except ImportError:
         click.echo(
             "Error: python-gazetteer not installed. "
@@ -149,9 +149,9 @@ def lookup_places(limit: Optional[int], dry_run: bool):
 
         # Initialize gazetteer
         try:
-            geo = GeoNames()
+            geo = Gazetteer()
         except Exception as e:
-            error_msg = f"Failed to initialize GeoNames: {e}"
+            error_msg = f"Failed to initialize Gazetteer: {e}"
             click.echo(f"Error: {error_msg}", err=True)
             mark_task_failed(db, task_record, error_msg)
             return 1
@@ -161,17 +161,16 @@ def lookup_places(limit: Optional[int], dry_run: bool):
 
         for photo in photos:
             try:
-                # Reverse geocode the coordinates
-                result = geo.reverse(photo.latitude, photo.longitude)
+                # Reverse geocode - gazetteer expects (lon, lat) order
+                results = list(geo.search([(photo.longitude, photo.latitude)]))
 
-                if result:
+                if results and results[0].result:
+                    result = results[0].result
                     # Extract place information
                     place_data = {
-                        "name": result.get("name", ""),
-                        "country": result.get("countryName", ""),
-                        "country_code": result.get("countryCode", ""),
-                        "admin1": result.get("adminName1", ""),  # State/Province
-                        "admin2": result.get("adminName2", ""),  # County
+                        "name": result.name,
+                        "country": result.admin1,  # Country
+                        "admin1": result.admin2,  # State/Province
                         "latitude": photo.latitude,
                         "longitude": photo.longitude,
                     }
@@ -202,7 +201,7 @@ def lookup_places(limit: Optional[int], dry_run: bool):
         db.commit()
         mark_task_completed(db, task_record)
 
-        click.echo(f"\nCompleted!")
+        click.echo("\nCompleted!")
         click.echo(f"  Processed: {processed} photos")
         if errors > 0:
             click.echo(f"  Errors: {errors}")
@@ -229,7 +228,8 @@ def update_place_summary(rebuild: bool):
         # Clear existing data if rebuilding
         if rebuild:
             click.echo("Clearing existing summary data...")
-            db.query(PlaceSummary).delete()
+            # Use SQLModel syntax
+            db.exec(PlaceSummary.__table__.delete())
             db.commit()
 
         # Get all photos with place data
@@ -264,7 +264,11 @@ def update_place_summary(rebuild: bool):
                 continue
 
             # Extract place name (use country if no specific name)
-            place_name = photo.place.get("name") or photo.place.get("country") or "Unknown"
+            place_name = (
+                photo.place.get("name")
+                or photo.place.get("country")
+                or "Unknown"
+            )
 
             if place_name not in place_aggregates:
                 place_aggregates[place_name] = {
@@ -324,8 +328,12 @@ def update_place_summary(rebuild: bool):
 
                 if processed % 50 == 0:
                     db.commit()
-                    update_task_progress(db, task_record, processed, len(place_aggregates))
-                    click.echo(f"Processed {processed}/{len(place_aggregates)} places...")
+                    update_task_progress(
+                        db, task_record, processed, len(place_aggregates)
+                    )
+                    click.echo(
+                        f"Processed {processed}/{len(place_aggregates)} places..."
+                    )
 
             except Exception as e:
                 click.echo(f"Error processing place {place_name}: {e}", err=True)
@@ -334,7 +342,7 @@ def update_place_summary(rebuild: bool):
         db.commit()
         mark_task_completed(db, task_record)
 
-        click.echo(f"\nCompleted!")
+        click.echo("\nCompleted!")
         click.echo(f"  Updated: {processed} place summaries")
 
         return 0

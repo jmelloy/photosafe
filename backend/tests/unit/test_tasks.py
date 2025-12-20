@@ -2,7 +2,7 @@
 
 import pytest
 from datetime import datetime, timezone
-from app.models import Task, PlaceSummary, Photo
+from app.models import Task, PlaceSummary
 from cli.task_commands import (
     create_task,
     update_task_progress,
@@ -175,7 +175,9 @@ class TestTaskAPI:
     def test_get_tasks_with_filters(self, client, auth_token, db_session):
         """Test filtering tasks by status and type"""
         task1 = Task(name="Task 1", task_type="lookup_places", status="pending")
-        task2 = Task(name="Task 2", task_type="update_place_summary", status="completed")
+        task2 = Task(
+            name="Task 2", task_type="update_place_summary", status="completed"
+        )
         task3 = Task(name="Task 3", task_type="lookup_places", status="completed")
         db_session.add_all([task1, task2, task3])
         db_session.commit()
