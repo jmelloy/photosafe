@@ -55,6 +55,7 @@ jobs:
       - name: Run tests
         working-directory: backend
         env:
+          DATABASE_URL: postgresql://photosafe:photosafe@localhost:5432/photosafe_test
           TEST_DATABASE_URL: postgresql://photosafe:photosafe@localhost:5432/photosafe_test
         run: |
           pytest -v --cov=app --cov=cli --cov-report=term-missing --cov-report=xml
