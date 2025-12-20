@@ -21,11 +21,11 @@ from cli.import_commands import extract_exif_data, import_photos, parse_meta_jso
 # NOTE: These tests require a PostgreSQL test database
 # Test database setup - PostgreSQL connection required
 # For local testing, set up a test database: createdb photosafe_test
-# Set environment variable: export TEST_DATABASE_URL="postgresql://user:pass@localhost:5432/photosafe_test"
+# Set environment variable: export TEST_DATABASE_URL="postgresql://user:pass@localhost:5433/photosafe_test"
 # The default below is for Docker Compose development environment only
 SQLALCHEMY_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
-    "postgresql://photosafe:photosafe@localhost:5432/photosafe_test",
+    "postgresql://photosafe:photosafe@localhost:5433/photosafe_test",
 )
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 TestingSessionLocal = sessionmaker(
