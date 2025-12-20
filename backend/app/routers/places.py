@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlmodel import Session
 from typing import List, Optional
 
-from app.database import get_session
+from app.database import get_db
 from app.models import PlaceSummary, PlaceSummaryRead, Task, TaskRead
 from app.auth import get_current_user, User
 
@@ -18,7 +18,7 @@ def get_place_summaries(
     state_province: Optional[str] = Query(None, description="Filter by state/province"),
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of results"),
     offset: int = Query(0, ge=0, description="Number of results to skip"),
-    db: Session = Depends(get_session),
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -45,7 +45,7 @@ def get_place_summaries(
 @router.get("/place-summaries/{summary_id}", response_model=PlaceSummaryRead)
 def get_place_summary(
     summary_id: int,
-    db: Session = Depends(get_session),
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Get a specific place summary by ID"""
@@ -60,7 +60,7 @@ def get_tasks(
     status: Optional[str] = Query(None, description="Filter by status"),
     task_type: Optional[str] = Query(None, description="Filter by task type"),
     limit: int = Query(20, ge=1, le=100, description="Maximum number of results"),
-    db: Session = Depends(get_session),
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Get list of tasks"""
@@ -80,7 +80,7 @@ def get_tasks(
 @router.get("/tasks/{task_id}", response_model=TaskRead)
 def get_task(
     task_id: int,
-    db: Session = Depends(get_session),
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Get a specific task by ID"""
