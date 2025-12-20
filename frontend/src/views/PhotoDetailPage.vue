@@ -25,7 +25,7 @@
     <div v-else-if="photo" class="detail-container">
       <!-- Left side: Image -->
       <div class="image-section">
-        <img :src="photo.url" :alt="photo.original_filename" />
+        <img :src="detailImageUrl" :alt="photo.original_filename" />
       </div>
 
       <!-- Right side: Metadata -->
@@ -195,6 +195,7 @@ import { getPhoto } from "../api/photos";
 import type { Photo } from "../types/api";
 import PhotoMap from "../components/PhotoMap.vue";
 import { formatPlace } from "../utils/formatPlace";
+import { getDetailImageUrl } from "../utils/imageUrl";
 
 interface PhotoDetailPageProps {
   uuid: string;
@@ -242,6 +243,9 @@ const loadPhoto = async () => {
     loading.value = false;
   }
 };
+
+// Compute detail image URL - prioritize medium or original over thumbnail
+const detailImageUrl = computed(() => getDetailImageUrl(photo.value));
 
 const goBack = () => {
   router.push("/");
@@ -431,10 +435,10 @@ onMounted(() => {
 }
 
 .detail-container {
-  max-width: 1400px;
+  max-width: 1600px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 1fr 400px;
+  grid-template-columns: 3fr 1fr;
   gap: 2rem;
   background: #1e1e1e;
   border-radius: 12px;
@@ -458,7 +462,7 @@ onMounted(() => {
 
 .image-section img {
   max-width: 100%;
-  max-height: calc(100vh - 8rem);
+  max-height: calc(100vh - 6rem);
   object-fit: contain;
   border-radius: 8px;
 }

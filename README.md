@@ -33,7 +33,7 @@ A modern photo gallery application built with FastAPI and Vue 3.
 
 ## Prerequisites
 
-- Python 3.11+
+- Python 3.13+
 - Node.js 20+
 - PostgreSQL 12+ (or use Docker Compose)
 - Docker & Docker Compose (optional)
@@ -65,7 +65,7 @@ docker-compose up --build
 
 #### Production Setup
 
-For production deployments, use environment variables to configure the services:
+For production deployments, use the production override file to prevent volume mounts from overwriting built files:
 
 1. Create a production environment file:
 ```bash
@@ -73,9 +73,13 @@ cp .env.production.example .env.production
 # Edit .env.production and set a strong POSTGRES_PASSWORD
 ```
 
-2. Start the application in production mode:
+2. Build and start the application in production mode:
 ```bash
-docker-compose --env-file .env.production up -d
+# Build images with current git SHA
+./build.sh
+
+# Start with production override (removes volume mounts)
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d
 ```
 
 Key production environment variables:
@@ -83,6 +87,8 @@ Key production environment variables:
 - `BACKEND_COMMAND`: Runs without --reload for better performance
 - `FRONTEND_COMMAND`: Runs production preview build
 - `RESTART_POLICY`: Set to "always" for auto-restart after reboot
+
+The `docker-compose.prod.yml` override file removes source code volume mounts, ensuring that the built Docker images are used instead of mounting host directories. This is critical for the frontend, where the built `dist` directory must be preserved.
 
 For details, see `.env.production.example` and comments in `docker-compose.yml`.
 

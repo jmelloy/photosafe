@@ -659,3 +659,97 @@ class BatchPhotoResponse(SQLModel):
     created: int
     updated: int
     errors: int
+
+
+class Task(SQLModel, table=True):
+    """Task model for background processing"""
+
+    __tablename__ = "tasks"
+
+    id: Optional[int] = Field(default=None, primary_key=True, index=True)
+    name: str = Field(sa_type=String)
+    task_type: str = Field(sa_type=String, index=True)
+    status: str = Field(default="pending", sa_type=String, index=True)  # pending, running, completed, failed
+    progress: int = Field(default=0)  # 0-100
+    total: Optional[int] = None
+    processed: int = Field(default=0)
+    error_message: Optional[str] = Field(default=None, sa_type=Text)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    task_metadata: Optional[Dict[str, Any]] = Field(
+        default=None, sa_column=Column("metadata", JSONB, nullable=True)
+    )
+
+
+class PlaceSummary(SQLModel, table=True):
+    """Summary table for place data to enable efficient map queries"""
+
+    __tablename__ = "place_summaries"
+
+    id: Optional[int] = Field(default=None, primary_key=True, index=True)
+    place_name: str = Field(sa_type=String, index=True, unique=True)
+    # Geographic info
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    # Aggregated data
+    photo_count: int = Field(default=0)
+    first_photo_date: Optional[datetime] = None
+    last_photo_date: Optional[datetime] = None
+    # Place hierarchy from place JSONB field
+    country: Optional[str] = Field(default=None, sa_type=String, index=True)
+    state_province: Optional[str] = Field(default=None, sa_type=String, index=True)
+    city: Optional[str] = Field(default=None, sa_type=String, index=True)
+    # Full place data
+    place_data: Optional[Dict[str, Any]] = Field(
+        default=None, sa_column=Column(JSONB, nullable=True)
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(
+            DateTime,
+            default=lambda: datetime.now(timezone.utc),
+            onupdate=lambda: datetime.now(timezone.utc),
+        ),
+    )
+
+
+# Task read/write schemas
+class TaskRead(SQLModel):
+    """Task read schema"""
+
+    id: int
+    name: str
+    task_type: str
+    status: str
+    progress: int
+    total: Optional[int] = None
+    processed: int
+    error_message: Optional[str] = None
+    created_at: datetime
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    task_metadata: Optional[Dict[str, Any]] = None
+
+    class Config:
+        from_attributes = True
+
+
+class PlaceSummaryRead(SQLModel):
+    """PlaceSummary read schema"""
+
+    id: int
+    place_name: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    photo_count: int
+    first_photo_date: Optional[datetime] = None
+    last_photo_date: Optional[datetime] = None
+    country: Optional[str] = None
+    state_province: Optional[str] = None
+    city: Optional[str] = None
+    place_data: Optional[Dict[str, Any]] = None
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True

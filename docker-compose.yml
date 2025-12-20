@@ -7,15 +7,9 @@
 #   docker-compose up --build
 #
 # Production Usage:
-#   Create a .env file with production settings or set environment variables:
-#     POSTGRES_PASSWORD=<strong-password>
-#     BACKEND_COMMAND=sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
-#     FRONTEND_COMMAND=npm run preview -- --host 0.0.0.0
-#     RESTART_POLICY=always
-#   Then run: docker-compose up -d
-#
-# Or use a production-specific .env file:
-#   docker-compose --env-file .env.production up -d
+#   Use docker-compose.prod.yml override to disable volume mounts:
+#   1. Create .env.production from .env.production.example
+#   2. docker-compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d
 #
 # Environment Variables (with defaults):
 #   - POSTGRES_DB: Database name (default: photosafe)
@@ -44,9 +38,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-photosafe}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    # ports:
-      # For production, comment out or remove this port mapping for security
-      # - "5432:5432"
+    ports:
+      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-photosafe}"]
       interval: 5s
