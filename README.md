@@ -33,7 +33,7 @@ A modern photo gallery application built with FastAPI and Vue 3.
 
 ## Prerequisites
 
-- Python 3.11+
+- Python 3.13+
 - Node.js 20+
 - PostgreSQL 12+ (or use Docker Compose)
 - Docker & Docker Compose (optional)
