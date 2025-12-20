@@ -1,18 +1,21 @@
 """Tests for photo import with metadata and EXIF extraction"""
 
+import json
+import os
+import tempfile
+from pathlib import Path
+
 import pytest
+from alembic import command
+from alembic.config import Config
 from click.testing import CliRunner
+from PIL import Image
 from sqlalchemy import create_engine, delete, select
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import Session, SQLModel
-from pathlib import Path
-import tempfile
-import json
-import os
-from PIL import Image
 
-from app.models import User, Library, Photo, Version, Album, album_photos
-from cli.import_commands import import_photos, extract_exif_data, parse_meta_json
+from app.models import Album, Library, Photo, User, Version, album_photos
+from cli.import_commands import extract_exif_data, import_photos, parse_meta_json
 
 
 # NOTE: These tests require a PostgreSQL test database
@@ -30,10 +33,37 @@ TestingSessionLocal = sessionmaker(
 )
 
 
+def run_migrations(database_url: str):
+    """Run alembic migrations for the test database."""
+    # Save the current DATABASE_URL and temporarily override it
+    old_database_url = os.environ.get("DATABASE_URL")
+    os.environ["DATABASE_URL"] = database_url
+
+    try:
+        # Get path to alembic.ini (it's in the backend directory)
+        backend_dir = Path(__file__).parent.parent.parent
+        alembic_ini_path = backend_dir / "alembic.ini"
+
+        # Create Alembic config and set the database URL
+        alembic_cfg = Config(str(alembic_ini_path))
+        alembic_cfg.set_main_option("sqlalchemy.url", database_url)
+
+        # Run migrations to head
+        command.upgrade(alembic_cfg, "head")
+    finally:
+        # Restore the original DATABASE_URL
+        if old_database_url is not None:
+            os.environ["DATABASE_URL"] = old_database_url
+        else:
+            os.environ.pop("DATABASE_URL", None)
+
+
 @pytest.fixture(scope="function")
 def setup_database():
     """Setup test database"""
-    SQLModel.metadata.create_all(bind=engine)
+    # Drop all tables and run migrations
+    SQLModel.metadata.drop_all(bind=engine)
+    run_migrations(SQLALCHEMY_DATABASE_URL)
 
     # Override SessionLocal in import_commands
     from cli import import_commands

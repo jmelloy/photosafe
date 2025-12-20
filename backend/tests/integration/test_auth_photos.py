@@ -1,84 +1,12 @@
 """Tests for authentication and user photo management"""
 
-import os
 import uuid
 
 import pytest
-from app.database import get_db
-from app.main import app
-from app.models import Library, Photo, User, Version, Album, album_photos
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, delete
-from sqlalchemy.orm import sessionmaker
-from sqlmodel import Session, SQLModel
-
-# NOTE: These tests require a PostgreSQL test database
-# Test database setup - PostgreSQL connection required
-# For local testing, set up a test database: createdb photosafe_test
-# Set environment variable: export TEST_DATABASE_URL="postgresql://user:pass@localhost:5432/photosafe_test"
-# The default below is for Docker Compose development environment only
-SQLALCHEMY_DATABASE_URL = os.getenv(
-    "TEST_DATABASE_URL",
-    "postgresql://photosafe:photosafe@localhost:5432/photosafe_test",
-)
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
-TestingSessionLocal = sessionmaker(
-    autocommit=False, autoflush=False, bind=engine, class_=Session
-)
-
-# Create all tables once
-SQLModel.metadata.create_all(bind=engine)
 
 
-def override_get_db():
-    """Override database dependency for testing"""
-    try:
-        db = TestingSessionLocal()
-        yield db
-    finally:
-        db.close()
 
-
-# Override the database dependency
-app.dependency_overrides[get_db] = override_get_db
-
-# Create test client
-client = TestClient(app)
-
-
-@pytest.fixture(autouse=True)
-def cleanup_db():
-    """Clean up database between tests"""
-    # Clear all data before test
-    db = TestingSessionLocal()
-    try:
-        db.execute(album_photos.delete())
-        db.exec(delete(Version))
-        db.exec(delete(Photo))
-        db.exec(delete(Album))
-        db.exec(delete(Library))
-        db.exec(delete(User))
-        db.commit()
-    finally:
-        db.close()
-
-    yield
-
-    # Clear all data after test
-    db = TestingSessionLocal()
-    try:
-        db.execute(album_photos.delete())
-        db.exec(delete(Version))
-        db.exec(delete(Photo))
-        db.exec(delete(Album))
-        db.exec(delete(Library))
-        db.exec(delete(User))
-        db.commit()
-    finally:
-        db.close()
-
-
-def test_register_user():
+def test_register_user(client):
     """Test user registration"""
     response = client.post(
         "/api/auth/register",
@@ -98,7 +26,7 @@ def test_register_user():
     assert data["is_active"] is True
 
 
-def test_register_duplicate_username():
+def test_register_duplicate_username(client):
     """Test registration with duplicate username"""
     # Register first user
     client.post(
@@ -123,7 +51,7 @@ def test_register_duplicate_username():
     assert "Username already registered" in response.json()["detail"]
 
 
-def test_login():
+def test_login(client):
     """Test user login"""
     # Register user
     client.post(
@@ -146,7 +74,7 @@ def test_login():
     assert data["token_type"] == "bearer"
 
 
-def test_refresh_token():
+def test_refresh_token(client):
     """Test refreshing access token using refresh token"""
     # Register user
     client.post(
@@ -185,14 +113,14 @@ def test_refresh_token():
     assert me_response.json()["username"] == "testuser"
 
 
-def test_refresh_token_invalid():
+def test_refresh_token_invalid(client):
     """Test refresh with invalid token"""
     response = client.post("/api/auth/refresh", json={"refresh_token": "invalid_token"})
     assert response.status_code == 401
     assert "Invalid refresh token" in response.json()["detail"]
 
 
-def test_login_invalid_credentials():
+def test_login_invalid_credentials(client):
     """Test login with invalid credentials"""
     # Register user
     client.post(
@@ -211,7 +139,7 @@ def test_login_invalid_credentials():
     assert response.status_code == 401
 
 
-def test_get_current_user():
+def test_get_current_user(client):
     """Test getting current user information"""
     # Register and login
     client.post(
@@ -238,7 +166,7 @@ def test_get_current_user():
     assert data["name"] == "Test User"
 
 
-def test_create_photo_authenticated():
+def test_create_photo_authenticated(client):
     """Test creating a photo while authenticated"""
     # Register and login
     client.post(
@@ -271,7 +199,7 @@ def test_create_photo_authenticated():
     assert data["original_filename"] == "test.jpg"
 
 
-def test_create_photo_unauthenticated():
+def test_create_photo_unauthenticated(client):
     """Test that creating a photo without authentication fails"""
     response = client.post(
         "/api/photos/",
@@ -284,7 +212,7 @@ def test_create_photo_unauthenticated():
     assert response.status_code == 401
 
 
-def test_list_photos_only_owned():
+def test_list_photos_only_owned(client):
     """Test that users only see their own photos"""
     # Create two users
     client.post(
@@ -357,7 +285,7 @@ def test_list_photos_only_owned():
     assert photos2[0]["uuid"] == user2_photo_uuid
 
 
-def test_update_photo_ownership():
+def test_update_photo_ownership(client):
     """Test that users can only update their own photos"""
     # Create two users
     client.post(
@@ -407,7 +335,7 @@ def test_update_photo_ownership():
     assert response.status_code == 403
 
 
-def test_delete_photo_ownership():
+def test_delete_photo_ownership(client):
     """Test that users can only delete their own photos"""
     # Create two users
     client.post(
@@ -456,7 +384,7 @@ def test_delete_photo_ownership():
     assert response.status_code == 403
 
 
-def test_batch_create_photos():
+def test_batch_create_photos(client):
     """Test batch creation of photos"""
     # Register and login
     client.post(
@@ -520,7 +448,7 @@ def test_batch_create_photos():
     assert len(photos) == 3
 
 
-def test_batch_update_photos():
+def test_batch_update_photos(client):
     """Test batch update of existing photos"""
     # Register and login
     client.post(
@@ -591,7 +519,7 @@ def test_batch_update_photos():
     assert photo1.json()["favorite"] is True
 
 
-def test_batch_mixed_create_and_update():
+def test_batch_mixed_create_and_update(client):
     """Test batch with both new and existing photos"""
     # Register and login
     client.post(
@@ -654,7 +582,7 @@ def test_batch_mixed_create_and_update():
     assert result["errors"] == 0
 
 
-def test_batch_unauthenticated():
+def test_batch_unauthenticated(client):
     """Test batch endpoint requires authentication"""
     new_uuid = uuid.uuid4()
     batch_data = {
@@ -671,7 +599,7 @@ def test_batch_unauthenticated():
     assert response.status_code == 401
 
 
-def test_get_photo():
+def test_get_photo(client):
     """Test retrieving a specific photo by UUID"""
     # Register and login
     client.post(
@@ -715,7 +643,7 @@ def test_get_photo():
     assert data["title"] == "Test Photo"
 
 
-def test_get_photo_not_found():
+def test_get_photo_not_found(client):
     """Test getting a non-existent photo returns 404"""
     # Register and login
     client.post(
@@ -739,7 +667,7 @@ def test_get_photo_not_found():
     assert response.status_code == 404
 
 
-def test_get_photo_unauthorized():
+def test_get_photo_unauthorized(client):
     """Test getting another user's photo is forbidden"""
     # Create two users
     client.post(
@@ -822,7 +750,7 @@ def test_get_photo_unauthorized():
 #     assert data["content_type"] == "image/jpeg"
 
 
-def test_upload_photo_invalid_type():
+def test_upload_photo_invalid_type(client):
     """Test uploading a non-image file fails"""
     # Register and login
     client.post(
@@ -851,7 +779,7 @@ def test_upload_photo_invalid_type():
     assert "must be an image" in response.json()["detail"]
 
 
-def test_upload_photo_unauthenticated():
+def test_upload_photo_unauthenticated(client):
     """Test uploading without authentication fails"""
     file_content = b"fake image content"
     files = {"file": ("test.jpg", file_content, "image/jpeg")}
