@@ -30,6 +30,7 @@ dependencies = [
     "tqdm>=4.66",
     "pytz>=2024.1",
     "ruff>=0.14.10",
+    "python-gazetteer>=0.1.0",
 ]
 
 [project.optional-dependencies]

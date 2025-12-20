@@ -9,7 +9,7 @@ from alembic import command
 from alembic.config import Config
 from app.database import get_db
 from app.main import app
-from app.models import Album, Library, Photo, User, Version, album_photos
+from app.models import Album, Library, Photo, User, Version, album_photos, Task, PlaceSummary
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -96,7 +96,7 @@ def db_session(engine):
     with engine.begin() as connection:
         # Delete in order to respect foreign key constraints
         connection.execute(album_photos.delete())
-        for table in [Version, Photo, Album, Library, User]:
+        for table in [Version, Photo, Album, Library, User, Task, PlaceSummary]:
             connection.execute(table.__table__.delete())
 
 
