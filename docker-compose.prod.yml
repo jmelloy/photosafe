@@ -1,0 +1,21 @@
+# Production override for PhotoSafe Docker Compose
+#
+# Usage:
+#   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Or with environment file:
+#   docker-compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d
+#
+# This override file removes development volume mounts and uses the code
+# baked into the Docker images instead.
+
+services:
+  backend:
+    volumes:
+      # Remove source code mount for production
+      # Keep only the uploads directory
+      - ./backend/uploads:/app/uploads
+  frontend:
+    # Remove all volume mounts for production
+    # The built files are baked into the Docker image
+    volumes: ~
