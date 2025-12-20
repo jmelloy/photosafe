@@ -208,15 +208,13 @@ def test_patch_photo_library_user_isolation(client, db_session):
     user1_libs = db_session.exec(select(Library).where(Library.owner_id == user1.id)).all()
     user2_libs = db_session.exec(select(Library).where(Library.owner_id == user2.id)).all()
     assert len(user1_libs) == 1
-        assert len(user2_libs) == 1
-        assert user1_libs[0].name == "Shared Name"
-        assert user2_libs[0].name == "Shared Name"
-        assert user1_libs[0].id != user2_libs[0].id
-    finally:
-        db.close()
+    assert len(user2_libs) == 1
+    assert user1_libs[0].name == "Shared Name"
+    assert user2_libs[0].name == "Shared Name"
+    assert user1_libs[0].id != user2_libs[0].id
 
 
-def test_patch_photo_without_library_no_change():
+def test_patch_photo_without_library_no_change(client, db_session):
     """Test that patching a photo without library field doesn't affect library"""
     # Register and login
     client.post(
