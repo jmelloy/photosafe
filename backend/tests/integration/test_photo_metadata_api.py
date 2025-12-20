@@ -19,8 +19,8 @@ class TestPhotoMetadataAPI:
             "original_filename": "test.jpg",
             "date": datetime.utcnow().isoformat(),
             "metadata": [
-                {"key": "camera", "value": "Canon", "source": "macos"},
-                {"key": "year", "value": "2024", "source": "macos"},
+                {"key": "camera", "value": {"value": "Canon"}, "source": "macos"},
+                {"key": "year", "value": {"value": "2024"}, "source": "macos"},
             ],
         }
         
@@ -77,8 +77,8 @@ class TestPhotoMetadataAPI:
             "original_filename": "test.jpg",
             "date": datetime.utcnow().isoformat(),
             "metadata": [
-                {"key": "camera", "value": "Canon", "source": "macos"},
-                {"key": "year", "value": "2024", "source": "macos"},
+                {"key": "camera", "value": {"value": "Canon"}, "source": "macos"},
+                {"key": "year", "value": {"value": "2024"}, "source": "macos"},
             ],
         }
         
@@ -92,7 +92,7 @@ class TestPhotoMetadataAPI:
         # Update photo with additional metadata
         update_data = {
             "metadata": [
-                {"key": "season", "value": "Winter", "source": "macos"},
+                {"key": "season", "value": {"value": "Winter"}, "source": "macos"},
             ],
         }
         
@@ -112,7 +112,7 @@ class TestPhotoMetadataAPI:
         assert any(m["key"] == "season" for m in data["metadata"])
 
     def test_update_photo_updates_existing_metadata_by_key_and_source(self, client, auth_token):
-        """Test that PATCH updates existing metadata with same key+source"""
+        """Test that PATCH updates existing metadata with same key (unique constraint on photo_uuid, key)"""
         photo_uuid = str(uuid.uuid4())
         
         # Create photo with initial metadata
@@ -121,7 +121,7 @@ class TestPhotoMetadataAPI:
             "original_filename": "test.jpg",
             "date": datetime.utcnow().isoformat(),
             "metadata": [
-                {"key": "camera", "value": "Canon", "source": "macos"},
+                {"key": "camera", "value": {"value": "Canon"}, "source": "macos"},
             ],
         }
         
@@ -132,10 +132,10 @@ class TestPhotoMetadataAPI:
         )
         assert response.status_code == 201
         
-        # Update metadata with same key+source but different value
+        # Update metadata with same key but different value and source
         update_data = {
             "metadata": [
-                {"key": "camera", "value": "Nikon", "source": "macos"},
+                {"key": "camera", "value": {"value": "Nikon"}, "source": "exif"},
             ],
         }
         
@@ -148,56 +148,12 @@ class TestPhotoMetadataAPI:
         assert response.status_code == 200
         data = response.json()
         
-        # Should still have only 1 metadata entry, but with updated value
+        # Should still have only 1 metadata entry (unique constraint on photo_uuid, key)
+        # The value and source should be updated
         assert len(data["metadata"]) == 1
         assert data["metadata"][0]["key"] == "camera"
-        assert data["metadata"][0]["value"] == "Nikon"
-        assert data["metadata"][0]["source"] == "macos"
-
-    def test_update_photo_different_sources_create_separate_entries(self, client, auth_token):
-        """Test that metadata with different sources are kept separate"""
-        photo_uuid = str(uuid.uuid4())
-        
-        # Create photo with initial metadata from macos
-        photo_data = {
-            "uuid": photo_uuid,
-            "original_filename": "test.jpg",
-            "date": datetime.utcnow().isoformat(),
-            "metadata": [
-                {"key": "camera", "value": "Canon", "source": "macos"},
-            ],
-        }
-        
-        response = client.post(
-            "/api/photos/",
-            json=photo_data,
-            headers={"Authorization": f"Bearer {auth_token}"},
-        )
-        assert response.status_code == 201
-        
-        # Update with metadata from different source but same key
-        update_data = {
-            "metadata": [
-                {"key": "camera", "value": "Canon EOS", "source": "exif"},
-            ],
-        }
-        
-        response = client.patch(
-            f"/api/photos/{photo_uuid}/",
-            json=update_data,
-            headers={"Authorization": f"Bearer {auth_token}"},
-        )
-        
-        assert response.status_code == 200
-        data = response.json()
-        
-        # Should have 2 metadata entries with same key but different sources
-        assert len(data["metadata"]) == 2
-        macos_entry = next(m for m in data["metadata"] if m["source"] == "macos")
-        exif_entry = next(m for m in data["metadata"] if m["source"] == "exif")
-        
-        assert macos_entry["value"] == "Canon"
-        assert exif_entry["value"] == "Canon EOS"
+        assert data["metadata"][0]["value"] == {"value": "Nikon"}
+        assert data["metadata"][0]["source"] == "exif"
 
     def test_batch_create_with_search_info_converts_to_metadata(self, client, auth_token):
         """Test that batch create converts search_info to metadata"""
@@ -220,7 +176,7 @@ class TestPhotoMetadataAPI:
                     "original_filename": "test2.jpg",
                     "date": datetime.utcnow().isoformat(),
                     "metadata": [
-                        {"key": "camera", "value": "Nikon", "source": "macos"},
+                        {"key": "camera", "value": {"value": "Nikon"}, "source": "macos"},
                     ],
                 },
             ],
