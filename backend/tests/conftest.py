@@ -9,7 +9,16 @@ from alembic import command
 from alembic.config import Config
 from app.database import get_db
 from app.main import app
-from app.models import Album, Library, Photo, User, Version, album_photos, Task, PlaceSummary
+from app.models import (
+    Album,
+    Library,
+    Photo,
+    User,
+    Version,
+    album_photos,
+    Task,
+    PlaceSummary,
+)
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -39,6 +48,7 @@ def run_migrations(database_url: str):
         # Create Alembic config and set the database URL
         alembic_cfg = Config(str(alembic_ini_path))
         alembic_cfg.set_main_option("sqlalchemy.url", database_url)
+        alembic_cfg.set_main_option("script_location", str(backend_dir / "alembic"))
 
         # Run migrations to head
         command.upgrade(alembic_cfg, "head")
@@ -50,9 +60,30 @@ def run_migrations(database_url: str):
             os.environ.pop("DATABASE_URL", None)
 
 
-def drop_all_tables(engine):
+def drop_all_tables(database_url: str):
     """Drop all tables in the database."""
-    SQLModel.metadata.drop_all(bind=engine)
+
+    old_database_url = os.environ.get("DATABASE_URL")
+    os.environ["DATABASE_URL"] = database_url
+
+    try:
+        # Get path to alembic.ini (it's in the backend directory)
+        backend_dir = Path(__file__).parent.parent
+        alembic_ini_path = backend_dir / "alembic.ini"
+
+        # Create Alembic config and set the database URL
+        alembic_cfg = Config(str(alembic_ini_path))
+        alembic_cfg.set_main_option("sqlalchemy.url", database_url)
+        alembic_cfg.set_main_option("script_location", str(backend_dir / "alembic"))
+
+        # Run migrations to head
+        command.downgrade(alembic_cfg, "base")
+    finally:
+        # Restore the original DATABASE_URL
+        if old_database_url is not None:
+            os.environ["DATABASE_URL"] = old_database_url
+        else:
+            os.environ.pop("DATABASE_URL", None)
 
 
 @pytest.fixture(scope="session")
@@ -60,16 +91,13 @@ def engine():
     """Create a test database engine for the entire test session."""
     test_engine = create_engine(TEST_DATABASE_URL, echo=False)
 
-    # Drop all tables first to ensure clean state
-    drop_all_tables(test_engine)
-
     # Run migrations to create all tables
     run_migrations(TEST_DATABASE_URL)
 
     yield test_engine
 
     # Drop all tables at the end of the test session
-    drop_all_tables(test_engine)
+    drop_all_tables(TEST_DATABASE_URL)
     test_engine.dispose()
 
 
@@ -169,3 +197,11 @@ def auth_token(client):
         data={"username": "testuser", "password": "testpassword123"},
     )
     return response.json()["access_token"]
+
+
+@pytest.fixture
+def runner(db_session):
+    """Click CLI runner"""
+    from click.testing import CliRunner
+
+    return CliRunner(env={"DATABASE_URL": TEST_DATABASE_URL})
