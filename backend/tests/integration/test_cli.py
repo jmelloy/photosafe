@@ -9,7 +9,6 @@ from pathlib import Path
 import pytest
 from alembic import command
 from alembic.config import Config
-from click.testing import CliRunner
 from sqlalchemy import create_engine, delete, select, text
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import Session, SQLModel
@@ -23,11 +22,11 @@ from cli.user_commands import user
 # NOTE: These tests require a PostgreSQL test database
 # Test database setup - PostgreSQL connection required
 # For local testing, set up a test database: createdb photosafe_test
-# Set environment variable: export TEST_DATABASE_URL="postgresql://user:pass@localhost:5432/photosafe_test"
+# Set environment variable: export TEST_DATABASE_URL="postgresql://user:pass@localhost:5433/photosafe_test"
 # The default below is for Docker Compose development environment only
 SQLALCHEMY_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
-    "postgresql://photosafe:photosafe@localhost:5432/photosafe_test",
+    "postgresql://photosafe:photosafe@localhost:5433/photosafe_test",
 )
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 TestingSessionLocal = sessionmaker(
@@ -119,12 +118,6 @@ def setup_database():
         db.commit()
     finally:
         db.close()
-
-
-@pytest.fixture
-def runner():
-    """Click CLI runner"""
-    return CliRunner()
 
 
 class TestUserCommands:

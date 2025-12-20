@@ -3,15 +3,8 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from click.testing import CliRunner
 
 from cli.sync_commands import sync
-
-
-@pytest.fixture
-def runner():
-    """Click CLI runner"""
-    return CliRunner()
 
 
 class TestSyncCommands:

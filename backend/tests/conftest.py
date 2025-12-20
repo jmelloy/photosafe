@@ -1,5 +1,6 @@
 """Shared test fixtures and configuration."""
 
+import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
@@ -10,6 +11,7 @@ from alembic.config import Config
 from app.database import get_db
 from app.main import app
 from app.models import Album, Library, Photo, User, Version, album_photos, Task, PlaceSummary
+from click.testing import CliRunner
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -169,3 +171,17 @@ def auth_token(client):
         data={"username": "testuser", "password": "testpassword123"},
     )
     return response.json()["access_token"]
+
+
+@pytest.fixture
+def runner():
+    """Click CLI runner for testing CLI commands."""
+    return CliRunner()
+
+
+@pytest.fixture
+def macos_sample_data(fixtures_dir):
+    """Load macos sample data from fixture."""
+    fixture_path = fixtures_dir / "macos_sample.json"
+    with open(fixture_path, "r") as f:
+        return json.load(f)

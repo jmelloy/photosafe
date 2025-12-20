@@ -1,28 +1,12 @@
 """Tests for macOS photo synchronization using fixtures"""
 
-import json
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 from dateutil import parser
 
 import pytest
-from click.testing import CliRunner
 
 from cli.sync_commands import sync
-
-
-@pytest.fixture
-def runner():
-    """Click CLI runner"""
-    return CliRunner()
-
-
-@pytest.fixture
-def macos_sample_data(fixtures_dir):
-    """Load macos sample data from fixture"""
-    fixture_path = fixtures_dir / "macos_sample.json"
-    with open(fixture_path, "r") as f:
-        return json.load(f)
 
 
 class TestMacOSSyncWithFixtures:
