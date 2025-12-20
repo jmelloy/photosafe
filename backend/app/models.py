@@ -634,8 +634,8 @@ class Task(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
-    metadata: Optional[Dict[str, Any]] = Field(
-        default=None, sa_column=Column(JSONB, nullable=True)
+    task_metadata: Optional[Dict[str, Any]] = Field(
+        default=None, sa_column=Column("metadata", JSONB, nullable=True)
     )
 
 
@@ -686,7 +686,7 @@ class TaskRead(SQLModel):
     created_at: datetime
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
-    metadata: Optional[Dict[str, Any]] = None
+    task_metadata: Optional[Dict[str, Any]] = None
 
     class Config:
         from_attributes = True
