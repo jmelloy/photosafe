@@ -125,7 +125,7 @@ class TestMetaJsonParsing:
 class TestPhotoImportWithMetadata:
     """Test photo import with metadata files"""
 
-    def test_import_with_meta_json(self, runner, test_user, test_library):
+    def test_import_with_meta_json(self, runner, test_user, test_library, db_session):
         """Test importing photos with meta.json sidecar"""
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir_path = Path(tmpdir)
@@ -161,28 +161,23 @@ class TestPhotoImportWithMetadata:
             assert result.exit_code == 0
             assert "Imported: 1" in result.output
 
-            # Verify photo was imported with metadata
-            db = TestingSessionLocal()
-            try:
-                photo = db.exec(
-                    select(Photo).where(Photo.owner_id == test_user.id)
-                ).scalar_one()
-                assert photo is not None
-                assert photo.original_filename == "test_photo.jpg"
+            photo = db_session.exec(
+                select(Photo).where(Photo.owner_id == test_user.id)
+            ).scalar_one()
+            assert photo is not None
+            assert photo.original_filename == "test_photo.jpg"
 
-                # Check if fields contains the arbitrary metadata
-                if photo.fields:
-                    fields_data = (
-                        json.loads(photo.fields)
-                        if isinstance(photo.fields, str)
-                        else photo.fields
-                    )
-                    assert "photographer" in fields_data or "fields" in fields_data
-            finally:
-                db.close()
+            # Check if fields contains the arbitrary metadata
+            if photo.fields:
+                fields_data = (
+                    json.loads(photo.fields)
+                    if isinstance(photo.fields, str)
+                    else photo.fields
+                )
+                assert "photographer" in fields_data or "fields" in fields_data
 
     def test_import_with_exif_extraction(
-        self, runner, test_user, test_library, temp_image_with_exif
+        self, runner, test_user, test_library, temp_image_with_exif, db_session
     ):
         """Test that EXIF data is extracted during import"""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -210,26 +205,21 @@ class TestPhotoImportWithMetadata:
             assert result.exit_code == 0
             assert "Imported: 1" in result.output
 
-            # Verify photo has EXIF data
-            db = TestingSessionLocal()
-            try:
-                photo = db.exec(
-                    select(Photo).where(Photo.owner_id == test_user.id)
-                ).scalar_one()
-                assert photo is not None
+            photo = db_session.exec(
+                select(Photo).where(Photo.owner_id == test_user.id)
+            ).scalar_one()
+            assert photo is not None
 
-                # Check if EXIF data was stored
-                if photo.exif:
-                    exif_data = (
-                        json.loads(photo.exif)
-                        if isinstance(photo.exif, str)
-                        else photo.exif
-                    )
-                    assert isinstance(exif_data, dict)
-                    # EXIF data should have at least the _raw field or some data
-                    assert len(exif_data) > 0
-            finally:
-                db.close()
+            # Check if EXIF data was stored
+            if photo.exif:
+                exif_data = (
+                    json.loads(photo.exif)
+                    if isinstance(photo.exif, str)
+                    else photo.exif
+                )
+                assert isinstance(exif_data, dict)
+                # EXIF data should have at least the _raw field or some data
+                assert len(exif_data) > 0
 
 
 if __name__ == "__main__":
