@@ -286,6 +286,7 @@ class TestLibraryCommands:
 
         # Extract library ID from output: "✓ Library created successfully: {name} (ID: {id})"
         import re
+
         match = re.search(r"\(ID: (\d+)\)", create_result.output)
         assert match, f"Could not find library ID in output: {create_result.output}"
         library_id = match.group(1)
