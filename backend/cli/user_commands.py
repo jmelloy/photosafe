@@ -3,7 +3,7 @@
 import click
 from sqlalchemy.orm import Session
 from sqlmodel import select
-from app.database import SessionLocal
+import app.database
 from app.models import User
 from app.auth import get_password_hash
 
@@ -28,7 +28,7 @@ def user():
 @click.option("--superuser", is_flag=True, help="Create as superuser")
 def create(username: str, email: str, password: str, name: str, superuser: bool):
     """Create a new user"""
-    db: Session = SessionLocal()
+    db: Session = app.database.SessionLocal()
     try:
         # Check if user exists
         existing_user = db.exec(select(User).where(User.username == username)).first()
@@ -67,7 +67,7 @@ def create(username: str, email: str, password: str, name: str, superuser: bool)
 @user.command()
 def list():
     """List all users"""
-    db: Session = SessionLocal()
+    db: Session = app.database.SessionLocal()
     try:
         users = db.exec(select(User)).all()
         if not users:
@@ -92,7 +92,7 @@ def list():
 @click.argument("username")
 def info(username: str):
     """Show detailed user information"""
-    db: Session = SessionLocal()
+    db: Session = app.database.SessionLocal()
     try:
         user = db.exec(select(User).where(User.username == username)).first()
         if not user:

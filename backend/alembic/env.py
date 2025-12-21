@@ -11,15 +11,28 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from app.database import SQLALCHEMY_DATABASE_URL
+TEST_DATABASE_URL = os.getenv(
+    "TEST_DATABASE_URL",
+)
+if TEST_DATABASE_URL:
+    DATABASE_URL = TEST_DATABASE_URL
+else:
+    # Get database URL from environment variable (set by tests) or from app config
+    DATABASE_URL = os.environ.get("DATABASE_URL")
+    if not DATABASE_URL:
+        from app.database import SQLALCHEMY_DATABASE_URL
+
+        DATABASE_URL = SQLALCHEMY_DATABASE_URL
+
 from sqlmodel import SQLModel
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
-# Set the database URL from our application config
-config.set_main_option("sqlalchemy.url", SQLALCHEMY_DATABASE_URL)
+# Set the database URL - use environment variable if available (for tests)
+# Otherwise fall back to the application config
+config.set_main_option("sqlalchemy.url", DATABASE_URL)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

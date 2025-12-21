@@ -21,7 +21,7 @@ def create_test_user_and_login(client):
     return login_response.json()["access_token"]
 
 
-def create_test_photo(token, photo_uuid=None):
+def create_test_photo(client, token, photo_uuid=None):
     """Helper function to create a test photo"""
     if photo_uuid is None:
         photo_uuid = str(uuid.uuid4())
@@ -94,8 +94,8 @@ def test_create_album_with_photos(client):
     # Create test photos
     photo_uuid_1 = str(uuid.uuid4())
     photo_uuid_2 = str(uuid.uuid4())
-    create_test_photo(token, photo_uuid_1)
-    create_test_photo(token, photo_uuid_2)
+    create_test_photo(client, token, photo_uuid_1)
+    create_test_photo(client, token, photo_uuid_2)
 
     album_uuid = str(uuid.uuid4())
     response = client.post(
@@ -277,9 +277,9 @@ def test_update_or_create_album_with_photos(client):
     photo_uuid_1 = str(uuid.uuid4())
     photo_uuid_2 = str(uuid.uuid4())
     photo_uuid_3 = str(uuid.uuid4())
-    create_test_photo(token, photo_uuid_1)
-    create_test_photo(token, photo_uuid_2)
-    create_test_photo(token, photo_uuid_3)
+    create_test_photo(client, token, photo_uuid_1)
+    create_test_photo(client, token, photo_uuid_2)
+    create_test_photo(client, token, photo_uuid_3)
 
     # Create album with initial photos
     album_uuid = str(uuid.uuid4())
@@ -359,9 +359,9 @@ def test_patch_album_photos(client):
     photo_uuid_1 = str(uuid.uuid4())
     photo_uuid_2 = str(uuid.uuid4())
     photo_uuid_3 = str(uuid.uuid4())
-    create_test_photo(token, photo_uuid_1)
-    create_test_photo(token, photo_uuid_2)
-    create_test_photo(token, photo_uuid_3)
+    create_test_photo(client, token, photo_uuid_1)
+    create_test_photo(client, token, photo_uuid_2)
+    create_test_photo(client, token, photo_uuid_3)
 
     # Create album with initial photos
     album_uuid = str(uuid.uuid4())
@@ -392,7 +392,7 @@ def test_patch_album_clear_photos(client):
 
     # Create test photo
     photo_uuid_1 = str(uuid.uuid4())
-    create_test_photo(token, photo_uuid_1)
+    create_test_photo(client, token, photo_uuid_1)
 
     # Create album with photos
     album_uuid = str(uuid.uuid4())
@@ -461,8 +461,8 @@ def test_delete_album_with_photos(client):
     # Create test photos
     photo_uuid_1 = str(uuid.uuid4())
     photo_uuid_2 = str(uuid.uuid4())
-    create_test_photo(token, photo_uuid_1)
-    create_test_photo(token, photo_uuid_2)
+    create_test_photo(client, token, photo_uuid_1)
+    create_test_photo(client, token, photo_uuid_2)
 
     # Create album with photos
     album_uuid = str(uuid.uuid4())

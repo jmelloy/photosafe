@@ -12,12 +12,6 @@ from cli.sync_commands import sync
 
 
 @pytest.fixture
-def runner():
-    """Click CLI runner"""
-    return CliRunner()
-
-
-@pytest.fixture
 def macos_sample_data(fixtures_dir):
     """Load macos sample data from fixture"""
     fixture_path = fixtures_dir / "macos_sample.json"

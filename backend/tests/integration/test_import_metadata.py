@@ -18,113 +18,6 @@ from app.models import Album, Library, Photo, User, Version, album_photos
 from cli.import_commands import extract_exif_data, import_photos, parse_meta_json
 
 
-# NOTE: These tests require a PostgreSQL test database
-# Test database setup - PostgreSQL connection required
-# For local testing, set up a test database: createdb photosafe_test
-# Set environment variable: export TEST_DATABASE_URL="postgresql://user:pass@localhost:5432/photosafe_test"
-# The default below is for Docker Compose development environment only
-SQLALCHEMY_DATABASE_URL = os.getenv(
-    "TEST_DATABASE_URL",
-    "postgresql://photosafe:photosafe@localhost:5432/photosafe_test",
-)
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
-TestingSessionLocal = sessionmaker(
-    autocommit=False, autoflush=False, bind=engine, class_=Session
-)
-
-
-def run_migrations(database_url: str):
-    """Run alembic migrations for the test database."""
-    # Save the current DATABASE_URL and temporarily override it
-    old_database_url = os.environ.get("DATABASE_URL")
-    os.environ["DATABASE_URL"] = database_url
-
-    try:
-        # Get path to alembic.ini (it's in the backend directory)
-        backend_dir = Path(__file__).parent.parent.parent
-        alembic_ini_path = backend_dir / "alembic.ini"
-
-        # Create Alembic config and set the database URL
-        alembic_cfg = Config(str(alembic_ini_path))
-        alembic_cfg.set_main_option("sqlalchemy.url", database_url)
-
-        # Run migrations to head
-        command.upgrade(alembic_cfg, "head")
-    finally:
-        # Restore the original DATABASE_URL
-        if old_database_url is not None:
-            os.environ["DATABASE_URL"] = old_database_url
-        else:
-            os.environ.pop("DATABASE_URL", None)
-
-
-@pytest.fixture(scope="function")
-def setup_database():
-    """Setup test database"""
-    # Drop all tables and run migrations
-    SQLModel.metadata.drop_all(bind=engine)
-    run_migrations(SQLALCHEMY_DATABASE_URL)
-
-    # Override SessionLocal in import_commands
-    from cli import import_commands
-
-    import_commands.SessionLocal = TestingSessionLocal
-
-    yield
-
-    # Cleanup
-    db = TestingSessionLocal()
-    try:
-        db.execute(album_photos.delete())
-        db.exec(delete(Version))
-        db.exec(delete(Photo))
-        db.exec(delete(Album))
-        db.exec(delete(Library))
-        db.exec(delete(User))
-        db.commit()
-    finally:
-        db.close()
-
-
-@pytest.fixture
-def test_user(setup_database):
-    """Create a test user"""
-    db = TestingSessionLocal()
-    try:
-        user = User(
-            username="testuser",
-            email="test@example.com",
-            hashed_password="hashed_password",
-            name="Test User",
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-        return user
-    finally:
-        db.close()
-
-
-@pytest.fixture
-def test_library(setup_database, test_user):
-    """Create a test library"""
-    db = TestingSessionLocal()
-    try:
-        library = Library(name="test_library", owner_id=test_user.id, path="/tmp/test")
-        db.add(library)
-        db.commit()
-        db.refresh(library)
-        return library
-    finally:
-        db.close()
-
-
-@pytest.fixture
-def runner():
-    """Click CLI runner"""
-    return CliRunner()
-
-
 @pytest.fixture
 def temp_image_with_exif():
     """Create a temporary image with EXIF data"""
@@ -232,7 +125,7 @@ class TestMetaJsonParsing:
 class TestPhotoImportWithMetadata:
     """Test photo import with metadata files"""
 
-    def test_import_with_meta_json(self, runner, test_user, test_library):
+    def test_import_with_meta_json(self, runner, test_user, test_library, db_session):
         """Test importing photos with meta.json sidecar"""
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir_path = Path(tmpdir)
@@ -268,28 +161,23 @@ class TestPhotoImportWithMetadata:
             assert result.exit_code == 0
             assert "Imported: 1" in result.output
 
-            # Verify photo was imported with metadata
-            db = TestingSessionLocal()
-            try:
-                photo = db.exec(
-                    select(Photo).where(Photo.owner_id == test_user.id)
-                ).scalar_one()
-                assert photo is not None
-                assert photo.original_filename == "test_photo.jpg"
+            photo = db_session.exec(
+                select(Photo).where(Photo.owner_id == test_user.id)
+            ).scalar_one()
+            assert photo is not None
+            assert photo.original_filename == "test_photo.jpg"
 
-                # Check if fields contains the arbitrary metadata
-                if photo.fields:
-                    fields_data = (
-                        json.loads(photo.fields)
-                        if isinstance(photo.fields, str)
-                        else photo.fields
-                    )
-                    assert "photographer" in fields_data or "fields" in fields_data
-            finally:
-                db.close()
+            # Check if fields contains the arbitrary metadata
+            if photo.fields:
+                fields_data = (
+                    json.loads(photo.fields)
+                    if isinstance(photo.fields, str)
+                    else photo.fields
+                )
+                assert "photographer" in fields_data or "fields" in fields_data
 
     def test_import_with_exif_extraction(
-        self, runner, test_user, test_library, temp_image_with_exif
+        self, runner, test_user, test_library, temp_image_with_exif, db_session
     ):
         """Test that EXIF data is extracted during import"""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -317,26 +205,21 @@ class TestPhotoImportWithMetadata:
             assert result.exit_code == 0
             assert "Imported: 1" in result.output
 
-            # Verify photo has EXIF data
-            db = TestingSessionLocal()
-            try:
-                photo = db.exec(
-                    select(Photo).where(Photo.owner_id == test_user.id)
-                ).scalar_one()
-                assert photo is not None
+            photo = db_session.exec(
+                select(Photo).where(Photo.owner_id == test_user.id)
+            ).scalar_one()
+            assert photo is not None
 
-                # Check if EXIF data was stored
-                if photo.exif:
-                    exif_data = (
-                        json.loads(photo.exif)
-                        if isinstance(photo.exif, str)
-                        else photo.exif
-                    )
-                    assert isinstance(exif_data, dict)
-                    # EXIF data should have at least the _raw field or some data
-                    assert len(exif_data) > 0
-            finally:
-                db.close()
+            # Check if EXIF data was stored
+            if photo.exif:
+                exif_data = (
+                    json.loads(photo.exif)
+                    if isinstance(photo.exif, str)
+                    else photo.exif
+                )
+                assert isinstance(exif_data, dict)
+                # EXIF data should have at least the _raw field or some data
+                assert len(exif_data) > 0
 
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@
 import click
 from sqlalchemy.orm import Session
 from sqlmodel import select
-from app.database import SessionLocal
+import app.database
 from app.models import User, Library
 
 
@@ -20,7 +20,7 @@ def library():
 @click.option("--description", help="Library description (optional)")
 def create(username: str, name: str, path: str, description: str):
     """Create a new library for a user"""
-    db: Session = SessionLocal()
+    db: Session = app.database.SessionLocal()
     try:
         # Check if user exists
         user = db.exec(select(User).where(User.username == username)).first()
@@ -54,7 +54,7 @@ def create(username: str, name: str, path: str, description: str):
 @click.option("--username", help="Filter by username (optional)")
 def list(username: str):
     """List all libraries"""
-    db: Session = SessionLocal()
+    db: Session = app.database.SessionLocal()
     try:
         query = select(Library)
         if username:
@@ -87,7 +87,7 @@ def list(username: str):
 @click.argument("library_id", type=int)
 def info(library_id: int):
     """Show detailed library information"""
-    db: Session = SessionLocal()
+    db: Session = app.database.SessionLocal()
     try:
         library = db.exec(select(Library).where(Library.id == library_id)).first()
         if not library:
@@ -117,7 +117,7 @@ def info(library_id: int):
 @click.option("--description", help="New library description")
 def update(library_id: int, name: str, path: str, description: str):
     """Update a library"""
-    db: Session = SessionLocal()
+    db: Session = app.database.SessionLocal()
     try:
         library = db.exec(select(Library).where(Library.id == library_id)).first()
         if not library:
