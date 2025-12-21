@@ -14,12 +14,7 @@ This directory contains all tests for the PhotoSafe backend.
   - `test_cli.py` - CLI command tests
   - `test_import_metadata.py` - Metadata import tests
   - `test_library_upsert.py` - Library update/insert tests
-  - `test_migrations.py` - Database migration tests
-  - `test_parity.py` - Parity checking tests
-  - `test_refresh_manual.py` - Manual refresh tests
-  - `test_sync_commands.py` - Sync command tests
-  - `demo_auth.py` - Authentication demo/test script
-  - `demo_metadata_import.py` - Metadata import demo/test script
+  - `test_sync.py` - Photo synchronization tests (macOS, iCloud)
 
 - `fixtures/` - Test fixtures and sample data
 
