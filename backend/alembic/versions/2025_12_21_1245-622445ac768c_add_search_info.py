@@ -1,8 +1,8 @@
-"""Add search_data table for searchable metadata
+"""add search info
 
-Revision ID: e1f2a3b4c5d6
-Revises: d8e9f0a1b2c3
-Create Date: 2025-12-21 20:15:00.000000
+Revision ID: 622445ac768c
+Revises: 7f412add73fe
+Create Date: 2025-12-21 12:45:16.954761
 
 """
 
@@ -12,10 +12,9 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID
 
-
 # revision identifiers, used by Alembic.
-revision: str = "e1f2a3b4c5d6"
-down_revision: Union[str, None] = "d8e9f0a1b2c3"
+revision: str = "622445ac768c"
+down_revision: Union[str, None] = "7f412add73fe"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
