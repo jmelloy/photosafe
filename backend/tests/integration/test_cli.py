@@ -197,8 +197,6 @@ class TestLibraryCommands:
         assert "Library created successfully" in result.output
         assert "My Photos" in result.output
 
-        # Close the current transaction and start a new one to see committed data
-        db_session.rollback()
         # Verify in database
         db_library = db_session.exec(
             select(Library).where(Library.name == "My Photos")
@@ -254,7 +252,7 @@ class TestLibraryCommands:
         assert "Library 1" in result.output
         assert "Library 2" in result.output
 
-    def test_library_info(self, runner):
+    def test_library_info(self, runner, db_session):
         """Test getting library info"""
         # Create user and library
         username, email, library_name, *_ = str(uuid.uuid4()).split("-")
@@ -284,14 +282,16 @@ class TestLibraryCommands:
             ],
         )
 
-        # Extract library ID from output: "✓ Library created successfully: {name} (ID: {id})"
-        import re
+        assert create_result.exit_code == 0
 
-        match = re.search(r"\(ID: (\d+)\)", create_result.output)
-        assert match, f"Could not find library ID in output: {create_result.output}"
-        library_id = match.group(1)
+        db_library = db_session.exec(
+            select(Library).where(Library.name == library_name)
+        ).scalar_one()
 
-        result = runner.invoke(library, ["info", library_id])
+        assert db_library is not None
+        library_id = db_library.id
+
+        result = runner.invoke(library, ["info", str(library_id)])
 
         assert result.exit_code == 0
         assert library_name in result.output
@@ -304,22 +304,30 @@ class TestImportCommands:
     def test_import_with_sidecar(self, db_session, runner):
         """Test importing photos with JSON sidecar"""
         # Create user and library
+        username = str(uuid.uuid4()).split("-")[0]
         runner.invoke(
             user,
             [
                 "create",
                 "--username",
-                "testuser",
+                username,
                 "--email",
-                "test@example.com",
+                f"{username}@example.com",
                 "--password",
                 "testpass123",
             ],
         )
 
-        runner.invoke(
-            library, ["create", "--username", "testuser", "--name", "Test Library"]
+        result = runner.invoke(
+            library, ["create", "--username", username, "--name", username]
         )
+        assert result.exit_code == 0
+
+        db_library = db_session.exec(
+            select(Library).where(Library.name == username)
+        ).scalar_one()
+        assert db_library is not None
+        library_id = db_library.id
 
         # Create temporary test folder with photo and sidecar
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -352,9 +360,9 @@ class TestImportCommands:
                 import_photos,
                 [
                     "--username",
-                    "testuser",
+                    username,
                     "--library-id",
-                    "1",
+                    str(library_id),
                     "--folder",
                     str(tmpdir),
                     "--sidecar-format",
@@ -366,35 +374,37 @@ class TestImportCommands:
             assert "Import complete" in result.output
             assert "Imported: 1" in result.output
 
-            # Close the current transaction and start a new one to see committed data
-            db_session.rollback()
             # Verify in database
             photo = db_session.exec(
                 select(Photo).where(Photo.uuid == test_uuid)
             ).scalar_one()
             assert photo is not None
             assert photo.title == "Test Photo"
-            assert photo.library_id == 1
+            assert photo.library_id == library_id
 
     def test_import_dry_run(self, db_session, runner):
         """Test import with dry-run flag"""
         # Create user and library
+        username = str(uuid.uuid4()).split("-")[0]
         runner.invoke(
             user,
             [
                 "create",
                 "--username",
-                "testuser",
+                username,
                 "--email",
-                "test@example.com",
+                f"{username}@example.com",
                 "--password",
                 "testpass123",
             ],
         )
 
-        runner.invoke(
-            library, ["create", "--username", "testuser", "--name", "Test Library"]
-        )
+        runner.invoke(library, ["create", "--username", username, "--name", username])
+        db_library = db_session.exec(
+            select(Library).where(Library.name == username)
+        ).scalar_one()
+        assert db_library is not None
+        library_id = db_library.id
 
         # Create temporary test folder
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -407,9 +417,9 @@ class TestImportCommands:
                 import_photos,
                 [
                     "--username",
-                    "testuser",
+                    username,
                     "--library-id",
-                    "1",
+                    str(library_id),
                     "--folder",
                     str(tmpdir),
                     "--dry-run",
