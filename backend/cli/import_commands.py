@@ -15,7 +15,7 @@ from PIL.ExifTags import TAGS, GPSTAGS
 from ulid import ULID
 
 
-from app.database import SessionLocal
+import app.database
 from app.models import User, Library, Photo, Version
 
 
@@ -53,7 +53,7 @@ def import_photos(
     dry_run: bool,
 ):
     """Import photos from a folder with sidecar metadata"""
-    db: Session = SessionLocal()
+    db: Session = app.database.SessionLocal()
 
     try:
         # Get user
