@@ -196,6 +196,9 @@ class Photo(SQLModel, table=True):
     versions: List["Version"] = Relationship(
         back_populates="photo", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
+    search_data: List["SearchData"] = Relationship(
+        back_populates="photo", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
 
     @property
     def url(self) -> Optional[str]:
@@ -282,7 +285,7 @@ class SearchData(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     # Relationship
-    photo: Optional["Photo"] = Relationship()
+    photo: Optional["Photo"] = Relationship(back_populates="search_data")
 
 
 class Album(SQLModel, table=True):

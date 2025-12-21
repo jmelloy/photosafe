@@ -1,5 +1,6 @@
 """Search API endpoints"""
 
+from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session, joinedload
@@ -230,7 +231,6 @@ async def search_photos(
     # Apply date range filters directly on Photo table
     if start_date:
         try:
-            from datetime import datetime
             start_dt = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
             query = query.where(Photo.date >= start_dt)
         except ValueError:
@@ -238,7 +238,6 @@ async def search_photos(
     
     if end_date:
         try:
-            from datetime import datetime
             end_dt = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
             # Include the entire end date
             end_dt = end_dt.replace(hour=23, minute=59, second=59, microsecond=999999)

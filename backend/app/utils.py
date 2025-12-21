@@ -7,6 +7,9 @@ from sqlalchemy import delete
 from sqlmodel import select
 from .models import Photo, User, Library, VersionRead, PhotoRead, SearchData
 
+# Batch size for committing search_data population
+SEARCH_DATA_BATCH_SIZE = 100
+
 
 def serialize_json_field(value):
     """Convert list/dict to JSON string for storage"""
@@ -290,8 +293,8 @@ def populate_search_data_for_all_photos(db: Session) -> int:
         populate_search_data_for_photo(photo, db)
         count += 1
         
-        # Commit in batches of 100
-        if count % 100 == 0:
+        # Commit in batches
+        if count % SEARCH_DATA_BATCH_SIZE == 0:
             db.commit()
     
     # Final commit
