@@ -29,6 +29,7 @@ from ..auth import get_current_active_user
 from ..utils import (
     handle_library_upsert,
     create_photo_response,
+    populate_search_data_for_photo,
 )
 
 router = APIRouter(prefix="/api/photos", tags=["photos"])
@@ -69,6 +70,9 @@ async def create_photo(
     for version_data in versions_data:
         db_version = Version(photo_uuid=db_photo.uuid, **version_data.model_dump())
         db.add(db_version)
+
+    # Populate search_data table
+    populate_search_data_for_photo(db_photo, db)
 
     db.commit()
     db.refresh(db_photo)
@@ -131,6 +135,9 @@ async def update_photo(
             else:
                 db_version = Version(photo_uuid=uuid, **version_data.model_dump())
                 db.add(db_version)
+
+    # Update search_data table
+    populate_search_data_for_photo(db_photo, db)
 
     db.commit()
     db.refresh(db_photo)
@@ -215,6 +222,9 @@ async def batch_create_or_update_photos(
                             )
                             db.add(db_version)
 
+                # Update search_data
+                populate_search_data_for_photo(existing, db)
+
                 db.flush()
                 results.append(
                     BatchPhotoResult(
@@ -243,6 +253,9 @@ async def batch_create_or_update_photos(
                         photo_uuid=db_photo.uuid, **version_data.model_dump()
                     )
                     db.add(db_version)
+
+                # Populate search_data
+                populate_search_data_for_photo(db_photo, db)
 
                 db.flush()
                 results.append(
