@@ -24,6 +24,35 @@ def maintenance():
     pass
 
 
+@maintenance.command()
+def populate_search_data():
+    """
+    Populate search_data table from existing photo metadata
+    
+    This command will:
+    1. Process all photos in the database
+    2. Extract searchable metadata (labels, keywords, persons, places, etc.)
+    3. Populate the search_data table for efficient searching
+    
+    Run this after upgrading to the search_data feature or if search_data
+    becomes out of sync with photo metadata.
+    """
+    from app.utils import populate_search_data_for_all_photos
+    
+    click.echo("PhotoSafe Search Data Population Tool")
+    click.echo("=" * 80)
+    click.echo("This will populate the search_data table from all photos...")
+    
+    with Session(engine) as db:
+        try:
+            count = populate_search_data_for_all_photos(db)
+            click.echo(f"\n✅ Successfully processed {count} photos")
+            click.echo("Search data has been populated!")
+        except Exception as e:
+            click.echo(f"\n❌ Error: {e}", err=True)
+            sys.exit(1)
+
+
 def download_s3_csv(s3_url: str) -> str:
     """
     Download CSV file from S3 to a temporary location
