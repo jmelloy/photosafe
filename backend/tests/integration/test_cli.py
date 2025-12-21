@@ -46,6 +46,8 @@ class TestUserCommands:
         assert "User created successfully" in result.output
         assert username in result.output
 
+        # Close the current transaction and start a new one to see committed data
+        db_session.rollback()
         db_user = db_session.exec(
             select(User).where(User.username == username)
         ).scalar_one()
@@ -195,6 +197,8 @@ class TestLibraryCommands:
         assert "Library created successfully" in result.output
         assert "My Photos" in result.output
 
+        # Close the current transaction and start a new one to see committed data
+        db_session.rollback()
         # Verify in database
         db_library = db_session.exec(
             select(Library).where(Library.name == "My Photos")
@@ -267,7 +271,7 @@ class TestLibraryCommands:
             ],
         )
 
-        result = runner.invoke(
+        create_result = runner.invoke(
             library,
             [
                 "create",
@@ -280,7 +284,13 @@ class TestLibraryCommands:
             ],
         )
 
-        result = runner.invoke(library, ["info", "1"])
+        # Extract library ID from output: "✓ Library created successfully: {name} (ID: {id})"
+        import re
+        match = re.search(r"\(ID: (\d+)\)", create_result.output)
+        assert match, f"Could not find library ID in output: {create_result.output}"
+        library_id = match.group(1)
+
+        result = runner.invoke(library, ["info", library_id])
 
         assert result.exit_code == 0
         assert library_name in result.output
@@ -355,6 +365,8 @@ class TestImportCommands:
             assert "Import complete" in result.output
             assert "Imported: 1" in result.output
 
+            # Close the current transaction and start a new one to see committed data
+            db_session.rollback()
             # Verify in database
             photo = db_session.exec(
                 select(Photo).where(Photo.uuid == test_uuid)

@@ -1,8 +1,7 @@
 """API routes for place summaries and tasks"""
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
-from sqlmodel import Session
+from sqlmodel import Session, select
 from typing import List, Optional
 
 from app.database import get_db

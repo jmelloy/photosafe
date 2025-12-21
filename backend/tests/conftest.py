@@ -180,6 +180,20 @@ def test_user(db_session):
 
 
 @pytest.fixture
+def test_library(db_session, test_user):
+    """Create a test library for testing."""
+    library = Library(
+        name="TestLibrary",
+        owner_id=test_user.id,
+        description="Test library for unit tests",
+    )
+    db_session.add(library)
+    db_session.commit()
+    db_session.refresh(library)
+    return library
+
+
+@pytest.fixture
 def auth_token(client):
     """Create a user and return an authentication token."""
     # Register user
@@ -200,8 +214,26 @@ def auth_token(client):
 
 
 @pytest.fixture
-def runner(db_session):
-    """Click CLI runner"""
+def runner(db_session, engine):
+    """Click CLI runner with proper database connection"""
     from click.testing import CliRunner
+    import app.database
+    from sqlalchemy.orm import sessionmaker
 
-    return CliRunner(env={"DATABASE_URL": TEST_DATABASE_URL})
+    # Save original SessionLocal
+    original_session_local = app.database.SessionLocal
+    original_engine = app.database.engine
+
+    # Replace with test database connection
+    app.database.engine = engine
+    app.database.SessionLocal = sessionmaker(
+        autocommit=False, autoflush=False, bind=engine, class_=Session
+    )
+
+    runner = CliRunner(env={"DATABASE_URL": TEST_DATABASE_URL})
+
+    yield runner
+
+    # Restore original SessionLocal
+    app.database.SessionLocal = original_session_local
+    app.database.engine = original_engine
