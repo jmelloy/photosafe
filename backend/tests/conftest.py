@@ -214,6 +214,18 @@ def auth_token(client):
 
 
 @pytest.fixture
+def auth_headers(client, test_user):
+    """Create authorization headers for the test_user."""
+    # Login with test_user credentials
+    response = client.post(
+        "/api/auth/login",
+        data={"username": "testuser", "password": "testpassword123"},
+    )
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
 def runner(db_session, engine):
     """Click CLI runner with proper database connection"""
     from click.testing import CliRunner

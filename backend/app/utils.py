@@ -1,10 +1,14 @@
 """Utility functions for photo processing"""
 
 import json
-from typing import Dict, Any
+from typing import Dict, Any, List
 from sqlalchemy.orm import Session
+from sqlalchemy import delete
 from sqlmodel import select
-from .models import Photo, User, Library, VersionRead, PhotoRead
+from .models import Photo, User, Library, VersionRead, PhotoRead, SearchData
+
+# Batch size for committing search_data population
+SEARCH_DATA_BATCH_SIZE = 100
 
 
 def serialize_json_field(value):
@@ -174,3 +178,126 @@ def create_photo_response(photo: Photo) -> PhotoRead:
     }
 
     return PhotoRead(**response_dict)
+
+
+def populate_search_data_for_photo(photo: Photo, db: Session) -> None:
+    """Populate search_data table entries for a single photo
+    
+    Extracts searchable metadata from photo and creates search_data entries.
+    This function handles:
+    - labels (from labels array)
+    - keywords (from keywords array)
+    - persons (from persons array)
+    - albums (from albums array)
+    - place (from place.name_* hierarchy)
+    - description (from description field)
+    - title (from title field)
+    
+    Args:
+        photo: Photo model instance to process
+        db: Database session
+    """
+    # Delete existing search data for this photo
+    db.exec(delete(SearchData).where(SearchData.photo_uuid == photo.uuid))
+    
+    search_entries = []
+    
+    # Add labels
+    if photo.labels:
+        for label in photo.labels:
+            if label:
+                search_entries.append(
+                    SearchData(photo_uuid=photo.uuid, key="label", value=label)
+                )
+    
+    # Add keywords
+    if photo.keywords:
+        for keyword in photo.keywords:
+            if keyword:
+                search_entries.append(
+                    SearchData(photo_uuid=photo.uuid, key="keyword", value=keyword)
+                )
+    
+    # Add persons
+    if photo.persons:
+        for person in photo.persons:
+            if person:
+                search_entries.append(
+                    SearchData(photo_uuid=photo.uuid, key="person", value=person)
+                )
+    
+    # Add albums
+    if photo.albums:
+        for album in photo.albums:
+            if album:
+                search_entries.append(
+                    SearchData(photo_uuid=photo.uuid, key="album", value=album)
+                )
+    
+    # Add place data
+    if photo.place:
+        place_data = deserialize_json_field(photo.place) if isinstance(photo.place, str) else photo.place
+        if place_data and isinstance(place_data, dict):
+            # Extract place hierarchy
+            place_fields = [
+                "name", "name_user_defined", "name_area_of_interest", 
+                "name_sub_locality", "name_locality", "name_sub_administrative_area",
+                "name_administrative_area", "name_country"
+            ]
+            for field in place_fields:
+                if field in place_data and place_data[field]:
+                    search_entries.append(
+                        SearchData(photo_uuid=photo.uuid, key="place", value=str(place_data[field]))
+                    )
+    
+    # Add description
+    if photo.description and photo.description.strip():
+        search_entries.append(
+            SearchData(photo_uuid=photo.uuid, key="description", value=photo.description.strip())
+        )
+    
+    # Add title
+    if photo.title and photo.title.strip():
+        search_entries.append(
+            SearchData(photo_uuid=photo.uuid, key="title", value=photo.title.strip())
+        )
+    
+    # Add library
+    if photo.library:
+        search_entries.append(
+            SearchData(photo_uuid=photo.uuid, key="library", value=photo.library)
+        )
+    
+    # Bulk insert all entries
+    if search_entries:
+        db.add_all(search_entries)
+
+
+def populate_search_data_for_all_photos(db: Session) -> int:
+    """Populate search_data table for all photos in the database
+    
+    This is a maintenance function that can be run to rebuild the search_data
+    table from scratch.
+    
+    Args:
+        db: Database session
+        
+    Returns:
+        Number of photos processed
+    """
+    # Get all photos
+    photos = db.exec(select(Photo)).all()
+    
+    count = 0
+    for photo in photos:
+        populate_search_data_for_photo(photo, db)
+        count += 1
+        
+        # Commit in batches
+        if count % SEARCH_DATA_BATCH_SIZE == 0:
+            db.commit()
+    
+    # Final commit
+    db.commit()
+    
+    return count

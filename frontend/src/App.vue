@@ -27,6 +27,9 @@
             <RouterLink to="/" class="nav-link">
               <span>🏠 Gallery</span>
             </RouterLink>
+            <RouterLink to="/search" class="nav-link">
+              <span>🔍 Search</span>
+            </RouterLink>
             <RouterLink to="/map" class="nav-link">
               <span>📍 Map</span>
             </RouterLink>

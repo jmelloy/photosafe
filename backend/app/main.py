@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from .routers import auth, photos, albums, places
+from .routers import auth, photos, albums, places, search
 from .version import get_version, get_version_info
 
 # Database tables are now created via Alembic migrations
@@ -36,6 +36,7 @@ app.include_router(auth.router)
 app.include_router(photos.router)
 app.include_router(albums.router)
 app.include_router(places.router, prefix="/api", tags=["places"])
+app.include_router(search.router)
 
 
 @app.get("/")

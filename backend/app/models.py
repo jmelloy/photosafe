@@ -196,6 +196,9 @@ class Photo(SQLModel, table=True):
     versions: List["Version"] = Relationship(
         back_populates="photo", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
+    search_data: List["SearchData"] = Relationship(
+        back_populates="photo", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
 
     @property
     def url(self) -> Optional[str]:
@@ -266,6 +269,23 @@ class Version(SQLModel, table=True):
 
     # Relationship
     photo: Optional["Photo"] = Relationship(back_populates="versions")
+
+
+class SearchData(SQLModel, table=True):
+    """Search data model for efficient searchable metadata"""
+
+    __tablename__ = "search_data"
+
+    id: Optional[int] = Field(default=None, primary_key=True, index=True)
+    photo_uuid: pkg_uuid.UUID = Field(
+        foreign_key="photos.uuid", index=True, sa_type=UUID(as_uuid=True)
+    )
+    key: str = Field(sa_type=String, index=True)
+    value: str = Field(sa_type=String, index=True)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    # Relationship
+    photo: Optional["Photo"] = Relationship(back_populates="search_data")
 
 
 class Album(SQLModel, table=True):
@@ -710,3 +730,27 @@ class PlaceSummaryRead(SQLModel):
 
     class Config:
         from_attributes = True
+
+
+class SearchDataRead(SQLModel):
+    """SearchData read schema"""
+
+    id: int
+    photo_uuid: pkg_uuid.UUID
+    key: str
+    value: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class SearchFiltersResponse(SQLModel):
+    """Available search filters response schema"""
+
+    places: List[str]
+    labels: List[str]
+    keywords: List[str]
+    persons: List[str]
+    albums: List[str]
+    libraries: List[str]
