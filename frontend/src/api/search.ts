@@ -1,5 +1,4 @@
 import api from "./client";
-import type { Photo } from "../types/api";
 import type { PaginatedPhotosResponse } from "./photos";
 
 export interface SearchFilters {

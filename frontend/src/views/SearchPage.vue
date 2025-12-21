@@ -156,7 +156,7 @@
 
       <!-- Search Button -->
       <div class="filter-section">
-        <button @click="performSearch" class="search-btn">
+        <button @click="() => performSearch()" class="search-btn">
           Search Photos
         </button>
       </div>
