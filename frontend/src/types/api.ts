@@ -141,3 +141,18 @@ export interface PhotoUpdateData {
   hidden?: boolean;
   [key: string]: any;
 }
+
+export interface PlaceSummary {
+  id: number;
+  place_name: string;
+  latitude?: number;
+  longitude?: number;
+  photo_count: number;
+  first_photo_date?: string;
+  last_photo_date?: string;
+  country?: string;
+  state_province?: string;
+  city?: string;
+  place_data?: Record<string, any>;
+  updated_at: string;
+}
