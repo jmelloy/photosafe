@@ -234,8 +234,6 @@ alembic revision --autogenerate -m "Description of changes"
 alembic downgrade -1
 ```
 
-For more details, see [backend/MIGRATIONS.md](backend/MIGRATIONS.md).
-
 ## CLI - Command Line Interface
 
 PhotoSafe includes a powerful CLI for bulk operations, user management, and photo imports.
@@ -258,51 +256,47 @@ photosafe library create --username john --name "My Photos"
 
 # Import photos from a folder
 photosafe import --username john --library-id 1 --folder /path/to/photos
+
+# Sync from macOS Photos or iCloud
+photosafe sync macos --username john --bucket my-bucket
+photosafe sync icloud --username john --icloud-username user@icloud.com --bucket my-bucket
+
+# Background tasks
+photosafe task lookup-places --limit 100
+photosafe task update-place-summary
 ```
 
-For complete CLI documentation, see [backend/CLI_README.md](backend/CLI_README.md).
+For complete CLI documentation including sync and task commands, see:
+- [backend/SYNC_COMMANDS.md](backend/SYNC_COMMANDS.md) - Syncing photos from macOS, iCloud, and Leonardo.ai
+- [backend/TASK_SYSTEM.md](backend/TASK_SYSTEM.md) - Background tasks for place lookup and summaries
 
 ## Project Structure
 
 ```
 photosafe/
-├── backend/
-│   ├── alembic/
-│   │   ├── versions/        # Migration files
-│   │   └── env.py          # Alembic environment config
-│   ├── app/
-│   │   ├── __init__.py
-│   │   ├── main.py          # FastAPI application
-│   │   ├── models.py        # Database models (User, Photo, Album, Library, Version)
-│   │   ├── schemas.py       # Pydantic schemas
-│   │   ├── database.py      # Database configuration
-│   │   └── auth.py          # Authentication
-│   ├── cli/
-│   │   ├── __init__.py
-│   │   ├── main.py          # CLI entry point
-│   │   ├── user_commands.py # User management commands
-│   │   ├── library_commands.py # Library management commands
-│   │   └── import_commands.py  # Photo import commands
-│   ├── alembic.ini          # Alembic configuration
-│   ├── CLI_README.md        # CLI documentation
-│   ├── MIGRATIONS.md        # Migration documentation
-│   ├── setup.py            # CLI package setup
-│   ├── Dockerfile
-│   └── requirements.txt
-├── frontend/
-│   ├── src/
-│   │   ├── api/
-│   │   │   └── photos.js    # API client
-│   │   ├── components/
-│   │   │   ├── PhotoGallery.vue
-│   │   │   └── PhotoUpload.vue
-│   │   ├── App.vue
-│   │   ├── main.js
-│   │   └── style.css
-│   ├── index.html
-│   ├── package.json
-│   ├── vite.config.js
+├── backend/               # FastAPI backend
+│   ├── alembic/          # Database migrations
+│   ├── app/              # Main application code
+│   │   ├── routers/      # API endpoints
+│   │   ├── main.py       # FastAPI application
+│   │   ├── models.py     # Database models
+│   │   ├── schemas.py    # Pydantic schemas
+│   │   ├── database.py   # Database configuration
+│   │   └── auth.py       # Authentication
+│   ├── cli/              # CLI commands
+│   ├── tests/            # Unit and integration tests
+│   ├── pyproject.toml    # Python dependencies and CLI setup
 │   └── Dockerfile
+├── frontend/             # Vue 3 frontend
+│   ├── src/
+│   │   ├── api/          # API client
+│   │   ├── components/   # Vue components
+│   │   ├── views/        # Page views
+│   │   └── router/       # Vue router
+│   ├── package.json
+│   ├── vite.config.ts
+│   └── Dockerfile
+├── iosapp/               # iOS/tvOS app
 └── docker-compose.yml
 ```
 
