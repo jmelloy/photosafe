@@ -78,7 +78,8 @@ const loadPlaceSummaries = async () => {
   loading.value = true;
   try {
     // Fetch place summaries - these are pre-aggregated by the backend
-    // Default limit is 100, but we can increase if needed
+    // The backend default limit is 100, but we increase it for the map view
+    // to show more locations. Consider implementing pagination if needed.
     placeSummaries.value = await getPlaceSummaries({ limit: 1000 });
   } catch (error) {
     console.error("Failed to load place summaries:", error);
