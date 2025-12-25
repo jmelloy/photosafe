@@ -531,41 +531,65 @@ def icloud(
         return photo.id in photos
 
     def upload_albums():
-        for name, album in api.photos.albums.items():
-            print(f"Processing album {name}")
-            if album.name == "All Photos" or not album.id:
+        """Upload albums from all libraries including shared libraries"""
+        # Process albums from all libraries (including shared ones)
+        for library_name, library_obj in api.photos.libraries.items():
+            # Check if this is a shared library
+            is_shared = getattr(library_obj, "shared", False)
+            library_type = "shared" if is_shared else "private"
+            
+            click.echo(f"Processing albums from {library_type} library: {library_name}")
+            
+            try:
+                albums = library_obj.albums
+            except Exception as e:
+                click.echo(f"Error accessing albums for library {library_name}: {e}", err=True)
                 continue
+            
+            for name, album in albums.items():
+                click.echo(f"  Processing album: {name}")
+                if album.name == "All Photos" or not album.id:
+                    continue
 
-            album_info = {
-                "uuid": album.id,
-                "title": album.title,
-                "creation_date": album.created,
-            }
-            album_info["photos"] = list(
-                map(
-                    lambda photo: photo._asset_record["recordName"],
-                    album.photos,
-                )
-            )
+                album_info = {
+                    "uuid": album.id,
+                    "title": album.title,
+                    "creation_date": album.created,
+                }
+                
+                try:
+                    album_info["photos"] = list(
+                        map(
+                            lambda photo: photo._asset_record["recordName"],
+                            album.photos,
+                        )
+                    )
+                except Exception as e:
+                    click.echo(f"    Error getting photos for album {name}: {e}", err=True)
+                    continue
 
-            if not album_info["photos"]:
-                continue
+                if not album_info["photos"]:
+                    click.echo(f"    Skipping empty album: {name}")
+                    continue
 
-            r = auth.put(
-                f"/api/albums/{album.id}/",
-                data=json.dumps(album_info, cls=DateTimeEncoder),
-                headers={"Content-Type": "application/json"},
-            )
-
-            if r.status_code == 404:
-                r = auth.post(
-                    "/api/albums/",
+                r = auth.put(
+                    f"/api/albums/{album.id}/",
                     data=json.dumps(album_info, cls=DateTimeEncoder),
                     headers={"Content-Type": "application/json"},
                 )
 
-            if r.status_code >= 400:
-                print(r.json(), album_info)
+                if r.status_code == 404:
+                    r = auth.post(
+                        "/api/albums/",
+                        data=json.dumps(album_info, cls=DateTimeEncoder),
+                        headers={"Content-Type": "application/json"},
+                    )
+
+                if r.status_code >= 400:
+                    click.echo(f"    Error uploading album {name}: {r.status_code}", err=True)
+                    click.echo(f"    Response: {r.json()}", err=True)
+                else:
+                    click.echo(f"    Successfully uploaded album: {name}")
 
     s3_keys = {}
     os.makedirs(username, exist_ok=True)
@@ -592,7 +616,10 @@ def icloud(
         libraries_to_process = api.photos.libraries
 
     for library_name, library_obj in libraries_to_process.items():
-        click.echo(f"Library: {library_name}")
+        # Check if this is a shared library
+        is_shared = getattr(library_obj, "shared", False)
+        library_type = "shared" if is_shared else "private"
+        click.echo(f"Library: {library_name} ({library_type})")
         photo_batch = []  # Collect photos for batching
         total_created = 0
         total_updated = 0

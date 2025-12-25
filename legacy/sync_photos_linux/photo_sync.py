@@ -134,38 +134,49 @@ def album_contains(album_name, photo):
 
 
 def upload_albums():
-    for name, album in api.photos.albums.items():
-        print(f"Processing album {name}")
-        if album.name == "All Photos" or not album.id:
+    """Upload albums from all libraries including shared libraries"""
+    # Process albums from all libraries (including shared ones)
+    for library_name, library in api.photos.libraries.items():
+        # Check if this is a shared library
+        is_shared = getattr(library, "shared", False)
+        library_type = "shared" if is_shared else "private"
+        
+        print(f"Processing albums from {library_type} library: {library_name}")
+        
+        try:
+            albums = library.albums
+        except Exception as e:
+            print(f"Error accessing albums for library {library_name}: {e}")
             continue
+        
+        for name, album in albums.items():
+            print(f"  Processing album: {name}")
+            if album.name == "All Photos" or not album.id:
+                continue
 
-        album_info = {
-            "uuid": album.id,
-            "title": album.title,
-            "creation_date": album.created,
-        }
-        album_info["photos"] = list(
-            map(
-                lambda photo: photo._asset_record["recordName"],
-                album.photos,
-            )
-        )
+            album_info = {
+                "uuid": album.id,
+                "title": album.title,
+                "creation_date": album.created,
+            }
+            
+            try:
+                album_info["photos"] = list(
+                    map(
+                        lambda photo: photo._asset_record["recordName"],
+                        album.photos,
+                    )
+                )
+            except Exception as e:
+                print(f"    Error getting photos for album {name}: {e}")
+                continue
 
-        if not album_info["photos"]:
-            continue
+            if not album_info["photos"]:
+                print(f"    Skipping empty album: {name}")
+                continue
 
-        r = requests.put(
-            f"{base_url}/api/albums/{album.id}/",
-            data=json.dumps(album_info, cls=DateTimeEncoder),
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {token}",
-            },
-        )
-
-        if r.status_code == 404:
-            r = requests.post(
-                f"{base_url}/api/albums/",
+            r = requests.put(
+                f"{base_url}/api/albums/{album.id}/",
                 data=json.dumps(album_info, cls=DateTimeEncoder),
                 headers={
                     "Content-Type": "application/json",
@@ -173,9 +184,22 @@ def upload_albums():
                 },
             )
 
-        if r.status_code >= 400:
-            print(r.json(), album_info)
-        # r.raise_for_status()
+            if r.status_code == 404:
+                r = requests.post(
+                    f"{base_url}/api/albums/",
+                    data=json.dumps(album_info, cls=DateTimeEncoder),
+                    headers={
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {token}",
+                    },
+                )
+
+            if r.status_code >= 400:
+                print(f"    Error uploading album {name}: {r.status_code}")
+                print(f"    Response: {r.json()}")
+            else:
+                print(f"    Successfully uploaded album: {name}")
+            # r.raise_for_status()
 
 
 if __name__ == "__main__":
@@ -188,7 +212,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
     os.makedirs(api_username, exist_ok=True)
     for library_name, library in api.photos.libraries.items():
-        print(f"Library: {library_name}")
+        # Check if this is a shared library
+        is_shared = getattr(library, "shared", False)
+        library_type = "shared" if is_shared else "private"
+        print(f"Library: {library_name} ({library_type})")
         existing = 0
 
         for i, photo in enumerate(library.all.fetch_records(args.offset)):
