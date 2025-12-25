@@ -4,6 +4,7 @@ import json
 from typing import Dict, Any, List
 from sqlalchemy.orm import Session
 from sqlalchemy import delete
+from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import select
 from .models import Photo, User, Library, VersionRead, PhotoRead, SearchData
 
@@ -193,6 +194,8 @@ def populate_search_data_for_photo(photo: Photo, db: Session) -> None:
     - description (from description field)
     - title (from title field)
     
+    Uses PostgreSQL's ON CONFLICT DO NOTHING to handle duplicates at the database level.
+    
     Args:
         photo: Photo model instance to process
         db: Database session
@@ -200,42 +203,39 @@ def populate_search_data_for_photo(photo: Photo, db: Session) -> None:
     # Delete existing search data for this photo
     db.exec(delete(SearchData).where(SearchData.photo_uuid == photo.uuid))
     
-    # Use a set to track (key, value) pairs and avoid duplicates
-    seen_entries = set()
     search_entries = []
-    
-    def add_entry(key: str, value: str) -> None:
-        """Helper to add entry only if not already seen"""
-        entry_tuple = (key, value)
-        if entry_tuple not in seen_entries:
-            seen_entries.add(entry_tuple)
-            search_entries.append(
-                SearchData(photo_uuid=photo.uuid, key=key, value=value)
-            )
     
     # Add labels
     if photo.labels:
         for label in photo.labels:
             if label:
-                add_entry("label", label)
+                search_entries.append(
+                    {"photo_uuid": photo.uuid, "key": "label", "value": label}
+                )
     
     # Add keywords
     if photo.keywords:
         for keyword in photo.keywords:
             if keyword:
-                add_entry("keyword", keyword)
+                search_entries.append(
+                    {"photo_uuid": photo.uuid, "key": "keyword", "value": keyword}
+                )
     
     # Add persons
     if photo.persons:
         for person in photo.persons:
             if person:
-                add_entry("person", person)
+                search_entries.append(
+                    {"photo_uuid": photo.uuid, "key": "person", "value": person}
+                )
     
     # Add albums
     if photo.albums:
         for album in photo.albums:
             if album:
-                add_entry("album", album)
+                search_entries.append(
+                    {"photo_uuid": photo.uuid, "key": "album", "value": album}
+                )
     
     # Add place data
     if photo.place:
@@ -249,23 +249,35 @@ def populate_search_data_for_photo(photo: Photo, db: Session) -> None:
             ]
             for field in place_fields:
                 if field in place_data and place_data[field]:
-                    add_entry("place", str(place_data[field]))
+                    search_entries.append(
+                        {"photo_uuid": photo.uuid, "key": "place", "value": str(place_data[field])}
+                    )
     
     # Add description
     if photo.description and photo.description.strip():
-        add_entry("description", photo.description.strip())
+        search_entries.append(
+            {"photo_uuid": photo.uuid, "key": "description", "value": photo.description.strip()}
+        )
     
     # Add title
     if photo.title and photo.title.strip():
-        add_entry("title", photo.title.strip())
+        search_entries.append(
+            {"photo_uuid": photo.uuid, "key": "title", "value": photo.title.strip()}
+        )
     
     # Add library
     if photo.library:
-        add_entry("library", photo.library)
+        search_entries.append(
+            {"photo_uuid": photo.uuid, "key": "library", "value": photo.library}
+        )
     
-    # Bulk insert all entries
+    # Bulk insert all entries using ON CONFLICT DO NOTHING to handle duplicates
     if search_entries:
-        db.add_all(search_entries)
+        stmt = insert(SearchData.__table__).values(search_entries)
+        stmt = stmt.on_conflict_do_nothing(
+            index_elements=["photo_uuid", "key", "value"]
+        )
+        db.execute(stmt)
 
 
 def populate_search_data_for_all_photos(db: Session) -> int:
