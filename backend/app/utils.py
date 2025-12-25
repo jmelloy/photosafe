@@ -200,39 +200,42 @@ def populate_search_data_for_photo(photo: Photo, db: Session) -> None:
     # Delete existing search data for this photo
     db.exec(delete(SearchData).where(SearchData.photo_uuid == photo.uuid))
     
+    # Use a set to track (key, value) pairs and avoid duplicates
+    seen_entries = set()
     search_entries = []
+    
+    def add_entry(key: str, value: str) -> None:
+        """Helper to add entry only if not already seen"""
+        entry_tuple = (key, value)
+        if entry_tuple not in seen_entries:
+            seen_entries.add(entry_tuple)
+            search_entries.append(
+                SearchData(photo_uuid=photo.uuid, key=key, value=value)
+            )
     
     # Add labels
     if photo.labels:
         for label in photo.labels:
             if label:
-                search_entries.append(
-                    SearchData(photo_uuid=photo.uuid, key="label", value=label)
-                )
+                add_entry("label", label)
     
     # Add keywords
     if photo.keywords:
         for keyword in photo.keywords:
             if keyword:
-                search_entries.append(
-                    SearchData(photo_uuid=photo.uuid, key="keyword", value=keyword)
-                )
+                add_entry("keyword", keyword)
     
     # Add persons
     if photo.persons:
         for person in photo.persons:
             if person:
-                search_entries.append(
-                    SearchData(photo_uuid=photo.uuid, key="person", value=person)
-                )
+                add_entry("person", person)
     
     # Add albums
     if photo.albums:
         for album in photo.albums:
             if album:
-                search_entries.append(
-                    SearchData(photo_uuid=photo.uuid, key="album", value=album)
-                )
+                add_entry("album", album)
     
     # Add place data
     if photo.place:
@@ -246,27 +249,19 @@ def populate_search_data_for_photo(photo: Photo, db: Session) -> None:
             ]
             for field in place_fields:
                 if field in place_data and place_data[field]:
-                    search_entries.append(
-                        SearchData(photo_uuid=photo.uuid, key="place", value=str(place_data[field]))
-                    )
+                    add_entry("place", str(place_data[field]))
     
     # Add description
     if photo.description and photo.description.strip():
-        search_entries.append(
-            SearchData(photo_uuid=photo.uuid, key="description", value=photo.description.strip())
-        )
+        add_entry("description", photo.description.strip())
     
     # Add title
     if photo.title and photo.title.strip():
-        search_entries.append(
-            SearchData(photo_uuid=photo.uuid, key="title", value=photo.title.strip())
-        )
+        add_entry("title", photo.title.strip())
     
     # Add library
     if photo.library:
-        search_entries.append(
-            SearchData(photo_uuid=photo.uuid, key="library", value=photo.library)
-        )
+        add_entry("library", photo.library)
     
     # Bulk insert all entries
     if search_entries:

@@ -161,3 +161,52 @@ def test_update_photo_updates_search_data(db_session, test_user):
     assert "updated" in values
     assert "new" in values
     assert "initial" not in values
+
+
+def test_populate_search_data_with_duplicates(db_session, test_user):
+    """Test that duplicate values in photo arrays don't cause unique constraint violations"""
+    # Create a photo with duplicate values in arrays
+    photo = Photo(
+        uuid=uuid4(),
+        original_filename="test.jpg",
+        date=datetime.now(timezone.utc),
+        labels=["beach", "sunset", "beach"],  # duplicate "beach"
+        keywords=["vacation", "summer", "vacation"],  # duplicate "vacation"
+        persons=["_UNKNOWN_", "_UNKNOWN_", "John"],  # duplicate "_UNKNOWN_"
+        albums=["Summer 2023", "Summer 2023"],  # duplicate "Summer 2023"
+        owner_id=test_user.id,
+    )
+    db_session.add(photo)
+    db_session.flush()
+
+    # Populate search_data - should not raise error despite duplicates
+    populate_search_data_for_photo(photo, db_session)
+    db_session.commit()
+
+    # Query search_data entries
+    search_entries = db_session.exec(
+        select(SearchData).where(SearchData.photo_uuid == photo.uuid)
+    ).all()
+
+    # Convert to dict for easier checking
+    search_dict = {}
+    for entry in search_entries:
+        if entry.key not in search_dict:
+            search_dict[entry.key] = []
+        search_dict[entry.key].append(entry.value)
+
+    # Verify that duplicates were removed
+    assert "label" in search_dict
+    assert search_dict["label"].count("beach") == 1  # only one "beach" entry
+    assert search_dict["label"].count("sunset") == 1
+
+    assert "keyword" in search_dict
+    assert search_dict["keyword"].count("vacation") == 1  # only one "vacation" entry
+    assert search_dict["keyword"].count("summer") == 1
+
+    assert "person" in search_dict
+    assert search_dict["person"].count("_UNKNOWN_") == 1  # only one "_UNKNOWN_" entry
+    assert search_dict["person"].count("John") == 1
+
+    assert "album" in search_dict
+    assert search_dict["album"].count("Summer 2023") == 1  # only one "Summer 2023" entry
