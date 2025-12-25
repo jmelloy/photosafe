@@ -6,7 +6,6 @@ from unittest.mock import MagicMock, patch
 from dateutil import parser
 
 import pytest
-from click.testing import CliRunner
 
 from cli.sync_commands import sync
 
@@ -695,6 +694,116 @@ class TestSharedAlbumSupport:
         assert "Processing albums from shared library: SharedAlbum123" in result.output
         assert "Processing album: Vacation 2024" in result.output
         # Verify album upload was attempted (PUT returned 404, then POST)
+        assert mock_auth_instance.post.called
+
+    @patch("cli.sync_tools.authenticate_icloud")
+    @patch("cli.sync_tools.PhotoSafeAuth")
+    @patch("boto3.client")
+    @patch("cli.sync_tools.list_bucket")
+    def test_icloud_downloads_and_uploads_photos_from_shared_libraries(
+        self, mock_list_bucket, mock_boto3, mock_auth, mock_authenticate, runner
+    ):
+        """Test that photos from shared libraries are downloaded and uploaded to S3"""
+        # Mock iCloud API
+        mock_api = MagicMock()
+        mock_authenticate.return_value = mock_api
+
+        # Create mock photo with versions
+        mock_photo = MagicMock()
+        mock_photo._asset_record = {"recordName": "shared-photo-uuid-123"}
+        mock_photo.id = "master-fingerprint-123"
+        mock_photo.filename = "IMG_1234.HEIC"
+        mock_photo.asset_date = datetime(2024, 12, 25, 10, 0, 0, tzinfo=timezone.utc)
+        mock_photo.created = datetime(2024, 12, 25, 10, 0, 0, tzinfo=timezone.utc)
+        mock_photo.size = 1024000
+        mock_photo.dimensions = [4032, 3024]
+        mock_photo.isHidden = False
+        mock_photo.isFavorite = False
+        mock_photo.caption = "Test photo"
+        mock_photo.description = "Test description"
+        mock_photo.latitude = 37.7749
+        mock_photo.longitude = -122.4194
+        mock_photo.item_type = "image"
+        mock_photo.mediaMetaData = None
+        mock_photo.fields = {}
+        
+        # Mock photo versions
+        mock_photo.versions = {
+            "original": {
+                "filename": "IMG_1234.HEIC",
+                "size": 1024000,
+                "width": 4032,
+                "height": 3024,
+                "type": "image/heic",
+            }
+        }
+        
+        # Mock download
+        mock_download_response = MagicMock()
+        mock_download_response.raw = MagicMock()
+        mock_download_response.raise_for_status = MagicMock()
+        mock_photo.download.return_value = mock_download_response
+
+        # Create mock shared library with photo
+        mock_shared_lib = MagicMock()
+        mock_shared_lib.shared = True
+        mock_shared_lib.albums = {}
+        mock_shared_lib.all.fetch_records.return_value = [mock_photo]
+
+        # Set up libraries
+        mock_api.photos.libraries = {
+            "SharedAlbum123": mock_shared_lib,
+        }
+
+        # Mock auth
+        mock_auth_instance = MagicMock()
+        mock_auth.return_value = mock_auth_instance
+        mock_auth_instance.post.return_value.status_code = 200
+        mock_auth_instance.post.return_value.json.return_value = {
+            "created": 1,
+            "updated": 0,
+            "errors": 0,
+            "results": [{"uuid": "shared-photo-uuid-123", "success": True}],
+        }
+
+        # Mock S3
+        mock_s3 = MagicMock()
+        mock_boto3.return_value = mock_s3
+        
+        # Mock list_bucket to return empty (photo doesn't exist on S3)
+        mock_list_bucket.return_value = []
+
+        result = runner.invoke(
+            sync,
+            [
+                "icloud",
+                "--username",
+                "testuser",
+                "--password",
+                "testpass",
+                "--icloud-username",
+                "test@icloud.com",
+                "--icloud-password",
+                "icloudpass",
+                "--bucket",
+                "test-bucket",
+                "--batch-size",
+                "1",
+            ],
+        )
+
+        # Verify the sync ran successfully
+        assert result.exit_code == 0
+        assert "SharedAlbum123" in result.output
+        assert "shared" in result.output
+        
+        # Verify photo.download was called (downloading from iCloud)
+        mock_photo.download.assert_called_once_with("original")
+        
+        # Verify S3 upload was called
+        assert mock_s3.upload_file.called
+        
+        # Verify the photo batch was sent to the API
         assert mock_auth_instance.post.called
 
 
