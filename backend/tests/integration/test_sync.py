@@ -549,5 +549,154 @@ class TestMacOS404Handling:
                         mock_auth_instance.delete.assert_called_once()
 
 
+class TestSharedAlbumSupport:
+    """Test shared album support in iCloud sync"""
+
+    @patch("cli.sync_tools.authenticate_icloud")
+    @patch("cli.sync_tools.PhotoSafeAuth")
+    @patch("boto3.client")
+    def test_icloud_processes_shared_libraries(
+        self, mock_boto3, mock_auth, mock_authenticate, runner
+    ):
+        """Test that iCloud sync processes shared libraries"""
+        # Mock iCloud API
+        mock_api = MagicMock()
+        mock_authenticate.return_value = mock_api
+
+        # Create mock private library
+        mock_private_lib = MagicMock()
+        mock_private_lib.shared = False
+        mock_private_lib.albums = {}
+        mock_private_lib.all.fetch_records.return_value = []
+
+        # Create mock shared library
+        mock_shared_lib = MagicMock()
+        mock_shared_lib.shared = True
+        mock_shared_lib.albums = {}
+        mock_shared_lib.all.fetch_records.return_value = []
+
+        # Set up libraries
+        mock_api.photos.libraries = {
+            "PrimarySync": mock_private_lib,
+            "SharedAlbum123": mock_shared_lib,
+        }
+
+        # Mock auth
+        mock_auth_instance = MagicMock()
+        mock_auth.return_value = mock_auth_instance
+        mock_auth_instance.post.return_value.status_code = 200
+        mock_auth_instance.post.return_value.json.return_value = {
+            "created": 0,
+            "updated": 0,
+            "errors": 0,
+            "results": [],
+        }
+
+        # Mock S3
+        mock_s3 = MagicMock()
+        mock_boto3.return_value = mock_s3
+
+        result = runner.invoke(
+            sync,
+            [
+                "icloud",
+                "--username",
+                "testuser",
+                "--password",
+                "testpass",
+                "--icloud-username",
+                "test@icloud.com",
+                "--icloud-password",
+                "icloudpass",
+                "--bucket",
+                "test-bucket",
+                "--batch-size",
+                "1",
+            ],
+        )
+
+        # Verify both libraries were processed
+        assert result.exit_code == 0
+        assert "PrimarySync" in result.output
+        assert "SharedAlbum123" in result.output
+        # Verify library types are logged
+        assert "private" in result.output
+        assert "shared" in result.output
+
+    @patch("cli.sync_tools.authenticate_icloud")
+    @patch("cli.sync_tools.PhotoSafeAuth")
+    @patch("boto3.client")
+    def test_icloud_uploads_albums_from_shared_libraries(
+        self, mock_boto3, mock_auth, mock_authenticate, runner
+    ):
+        """Test that iCloud sync uploads albums from shared libraries"""
+        # Mock iCloud API
+        mock_api = MagicMock()
+        mock_authenticate.return_value = mock_api
+
+        # Create mock album in shared library
+        mock_album = MagicMock()
+        mock_album.name = "Vacation 2024"
+        mock_album.id = "album-123"
+        mock_album.title = "Vacation 2024"
+        mock_album.created = datetime.now(timezone.utc)
+        
+        # Mock photo in album
+        mock_photo = MagicMock()
+        mock_photo._asset_record = {"recordName": "photo-uuid-123"}
+        mock_album.photos = [mock_photo]
+
+        # Create mock shared library with album
+        mock_shared_lib = MagicMock()
+        mock_shared_lib.shared = True
+        mock_shared_lib.albums = {"Vacation 2024": mock_album}
+        mock_shared_lib.all.fetch_records.return_value = []
+
+        # Set up libraries
+        mock_api.photos.libraries = {
+            "SharedAlbum123": mock_shared_lib,
+        }
+
+        # Mock auth
+        mock_auth_instance = MagicMock()
+        mock_auth.return_value = mock_auth_instance
+        mock_auth_instance.post.return_value.status_code = 200
+        mock_auth_instance.post.return_value.json.return_value = {
+            "created": 0,
+            "updated": 0,
+            "errors": 0,
+            "results": [],
+        }
+        mock_auth_instance.put.return_value.status_code = 404
+
+        # Mock S3
+        mock_s3 = MagicMock()
+        mock_boto3.return_value = mock_s3
+
+        result = runner.invoke(
+            sync,
+            [
+                "icloud",
+                "--username",
+                "testuser",
+                "--password",
+                "testpass",
+                "--icloud-username",
+                "test@icloud.com",
+                "--icloud-password",
+                "icloudpass",
+                "--bucket",
+                "test-bucket",
+            ],
+        )
+
+        # Verify album was processed
+        assert result.exit_code == 0
+        assert "Processing albums from shared library: SharedAlbum123" in result.output
+        assert "Processing album: Vacation 2024" in result.output
+        # Verify album upload was attempted (PUT returned 404, then POST)
+        assert mock_auth_instance.post.called
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
