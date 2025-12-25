@@ -275,7 +275,7 @@ def populate_search_data_for_photo(photo: Photo, db: Session) -> None:
     if search_entries:
         stmt = insert(SearchData.__table__).values(search_entries)
         stmt = stmt.on_conflict_do_nothing(
-            index_elements=["photo_uuid", "key", "value"]
+            constraint="uq_search_data_photo_key_value"
         )
         db.execute(stmt)
 
