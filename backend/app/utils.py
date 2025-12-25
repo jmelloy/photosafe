@@ -4,6 +4,7 @@ import json
 from typing import Dict, Any, List
 from sqlalchemy.orm import Session
 from sqlalchemy import delete
+from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import select
 from .models import Photo, User, Library, VersionRead, PhotoRead, SearchData
 
@@ -193,6 +194,8 @@ def populate_search_data_for_photo(photo: Photo, db: Session) -> None:
     - description (from description field)
     - title (from title field)
     
+    Uses PostgreSQL's ON CONFLICT DO NOTHING to handle duplicates at the database level.
+    
     Args:
         photo: Photo model instance to process
         db: Database session
@@ -207,7 +210,7 @@ def populate_search_data_for_photo(photo: Photo, db: Session) -> None:
         for label in photo.labels:
             if label:
                 search_entries.append(
-                    SearchData(photo_uuid=photo.uuid, key="label", value=label)
+                    {"photo_uuid": photo.uuid, "key": "label", "value": label}
                 )
     
     # Add keywords
@@ -215,7 +218,7 @@ def populate_search_data_for_photo(photo: Photo, db: Session) -> None:
         for keyword in photo.keywords:
             if keyword:
                 search_entries.append(
-                    SearchData(photo_uuid=photo.uuid, key="keyword", value=keyword)
+                    {"photo_uuid": photo.uuid, "key": "keyword", "value": keyword}
                 )
     
     # Add persons
@@ -223,7 +226,7 @@ def populate_search_data_for_photo(photo: Photo, db: Session) -> None:
         for person in photo.persons:
             if person:
                 search_entries.append(
-                    SearchData(photo_uuid=photo.uuid, key="person", value=person)
+                    {"photo_uuid": photo.uuid, "key": "person", "value": person}
                 )
     
     # Add albums
@@ -231,7 +234,7 @@ def populate_search_data_for_photo(photo: Photo, db: Session) -> None:
         for album in photo.albums:
             if album:
                 search_entries.append(
-                    SearchData(photo_uuid=photo.uuid, key="album", value=album)
+                    {"photo_uuid": photo.uuid, "key": "album", "value": album}
                 )
     
     # Add place data
@@ -247,30 +250,34 @@ def populate_search_data_for_photo(photo: Photo, db: Session) -> None:
             for field in place_fields:
                 if field in place_data and place_data[field]:
                     search_entries.append(
-                        SearchData(photo_uuid=photo.uuid, key="place", value=str(place_data[field]))
+                        {"photo_uuid": photo.uuid, "key": "place", "value": str(place_data[field])}
                     )
     
     # Add description
     if photo.description and photo.description.strip():
         search_entries.append(
-            SearchData(photo_uuid=photo.uuid, key="description", value=photo.description.strip())
+            {"photo_uuid": photo.uuid, "key": "description", "value": photo.description.strip()}
         )
     
     # Add title
     if photo.title and photo.title.strip():
         search_entries.append(
-            SearchData(photo_uuid=photo.uuid, key="title", value=photo.title.strip())
+            {"photo_uuid": photo.uuid, "key": "title", "value": photo.title.strip()}
         )
     
     # Add library
     if photo.library:
         search_entries.append(
-            SearchData(photo_uuid=photo.uuid, key="library", value=photo.library)
+            {"photo_uuid": photo.uuid, "key": "library", "value": photo.library}
         )
     
-    # Bulk insert all entries
+    # Bulk insert all entries using ON CONFLICT DO NOTHING to handle duplicates
     if search_entries:
-        db.add_all(search_entries)
+        stmt = insert(SearchData.__table__).values(search_entries)
+        stmt = stmt.on_conflict_do_nothing(
+            constraint="uq_search_data_photo_key_value"
+        )
+        db.execute(stmt)
 
 
 def populate_search_data_for_all_photos(db: Session) -> int:
