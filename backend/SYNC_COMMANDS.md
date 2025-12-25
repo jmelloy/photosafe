@@ -46,7 +46,7 @@ photosafe sync macos \
 
 ### 2. iCloud Photos Sync
 
-Syncs photos from iCloud Photos to PhotoSafe.
+Syncs photos from iCloud Photos to PhotoSafe, including support for **shared albums**.
 
 ```bash
 photosafe sync icloud \
@@ -72,6 +72,12 @@ photosafe sync icloud \
   --base-url https://api.photosafe.example.com \
   --library "My Library Name"
 ```
+
+**Features:**
+- Syncs photos from all iCloud libraries (private and shared)
+- Automatically identifies and labels shared libraries
+- Syncs albums from both private and shared libraries
+- Supports batch processing for efficient uploads
 
 **Requirements:**
 - `pyicloud` package (install with `pip install photosafe-cli[icloud]`)
