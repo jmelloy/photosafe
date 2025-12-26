@@ -3,7 +3,70 @@
 import os
 from unittest.mock import patch, MagicMock
 import pytest
+from fastapi import HTTPException
 from app.main import app
+
+
+@pytest.mark.integration
+def test_http_exception_500_sends_email(client):
+    """Test that HTTPException with 500 status sends email notification."""
+    env_vars = {
+        "SMTP_HOST": "smtp.example.com",
+        "SMTP_PORT": "587",
+        "SMTP_USER": "test@example.com",
+        "SMTP_PASSWORD": "testpassword",
+        "ERROR_EMAIL_TO": "jmelloy@gmail.com",
+    }
+    
+    # Create a route that raises HTTPException with 500
+    @app.get("/test-http-500")
+    async def test_http_500():
+        raise HTTPException(status_code=500, detail="Test HTTP 500 error")
+    
+    with patch.dict(os.environ, env_vars, clear=True):
+        with patch("smtplib.SMTP") as mock_smtp:
+            mock_server = MagicMock()
+            mock_smtp.return_value.__enter__.return_value = mock_server
+            
+            response = client.get("/test-http-500")
+            
+            # Should return 500
+            assert response.status_code == 500
+            assert response.json()["detail"] == "Test HTTP 500 error"
+            
+            # Should have attempted to send email
+            assert mock_smtp.called
+
+
+@pytest.mark.integration
+def test_http_exception_400_no_email(client):
+    """Test that HTTPException with non-500 status does not send email."""
+    env_vars = {
+        "SMTP_HOST": "smtp.example.com",
+        "SMTP_PORT": "587",
+        "SMTP_USER": "test@example.com",
+        "SMTP_PASSWORD": "testpassword",
+        "ERROR_EMAIL_TO": "jmelloy@gmail.com",
+    }
+    
+    # Create a route that raises HTTPException with 400
+    @app.get("/test-http-400")
+    async def test_http_400():
+        raise HTTPException(status_code=400, detail="Test HTTP 400 error")
+    
+    with patch.dict(os.environ, env_vars, clear=True):
+        with patch("smtplib.SMTP") as mock_smtp:
+            mock_server = MagicMock()
+            mock_smtp.return_value.__enter__.return_value = mock_server
+            
+            response = client.get("/test-http-400")
+            
+            # Should return 400
+            assert response.status_code == 400
+            assert response.json()["detail"] == "Test HTTP 400 error"
+            
+            # Should NOT have attempted to send email for 400 error
+            assert not mock_smtp.called
 
 
 @pytest.mark.integration
@@ -69,4 +132,5 @@ def test_exception_handler_without_smtp_config(client):
             # Exception was raised - this is also acceptable
             # The important thing is that trying to send email didn't crash
             pass
+
 

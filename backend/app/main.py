@@ -4,7 +4,7 @@ import os
 import traceback
 from pathlib import Path
 
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request, status, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
@@ -34,7 +34,33 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 # Mount static files
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
-# Exception handler for 500 errors
+# Exception handler for HTTPException with 500 status code
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Handle HTTPException and send email for 500 errors."""
+    # Only send email for 500 errors
+    if exc.status_code >= 500:
+        # Get request context
+        context = {
+            "method": request.method,
+            "url": str(request.url),
+            "client": request.client.host if request.client else "unknown",
+        }
+        
+        # Get traceback
+        tb_str = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+        
+        # Send error email notification
+        send_error_email(exc, context=context, traceback_str=tb_str)
+    
+    # Return the original HTTPException response
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+    )
+
+
+# Exception handler for all other unhandled exceptions
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Handle all unhandled exceptions and send email notification."""
