@@ -114,6 +114,104 @@ class TestSyncCommands:
         assert "--library" in result.output
         assert "Filter by library name" in result.output
 
+    @patch("cli.sync_commands.boto3")
+    @patch("cli.sync_tools.authenticate_icloud")
+    @patch("cli.sync_tools.PhotoSafeAuth")
+    def test_icloud_processes_shared_albums(
+        self, mock_auth_class, mock_authenticate, mock_boto3, runner
+    ):
+        """Test that icloud command processes shared albums after libraries"""
+        # Mock S3
+        mock_s3 = MagicMock()
+        mock_boto3.client.return_value = mock_s3
+        
+        # Mock authentication
+        mock_auth = MagicMock()
+        mock_auth_class.return_value = mock_auth
+        mock_auth.post.return_value.status_code = 200
+        mock_auth.post.return_value.json.return_value = {
+            "created": 1,
+            "updated": 0,
+            "errors": 0,
+            "results": [{"success": True, "uuid": "test-uuid"}]
+        }
+        
+        # Mock iCloud API with libraries and shared albums
+        mock_api = MagicMock()
+        mock_authenticate.return_value = mock_api
+        
+        # Mock a regular library
+        mock_library = MagicMock()
+        mock_library.all.fetch_records.return_value = []
+        mock_api.photos.libraries = {"Primary": mock_library}
+        
+        # Mock shared albums
+        mock_shared_album = MagicMock()
+        mock_photo = MagicMock()
+        mock_photo._asset_record = {"recordName": "shared-photo-uuid"}
+        mock_photo.id = "shared-photo-id"
+        mock_photo.filename = "shared-photo.jpg"
+        mock_photo.asset_date = None
+        mock_photo.created = MagicMock()
+        mock_photo.created.strftime.return_value = "2025/12/15"
+        mock_photo.size = 1000000
+        mock_photo.versions = {
+            "original": {
+                "type": "image/jpeg",
+                "filename": "shared-photo.jpg",
+                "width": 1000,
+                "height": 1000,
+                "size": 1000000
+            }
+        }
+        mock_photo.dimensions = [1000, 1000]
+        mock_photo.isHidden = False
+        mock_photo.isFavorite = False
+        mock_photo.caption = "Test Caption"
+        mock_photo.description = "Test Description"
+        mock_photo.latitude = 47.6
+        mock_photo.longitude = -122.3
+        mock_photo.mediaMetaData = {}
+        mock_photo.item_type = "image"
+        mock_photo.fields = {}
+        mock_photo.download = MagicMock()
+        
+        mock_shared_album.photos = [mock_photo]
+        mock_api.photos.shared_albums = {"Family Photos": mock_shared_album}
+        
+        # Mock albums (for album_contains function)
+        mock_api.photos.albums = MagicMock()
+        mock_api.photos.albums.get.return_value = []
+        mock_api.photos.albums.items.return_value = []
+        
+        # Mock list_bucket
+        with patch("cli.sync_commands.list_bucket", return_value=[]):
+            # Mock shutil.rmtree to avoid actual file operations
+            with patch("cli.sync_commands.shutil.rmtree"):
+                # Mock os.makedirs
+                with patch("cli.sync_commands.os.makedirs"):
+                    result = runner.invoke(
+                        sync,
+                        [
+                            "icloud",
+                            "--username", "test",
+                            "--password", "test",
+                            "--icloud-username", "test@icloud.com",
+                            "--icloud-password", "testpass",
+                            "--bucket", "test-bucket",
+                            "--base-url", "http://localhost:8000",
+                            "--stop-after", "10",
+                            "--batch-size", "5",
+                        ],
+                    )
+        
+        assert result.exit_code == 0
+        assert "Processing shared albums" in result.output
+        assert "Shared Album: Shared: Family Photos" in result.output
+        
+        # Verify that photos were sent via batch POST
+        assert mock_auth.post.called
+
 
 class TestMacOSSyncWithFixtures:
     """Test macOS sync functionality using fixtures"""
