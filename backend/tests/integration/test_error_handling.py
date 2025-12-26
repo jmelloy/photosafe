@@ -133,4 +133,3 @@ def test_exception_handler_without_smtp_config(client):
             # The important thing is that trying to send email didn't crash
             pass
 
-

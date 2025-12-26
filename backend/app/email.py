@@ -1,5 +1,6 @@
 """Email notification utilities for error reporting."""
 
+import logging
 import os
 import smtplib
 import traceback
@@ -7,6 +8,8 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 
 def send_error_email(
@@ -77,5 +80,5 @@ def send_error_email(
         return True
     except Exception as e:
         # Log the error but don't raise it to avoid interfering with error handling
-        print(f"Failed to send error email: {str(e)}")
+        logger.error(f"Failed to send error email: {str(e)}")
         return False

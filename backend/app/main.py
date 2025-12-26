@@ -34,23 +34,25 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 # Mount static files
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
+
+def _get_error_context(request: Request, exc: Exception) -> tuple[dict, str]:
+    """Extract error context and traceback from request and exception."""
+    context = {
+        "method": request.method,
+        "url": str(request.url),
+        "client": request.client.host if request.client else "unknown",
+    }
+    tb_str = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+    return context, tb_str
+
+
 # Exception handler for HTTPException with 500 status code
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     """Handle HTTPException and send email for 500 errors."""
     # Only send email for 500 errors
     if exc.status_code >= 500:
-        # Get request context
-        context = {
-            "method": request.method,
-            "url": str(request.url),
-            "client": request.client.host if request.client else "unknown",
-        }
-        
-        # Get traceback
-        tb_str = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
-        
-        # Send error email notification
+        context, tb_str = _get_error_context(request, exc)
         send_error_email(exc, context=context, traceback_str=tb_str)
     
     # Return the original HTTPException response
@@ -64,17 +66,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Handle all unhandled exceptions and send email notification."""
-    # Get request context
-    context = {
-        "method": request.method,
-        "url": str(request.url),
-        "client": request.client.host if request.client else "unknown",
-    }
-    
-    # Get traceback
-    tb_str = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
-    
-    # Send error email notification
+    context, tb_str = _get_error_context(request, exc)
     send_error_email(exc, context=context, traceback_str=tb_str)
     
     # Return 500 response
