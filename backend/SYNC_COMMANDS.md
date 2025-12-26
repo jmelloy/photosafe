@@ -90,6 +90,13 @@ photosafe sync icloud \
 - `--batch-size` - Number of photos to process in each batch (default: 10)
 - `--library` - Filter by library name (optional)
 
+**Shared Albums:**
+After processing all iCloud photo libraries, the sync command automatically looks for and processes shared iPhoto albums. Each shared album is treated as its own library with the name format "Shared: {album_name}". Photos from shared albums are:
+- Assigned a library name that includes "Shared:" prefix
+- Processed using the same batching and uploading logic as regular libraries
+- Uploaded to the same S3 bucket structure
+- Synced with the same error handling and retry logic
+
 ### 3. List iCloud Libraries
 
 Lists available iCloud photo libraries.
