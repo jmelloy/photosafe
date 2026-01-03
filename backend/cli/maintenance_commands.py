@@ -6,7 +6,7 @@ import gzip
 import os
 import sys
 import tempfile
-from typing import Dict, List
+from typing import Any, Dict, List
 from urllib.parse import urlparse
 
 import boto3
@@ -105,14 +105,14 @@ def download_s3_csv(s3_url: str) -> str:
         raise
 
 
-def get_s3_objects_from_csv(csv_path: str) -> Dict[str, int]:
+def get_s3_objects_from_csv(csv_path: str) -> Dict[str, Dict[str, Any]]:
     """
-    Get all objects from S3 CSV export with their sizes
+    Get all objects from S3 CSV export with their sizes and bucket info
 
     Expected CSV format: Bucket, Key, Size, LastModifiedDate, ETag
 
     Returns:
-        Dict mapping s3_path -> size
+        Dict mapping s3_path -> {"size": int, "bucket": str}
     """
     objects = {}
 
@@ -144,12 +144,13 @@ def get_s3_objects_from_csv(csv_path: str) -> Dict[str, int]:
                     # Strip whitespace from keys
                     key = row["Key"].strip() if row.get("Key") else None
                     size_str = row["Size"].strip() if row.get("Size") else None
+                    bucket = row.get("Bucket", "").strip() if row.get("Bucket") else ""
 
                     if not key or not size_str:
                         continue
 
                     size = int(size_str)
-                    objects[key] = size
+                    objects[key] = {"size": size, "bucket": bucket}
                     total_count += 1
 
                     if total_count % 10000 == 0:
@@ -181,7 +182,7 @@ def get_database_versions(db: Session) -> List[Version]:
 
 
 def compare_versions(
-    versions: List[Version], s3_objects: Dict[str, int]
+    versions: List[Version], s3_objects: Dict[str, Dict[str, Any]]
 ) -> Dict[str, List]:
     """
     Compare database versions with S3 objects
@@ -190,7 +191,7 @@ def compare_versions(
         Dict with lists of issues:
         - missing_in_s3: versions in DB but not in S3
         - size_mismatch: versions with different sizes
-        - orphaned_in_s3: files in S3 not referenced in DB
+        - orphaned_in_s3: files in S3 not referenced in DB (with size and bucket)
     """
     issues = {
         "missing_in_s3": [],
@@ -219,7 +220,8 @@ def compare_versions(
             )
         else:
             # File exists, check size
-            s3_size = s3_objects[s3_path]
+            s3_info = s3_objects[s3_path]
+            s3_size = s3_info["size"]
             if version.size and s3_size != version.size:
                 issues["size_mismatch"].append(
                     {
@@ -236,8 +238,16 @@ def compare_versions(
             # Remove from orphaned set
             issues["orphaned_in_s3"].discard(s3_path)
 
-    # Convert orphaned set to list for easier handling
-    issues["orphaned_in_s3"] = sorted(list(issues["orphaned_in_s3"]))
+    # Convert orphaned set to list with size and bucket info
+    orphaned_list = []
+    for s3_path in sorted(issues["orphaned_in_s3"]):
+        s3_info = s3_objects[s3_path]
+        orphaned_list.append({
+            "s3_path": s3_path,
+            "size": s3_info["size"],
+            "bucket": s3_info["bucket"],
+        })
+    issues["orphaned_in_s3"] = orphaned_list
 
     return issues
 
@@ -268,6 +278,16 @@ def check_photo_consistency(db: Session, versions: List[Version]) -> List[Dict]:
             )
 
     return missing_photos
+
+
+def format_size_mb(size_bytes: int) -> str:
+    """Format size in bytes as MB string"""
+    return f"{size_bytes / (1024 * 1024):,.2f}"
+
+
+def format_size_kb(size_bytes: int) -> str:
+    """Format size in bytes as KB string"""
+    return f"{size_bytes / 1024:,.2f}"
 
 
 def print_report(issues: Dict[str, List], show_orphaned: bool = False):
@@ -334,12 +354,16 @@ def print_report(issues: Dict[str, List], show_orphaned: bool = False):
     # Orphaned in S3
     if show_orphaned:
         if issues["orphaned_in_s3"]:
+            # Calculate total size
+            total_size = sum(item["size"] for item in issues["orphaned_in_s3"])
+            
             click.echo(
-                f"\n⚠️  ORPHANED IN S3: {len(issues['orphaned_in_s3'])} files not in database"
+                f"\n⚠️  ORPHANED IN S3: {len(issues['orphaned_in_s3'])} files "
+                f"({format_size_mb(total_size)} MB total)"
             )
             click.echo("-" * 80)
-            for path in issues["orphaned_in_s3"][:10]:
-                click.echo(f"  {path}")
+            for item in issues["orphaned_in_s3"][:10]:
+                click.echo(f"  {item['s3_path']} ({format_size_kb(item['size'])} KB)")
 
             if len(issues["orphaned_in_s3"]) > 10:
                 click.echo(f"  ... and {len(issues['orphaned_in_s3']) - 10} more")
@@ -347,8 +371,12 @@ def print_report(issues: Dict[str, List], show_orphaned: bool = False):
             click.echo("\n✅ No orphaned files in S3")
     else:
         if issues["orphaned_in_s3"]:
+            # Calculate total size
+            total_size = sum(item["size"] for item in issues["orphaned_in_s3"])
+            
             click.echo(
-                f"\n⚠️  ORPHANED IN S3: {len(issues['orphaned_in_s3'])} files not in database"
+                f"\n⚠️  ORPHANED IN S3: {len(issues['orphaned_in_s3'])} files "
+                f"({format_size_mb(total_size)} MB total)"
             )
             click.echo("    (use --show-orphaned to see details)")
 
@@ -370,21 +398,76 @@ def print_report(issues: Dict[str, List], show_orphaned: bool = False):
         click.echo(f"   - Size mismatches: {len(issues['size_mismatch'])}")
         click.echo(f"   - Orphaned versions: {len(issues['missing_photos'])}")
         if show_orphaned:
-            click.echo(f"   - Orphaned in S3: {len(issues['orphaned_in_s3'])}")
+            total_size = sum(item["size"] for item in issues["orphaned_in_s3"])
+            click.echo(f"   - Orphaned in S3: {len(issues['orphaned_in_s3'])} ({format_size_mb(total_size)} MB)")
 
 
 def export_issues(issues: Dict[str, List], output_file: str):
     """Export issues to JSON file"""
     import json
 
-    # Convert orphaned_in_s3 set to list if needed
-    if isinstance(issues.get("orphaned_in_s3"), set):
-        issues["orphaned_in_s3"] = sorted(list(issues["orphaned_in_s3"]))
+    # orphaned_in_s3 is already a list of dicts, no conversion needed
 
     with open(output_file, "w") as f:
         json.dump(issues, f, indent=2)
 
     click.echo(f"\n✅ Issues exported to: {output_file}")
+
+
+def delete_orphaned_files(orphaned_files: List[Dict[str, Any]]) -> int:
+    """
+    Delete orphaned files from S3
+    
+    Args:
+        orphaned_files: List of dicts with s3_path, bucket, and size
+        
+    Returns:
+        Number of files successfully deleted
+    """
+    if not orphaned_files:
+        click.echo("No orphaned files to delete")
+        return 0
+    
+    # Calculate total size
+    total_size = sum(f["size"] for f in orphaned_files)
+    
+    click.echo(f"\n⚠️  WARNING: About to delete {len(orphaned_files)} files ({format_size_mb(total_size)} MB)")
+    click.echo("This action cannot be undone!")
+    
+    if not click.confirm("\nDo you want to proceed with deletion?"):
+        click.echo("Deletion cancelled")
+        return 0
+    
+    s3 = boto3.client("s3")
+    deleted_count = 0
+    failed_count = 0
+    
+    click.echo("\nDeleting orphaned files...")
+    
+    for item in orphaned_files:
+        s3_path = item["s3_path"]
+        bucket = item["bucket"]
+        
+        if not bucket:
+            click.echo(f"  ⚠️  Skipping {s3_path}: no bucket specified")
+            failed_count += 1
+            continue
+        
+        try:
+            s3.delete_object(Bucket=bucket, Key=s3_path)
+            deleted_count += 1
+            
+            if deleted_count % 100 == 0:
+                click.echo(f"  Deleted {deleted_count}/{len(orphaned_files)} files...")
+        except Exception as e:
+            click.echo(f"  ❌ Failed to delete {s3_path}: {e}")
+            failed_count += 1
+    
+    click.echo(f"\n✅ Successfully deleted {deleted_count} files")
+    if failed_count > 0:
+        click.echo(f"⚠️  Failed to delete {failed_count} files")
+    
+    return deleted_count
 
 
 @maintenance.command()
@@ -400,6 +483,11 @@ def export_issues(issues: Dict[str, List], output_file: str):
     help="Show details of orphaned files in S3",
 )
 @click.option(
+    "--delete-orphaned",
+    is_flag=True,
+    help="Delete orphaned files from S3 (requires confirmation)",
+)
+@click.option(
     "--export",
     "export_file",
     type=click.Path(),
@@ -411,7 +499,7 @@ def export_issues(issues: Dict[str, List], output_file: str):
     help="Check if versions reference valid photos",
 )
 def compare_versions_cmd(
-    csv_source: str, show_orphaned: bool, export_file: str, check_photos: bool
+    csv_source: str, show_orphaned: bool, delete_orphaned: bool, export_file: str, check_photos: bool
 ):
     """
     Compare versions table content with S3 storage from CSV export
@@ -430,6 +518,7 @@ def compare_versions_cmd(
     Examples:
         photosafe maintenance compare-versions --csv /path/to/inventory.csv
         photosafe maintenance compare-versions --csv s3://bucket/path/inventory.csv.gz --show-orphaned
+        photosafe maintenance compare-versions --csv /path/to/inventory.csv --delete-orphaned
     """
 
     click.echo("PhotoSafe Version Comparison Tool")
@@ -472,17 +561,28 @@ def compare_versions_cmd(
                 sys.exit(1)
 
         # Print report
-        print_report(issues, show_orphaned)
+        print_report(issues, show_orphaned or delete_orphaned)
+
+        # Track initial orphaned count before deletion
+        initial_orphaned_count = len(issues["orphaned_in_s3"])
+
+        # Delete orphaned files if requested
+        if delete_orphaned and issues["orphaned_in_s3"]:
+            deleted_count = delete_orphaned_files(issues["orphaned_in_s3"])
+            if deleted_count > 0:
+                # Update issues to reflect deletion
+                issues["orphaned_in_s3"] = []
 
         # Export if requested
         if export_file:
             export_issues(issues, export_file)
 
-        # Exit with error code if issues found
+        # Exit with error code if issues found (including orphaned files before deletion)
         total_issues = (
             len(issues["missing_in_s3"])
             + len(issues["size_mismatch"])
             + len(issues.get("missing_photos", []))
+            + initial_orphaned_count
         )
 
         sys.exit(1 if total_issues > 0 else 0)
