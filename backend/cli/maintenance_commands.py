@@ -207,7 +207,6 @@ def compare_versions(
 
     for rec in versions:
         version = rec[0]
-        print(f"Checking version {version}...")
         s3_path = version.s3_path
 
         # Check if file exists in S3
