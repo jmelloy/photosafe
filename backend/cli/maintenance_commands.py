@@ -538,19 +538,18 @@ def compare_versions_cmd(
     click.echo("PhotoSafe Version Comparison Tool")
     click.echo("=" * 80)
 
-    csv_path = csv_source
-    temp_file = None
-
-    if not csv_path:
+    if not csv_source:
         bucket = "jmelloy-photo-backup"
         s3 = boto3.client("s3")
         files = sorted(
-            list_bucket(s3, bucket, prefix="jmelloy-photo-backup/Photos"),
+            list_bucket(s3, bucket, prefix="jmelloy-photo-backup/Photos/data"),
             key=lambda x: x[3],
         )
 
-        csv_path = f"s3://{bucket}/{files[-1][0]}"
-        click.echo(f"No CSV provided, using latest inventory: {csv_path}")
+        csv_source = f"s3://{bucket}/{files[-1][0]}"
+        click.echo(f"No CSV provided, using latest inventory: {csv_source}")
+    csv_path = csv_source
+    temp_file = None
 
     try:
         # Check if it's an S3 URL
