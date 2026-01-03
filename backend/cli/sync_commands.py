@@ -747,6 +747,175 @@ def icloud(
         total_created_all += total_created
         total_updated_all += total_updated
 
+    # Process shared albums after libraries
+    # Each shared album is treated as its own library
+    if hasattr(api.photos, 'shared_albums') and api.photos.shared_albums:
+        click.echo("\nProcessing shared albums...")
+        for album_name, album_obj in api.photos.shared_albums.items():
+            # Create a library name for this shared album
+            shared_library_name = f"Shared: {album_name}"
+            click.echo(f"Shared Album: {shared_library_name}")
+            
+            photo_batch = []  # Collect photos for batching
+            total_created = 0
+            total_updated = 0
+            photo_count = 0  # Track total photos processed in this shared album
+            
+            # Reuse the same send_batch function logic
+            def send_shared_batch():
+                """Send accumulated batch of photos to the API"""
+                nonlocal total_created, total_updated
+                
+                if not photo_batch:
+                    return
+                
+                batch_data = {"photos": photo_batch}
+                
+                r = auth.post(
+                    "/api/photos/batch/",
+                    data=json.dumps(batch_data, cls=DateTimeEncoder).replace("\\u0000", ""),
+                    headers={"Content-Type": "application/json"},
+                )
+                
+                if r.status_code == 200:
+                    result = r.json()
+                    total_created += result["created"]
+                    total_updated += result["updated"]
+                    click.echo(
+                        f"Batch processed: {result['created']} created, total: {total_created} created, "
+                        f"{result['updated']} updated, total: {total_updated} updated, {result['errors']} errors"
+                    )
+                    
+                    # Log any errors
+                    for photo_result in result["results"]:
+                        if not photo_result["success"]:
+                            click.echo(
+                                f"Error processing {photo_result['uuid']}: {photo_result.get('error', 'Unknown error')}",
+                                err=True,
+                            )
+                else:
+                    click.echo(f"Batch request failed: {r.status_code} {r.text}", err=True)
+                    r.raise_for_status()
+                
+                photo_batch.clear()
+            
+            # Process photos in the shared album
+            try:
+                for i, photo in enumerate(album_obj.photos):
+                    photo_count = i + 1
+                    dt = (photo.asset_date or photo.created).strftime("%Y/%m/%d")
+                    
+                    objects = s3_keys.get(dt)
+                    if not objects:
+                        objects = {
+                            x[0]: x[1]
+                            for x in list_bucket(
+                                s3,
+                                bucket=bucket,
+                                prefix=os.path.join(os.path.join(username, dt)),
+                            )
+                        }
+                        s3_keys[dt] = objects
+                        for key in list(s3_keys):
+                            if key[0:7] > dt[0:7]:
+                                del s3_keys[key]
+                    
+                    exif = None
+                    metadata = photo.mediaMetaData
+                    if metadata:
+                        exif = metadata.get("{Exif}")
+                    
+                    lat, long = None, None
+                    try:
+                        lat = photo.latitude
+                    except Exception:
+                        click.echo(f"{photo} has no latitude", err=True)
+                    try:
+                        long = photo.longitude
+                    except Exception:
+                        click.echo(f"{photo} has no longitude", err=True)
+                    
+                    data = {
+                        "uuid": photo._asset_record["recordName"],
+                        "masterFingerprint": photo.id,
+                        "original_filename": photo.filename,
+                        "date": photo.asset_date or photo.created,
+                        "versions": [],
+                        "size": photo.size,
+                        "uti": photo.versions["original"]["type"],
+                        "width": photo.dimensions[0],
+                        "height": photo.dimensions[1],
+                        "hidden": photo.isHidden,
+                        "favorite": photo.isFavorite,
+                        "title": photo.caption,
+                        "description": photo.description,
+                        "latitude": lat,
+                        "longitude": long,
+                        "exif": exif,
+                        "live_photo": "live" in photo.versions,
+                        "isphoto": photo.item_type == "image",
+                        "ismovie": photo.item_type == "movie",
+                        "screenshot": album_contains("Screenshots", photo),
+                        "slow_mo": album_contains("Slo-mo", photo),
+                        "time_lapse": album_contains("Time-lapse", photo),
+                        "panorama": album_contains("Panoramas", photo),
+                        "burst": album_contains("Bursts", photo),
+                        "portrait": album_contains("Portrait", photo),
+                        "library": shared_library_name,  # Use the shared album name as library
+                        "fields": photo.fields,
+                    }
+                    
+                    keys = {
+                        "medium": "s3_key_path",
+                        "thumb": "s3_thumbnail_path",
+                        "original": "s3_original_path",
+                        "live": "s3_live_path",
+                    }
+                    
+                    for version, details in photo.versions.items():
+                        path = os.path.join(
+                            username, dt, data["uuid"], version, details["filename"]
+                        )
+                        if path not in objects or objects[path] != details["size"]:
+                            upload_photo(photo, version, path)
+                        if version in keys:
+                            data[keys[version]] = path
+                        
+                        data["versions"].append(
+                            dict(
+                                version=version,
+                                s3_path=path,
+                                filename=details["filename"],
+                                width=details["width"],
+                                height=details["height"],
+                                size=details["size"],
+                                type=path.split(".")[-1].lower(),
+                            )
+                        )
+                    
+                    # Add photo to batch
+                    photo_batch.append(data)
+                    
+                    # Send batch when it reaches the batch size
+                    if len(photo_batch) >= batch_size:
+                        send_shared_batch()
+                        
+                        # Check stop condition after sending batch
+                        if total_updated > stop_after:
+                            break
+                
+                # Send any remaining photos in the final batch
+                send_shared_batch()
+                
+                # Accumulate totals from this shared album
+                total_photos += photo_count
+                total_created_all += total_created
+                total_updated_all += total_updated
+                
+            except Exception as e:
+                click.echo(f"Error processing shared album '{album_name}': {str(e)}", err=True)
+                continue
+
     shutil.rmtree(username)
     click.echo(
         f"{total_photos} photos processed, {total_created_all} created, {total_updated_all} updated"
