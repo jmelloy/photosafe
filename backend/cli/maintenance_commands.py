@@ -245,7 +245,7 @@ def compare_versions(
         orphaned_list.append({
             "s3_path": s3_path,
             "size": s3_info["size"],
-            "bucket": s3_info["bucket"]
+            "bucket": s3_info["bucket"],
         })
     issues["orphaned_in_s3"] = orphaned_list
 
@@ -558,6 +558,9 @@ def compare_versions_cmd(
         # Print report
         print_report(issues, show_orphaned or delete_orphaned)
 
+        # Track initial orphaned count before deletion
+        initial_orphaned_count = len(issues["orphaned_in_s3"])
+
         # Delete orphaned files if requested
         if delete_orphaned and issues["orphaned_in_s3"]:
             deleted_count = delete_orphaned_files(issues["orphaned_in_s3"])
@@ -569,11 +572,12 @@ def compare_versions_cmd(
         if export_file:
             export_issues(issues, export_file)
 
-        # Exit with error code if issues found
+        # Exit with error code if issues found (including orphaned files before deletion)
         total_issues = (
             len(issues["missing_in_s3"])
             + len(issues["size_mismatch"])
             + len(issues.get("missing_photos", []))
+            + initial_orphaned_count
         )
 
         sys.exit(1 if total_issues > 0 else 0)
