@@ -280,6 +280,16 @@ def check_photo_consistency(db: Session, versions: List[Version]) -> List[Dict]:
     return missing_photos
 
 
+def format_size_mb(size_bytes: int) -> str:
+    """Format size in bytes as MB string"""
+    return f"{size_bytes / (1024 * 1024):,.2f}"
+
+
+def format_size_kb(size_bytes: int) -> str:
+    """Format size in bytes as KB string"""
+    return f"{size_bytes / 1024:,.2f}"
+
+
 def print_report(issues: Dict[str, List], show_orphaned: bool = False):
     """Print comparison report"""
 
@@ -346,16 +356,14 @@ def print_report(issues: Dict[str, List], show_orphaned: bool = False):
         if issues["orphaned_in_s3"]:
             # Calculate total size
             total_size = sum(item["size"] for item in issues["orphaned_in_s3"])
-            total_size_mb = total_size / (1024 * 1024)
             
             click.echo(
                 f"\n⚠️  ORPHANED IN S3: {len(issues['orphaned_in_s3'])} files "
-                f"({total_size_mb:,.2f} MB total)"
+                f"({format_size_mb(total_size)} MB total)"
             )
             click.echo("-" * 80)
             for item in issues["orphaned_in_s3"][:10]:
-                size_kb = item["size"] / 1024
-                click.echo(f"  {item['s3_path']} ({size_kb:,.2f} KB)")
+                click.echo(f"  {item['s3_path']} ({format_size_kb(item['size'])} KB)")
 
             if len(issues["orphaned_in_s3"]) > 10:
                 click.echo(f"  ... and {len(issues['orphaned_in_s3']) - 10} more")
@@ -365,11 +373,10 @@ def print_report(issues: Dict[str, List], show_orphaned: bool = False):
         if issues["orphaned_in_s3"]:
             # Calculate total size
             total_size = sum(item["size"] for item in issues["orphaned_in_s3"])
-            total_size_mb = total_size / (1024 * 1024)
             
             click.echo(
                 f"\n⚠️  ORPHANED IN S3: {len(issues['orphaned_in_s3'])} files "
-                f"({total_size_mb:,.2f} MB total)"
+                f"({format_size_mb(total_size)} MB total)"
             )
             click.echo("    (use --show-orphaned to see details)")
 
@@ -392,8 +399,7 @@ def print_report(issues: Dict[str, List], show_orphaned: bool = False):
         click.echo(f"   - Orphaned versions: {len(issues['missing_photos'])}")
         if show_orphaned:
             total_size = sum(item["size"] for item in issues["orphaned_in_s3"])
-            total_size_mb = total_size / (1024 * 1024)
-            click.echo(f"   - Orphaned in S3: {len(issues['orphaned_in_s3'])} ({total_size_mb:,.2f} MB)")
+            click.echo(f"   - Orphaned in S3: {len(issues['orphaned_in_s3'])} ({format_size_mb(total_size)} MB)")
 
 
 def export_issues(issues: Dict[str, List], output_file: str):
@@ -424,9 +430,8 @@ def delete_orphaned_files(orphaned_files: List[Dict[str, Any]]) -> int:
     
     # Calculate total size
     total_size = sum(f["size"] for f in orphaned_files)
-    total_size_mb = total_size / (1024 * 1024)
     
-    click.echo(f"\n⚠️  WARNING: About to delete {len(orphaned_files)} files ({total_size_mb:,.2f} MB)")
+    click.echo(f"\n⚠️  WARNING: About to delete {len(orphaned_files)} files ({format_size_mb(total_size)} MB)")
     click.echo("This action cannot be undone!")
     
     if not click.confirm("\nDo you want to proceed with deletion?"):
