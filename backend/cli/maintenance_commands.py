@@ -6,7 +6,7 @@ import gzip
 import os
 import sys
 import tempfile
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 from urllib.parse import urlparse
 
 import boto3
@@ -167,7 +167,7 @@ def get_s3_objects_from_csv(csv_path: str) -> Dict[str, Dict[str, Any]]:
         raise
 
 
-def get_database_versions(db: Session) -> List[Version]:
+def get_database_versions(db: Session) -> List[Tuple[Version,]]:
     """
     Get all versions from the database
 
@@ -182,7 +182,8 @@ def get_database_versions(db: Session) -> List[Version]:
 
 
 def compare_versions(
-    versions: List[Version], s3_objects: Dict[str, Dict[str, Any]]
+    versions: List[Tuple[Version,]],
+    s3_objects: Dict[str, Dict[str, Any]],
 ) -> Dict[str, List]:
     """
     Compare database versions with S3 objects
@@ -205,7 +206,7 @@ def compare_versions(
     click.echo("\nComparing versions...")
 
     for version in versions:
-        s3_path = version.s3_path
+        s3_path = version.Version.s3_path
 
         # Check if file exists in S3
         if s3_path not in s3_objects:
