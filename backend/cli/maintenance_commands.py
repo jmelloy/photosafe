@@ -28,21 +28,21 @@ def maintenance():
 def populate_search_data():
     """
     Populate search_data table from existing photo metadata
-    
+
     This command will:
     1. Process all photos in the database
     2. Extract searchable metadata (labels, keywords, persons, places, etc.)
     3. Populate the search_data table for efficient searching
-    
+
     Run this after upgrading to the search_data feature or if search_data
     becomes out of sync with photo metadata.
     """
     from app.utils import populate_search_data_for_all_photos
-    
+
     click.echo("PhotoSafe Search Data Population Tool")
     click.echo("=" * 80)
     click.echo("This will populate the search_data table from all photos...")
-    
+
     with Session(engine) as db:
         try:
             count = populate_search_data_for_all_photos(db)
@@ -122,11 +122,11 @@ def get_s3_objects_from_csv(csv_path: str) -> Dict[str, Dict[str, Any]]:
         with open(csv_path, "r", encoding="utf-8") as f:
             # CSV format is: Bucket, Key, Size, LastModifiedDate, ETag
             # Columns may have spaces after commas
-            reader = csv.DictReader(f, skipinitialspace=True)
-
-            # Verify we have the expected columns
-            fieldnames = (
-                [f.strip() for f in reader.fieldnames] if reader.fieldnames else []
+            fieldnames = ["Bucket", "Key", "Size", "LastModifiedDate", "ETag"]
+            reader = csv.DictReader(
+                f,
+                skipinitialspace=True,
+                fieldnames=fieldnames,
             )
 
             # Check if we have the Key and Size columns at minimum
@@ -242,11 +242,13 @@ def compare_versions(
     orphaned_list = []
     for s3_path in sorted(issues["orphaned_in_s3"]):
         s3_info = s3_objects[s3_path]
-        orphaned_list.append({
-            "s3_path": s3_path,
-            "size": s3_info["size"],
-            "bucket": s3_info["bucket"],
-        })
+        orphaned_list.append(
+            {
+                "s3_path": s3_path,
+                "size": s3_info["size"],
+                "bucket": s3_info["bucket"],
+            }
+        )
     issues["orphaned_in_s3"] = orphaned_list
 
     return issues
@@ -356,7 +358,7 @@ def print_report(issues: Dict[str, List], show_orphaned: bool = False):
         if issues["orphaned_in_s3"]:
             # Calculate total size
             total_size = sum(item["size"] for item in issues["orphaned_in_s3"])
-            
+
             click.echo(
                 f"\n⚠️  ORPHANED IN S3: {len(issues['orphaned_in_s3'])} files "
                 f"({format_size_mb(total_size)} MB total)"
@@ -373,7 +375,7 @@ def print_report(issues: Dict[str, List], show_orphaned: bool = False):
         if issues["orphaned_in_s3"]:
             # Calculate total size
             total_size = sum(item["size"] for item in issues["orphaned_in_s3"])
-            
+
             click.echo(
                 f"\n⚠️  ORPHANED IN S3: {len(issues['orphaned_in_s3'])} files "
                 f"({format_size_mb(total_size)} MB total)"
@@ -399,7 +401,9 @@ def print_report(issues: Dict[str, List], show_orphaned: bool = False):
         click.echo(f"   - Orphaned versions: {len(issues['missing_photos'])}")
         if show_orphaned:
             total_size = sum(item["size"] for item in issues["orphaned_in_s3"])
-            click.echo(f"   - Orphaned in S3: {len(issues['orphaned_in_s3'])} ({format_size_mb(total_size)} MB)")
+            click.echo(
+                f"   - Orphaned in S3: {len(issues['orphaned_in_s3'])} ({format_size_mb(total_size)} MB)"
+            )
 
 
 def export_issues(issues: Dict[str, List], output_file: str):
@@ -417,56 +421,58 @@ def export_issues(issues: Dict[str, List], output_file: str):
 def delete_orphaned_files(orphaned_files: List[Dict[str, Any]]) -> int:
     """
     Delete orphaned files from S3
-    
+
     Args:
         orphaned_files: List of dicts with s3_path, bucket, and size
-        
+
     Returns:
         Number of files successfully deleted
     """
     if not orphaned_files:
         click.echo("No orphaned files to delete")
         return 0
-    
+
     # Calculate total size
     total_size = sum(f["size"] for f in orphaned_files)
-    
-    click.echo(f"\n⚠️  WARNING: About to delete {len(orphaned_files)} files ({format_size_mb(total_size)} MB)")
+
+    click.echo(
+        f"\n⚠️  WARNING: About to delete {len(orphaned_files)} files ({format_size_mb(total_size)} MB)"
+    )
     click.echo("This action cannot be undone!")
-    
+
     if not click.confirm("\nDo you want to proceed with deletion?"):
         click.echo("Deletion cancelled")
         return 0
-    
+
     s3 = boto3.client("s3")
     deleted_count = 0
     failed_count = 0
-    
+
     click.echo("\nDeleting orphaned files...")
-    
+
     for item in orphaned_files:
         s3_path = item["s3_path"]
         bucket = item["bucket"]
-        
+
         if not bucket:
             click.echo(f"  ⚠️  Skipping {s3_path}: no bucket specified")
             failed_count += 1
             continue
-        
+
         try:
             s3.delete_object(Bucket=bucket, Key=s3_path)
             deleted_count += 1
-            
+
             if deleted_count % 100 == 0:
                 click.echo(f"  Deleted {deleted_count}/{len(orphaned_files)} files...")
         except Exception as e:
             click.echo(f"  ❌ Failed to delete {s3_path}: {e}")
             failed_count += 1
-    
+
     click.echo(f"\n✅ Successfully deleted {deleted_count} files")
     if failed_count > 0:
         click.echo(f"⚠️  Failed to delete {failed_count} files")
-    
+
     return deleted_count
 
 
@@ -499,7 +505,11 @@ def delete_orphaned_files(orphaned_files: List[Dict[str, Any]]) -> int:
     help="Check if versions reference valid photos",
 )
 def compare_versions_cmd(
-    csv_source: str, show_orphaned: bool, delete_orphaned: bool, export_file: str, check_photos: bool
+    csv_source: str,
+    show_orphaned: bool,
+    delete_orphaned: bool,
+    export_file: str,
+    check_photos: bool,
 ):
     """
     Compare versions table content with S3 storage from CSV export
