@@ -205,8 +205,9 @@ def compare_versions(
 
     click.echo("\nComparing versions...")
 
-    for version in versions:
-        s3_path = version.Version.s3_path
+    for rec in versions:
+        version = rec[0]
+        s3_path = version.s3_path
 
         # Check if file exists in S3
         if s3_path not in s3_objects:
