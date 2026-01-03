@@ -6,7 +6,7 @@ import gzip
 import os
 import sys
 import tempfile
-from typing import Dict, List
+from typing import Any, Dict, List
 from urllib.parse import urlparse
 
 import boto3
@@ -105,7 +105,7 @@ def download_s3_csv(s3_url: str) -> str:
         raise
 
 
-def get_s3_objects_from_csv(csv_path: str) -> Dict[str, Dict[str, any]]:
+def get_s3_objects_from_csv(csv_path: str) -> Dict[str, Dict[str, Any]]:
     """
     Get all objects from S3 CSV export with their sizes and bucket info
 
@@ -182,7 +182,7 @@ def get_database_versions(db: Session) -> List[Version]:
 
 
 def compare_versions(
-    versions: List[Version], s3_objects: Dict[str, Dict[str, any]]
+    versions: List[Version], s3_objects: Dict[str, Dict[str, Any]]
 ) -> Dict[str, List]:
     """
     Compare database versions with S3 objects
@@ -408,7 +408,7 @@ def export_issues(issues: Dict[str, List], output_file: str):
     click.echo(f"\n✅ Issues exported to: {output_file}")
 
 
-def delete_orphaned_files(orphaned_files: List[Dict[str, any]]) -> int:
+def delete_orphaned_files(orphaned_files: List[Dict[str, Any]]) -> int:
     """
     Delete orphaned files from S3
     
