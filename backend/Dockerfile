@@ -15,10 +15,11 @@ RUN uv pip install --system .[icloud]
 
 COPY app ./app
 COPY cli ./cli
-
-# Copy application
 COPY alembic ./alembic
 COPY alembic.ini .
+
+# Install the package in editable mode so volume mounts work properly
+RUN uv pip install --system -e .
 
 # Create uploads directory
 RUN mkdir -p uploads
