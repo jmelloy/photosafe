@@ -17,6 +17,8 @@ from sqlmodel import Session
 from app.database import engine
 from app.models import Version, Photo
 
+from cli.sync_tools import list_bucket
+
 
 @click.group()
 def maintenance():
@@ -482,7 +484,7 @@ def delete_orphaned_files(orphaned_files: List[Dict[str, Any]]) -> int:
 @click.option(
     "--csv",
     "csv_source",
-    required=True,
+    required=False,
     help="Path to local CSV file or S3 URL (s3://bucket/path/file.csv or s3://bucket/path/file.csv.gz)",
 )
 @click.option(
@@ -538,6 +540,14 @@ def compare_versions_cmd(
 
     csv_path = csv_source
     temp_file = None
+
+    if not csv_path:
+        bucket = "jmelloy-photo-backup"
+        s3 = boto3.client("s3")
+        files = list(list_bucket(s3, bucket, prefix="jmelloy-photo-backup/Photos"))
+
+        csv_path = f"s3://{bucket}/{files[-1][0]}"
+        click.echo(f"No CSV provided, using latest inventory: {csv_path}")
 
     try:
         # Check if it's an S3 URL
