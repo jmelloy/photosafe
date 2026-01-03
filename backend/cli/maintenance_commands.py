@@ -544,7 +544,10 @@ def compare_versions_cmd(
     if not csv_path:
         bucket = "jmelloy-photo-backup"
         s3 = boto3.client("s3")
-        files = list(list_bucket(s3, bucket, prefix="jmelloy-photo-backup/Photos"))
+        files = sorted(
+            list_bucket(s3, bucket, prefix="jmelloy-photo-backup/Photos"),
+            key=lambda x: x[3],
+        )
 
         csv_path = f"s3://{bucket}/{files[-1][0]}"
         click.echo(f"No CSV provided, using latest inventory: {csv_path}")

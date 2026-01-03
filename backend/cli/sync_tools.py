@@ -150,14 +150,14 @@ class PhotoSafeAuth:
 class DateTimeEncoder(JSONEncoder):
     """JSON encoder that handles datetime objects"""
 
-    def default(self, obj):
-        if isinstance(obj, (datetime.date, datetime.datetime)):
-            return obj.isoformat()
-        if isinstance(obj, bytes):
-            return obj.decode("utf-8", errors="ignore")
-        if isinstance(obj, PosixPath):
-            return str(obj)
-        return super().default(obj)
+    def default(self, o):
+        if isinstance(o, (datetime.date, datetime.datetime)):
+            return o.isoformat()
+        if isinstance(o, bytes):
+            return o.decode("utf-8", errors="ignore")
+        if isinstance(o, PosixPath):
+            return str(o)
+        return super().default(o)
 
 
 def calc_etag(data, partsize=8388608):
@@ -182,7 +182,7 @@ def list_bucket(s3, bucket, prefix=""):
             return
 
         for row in rs.get("Contents", []):
-            yield row["Key"], row.get("Size", 0), row["ETag"]
+            yield row["Key"], row.get("Size", 0), row["ETag"], row["LastModified"]
         else:
             key = row["Key"]
             total += len(rs.get("Contents", []))
@@ -192,7 +192,7 @@ def list_bucket(s3, bucket, prefix=""):
 def sum_bucket(s3, bucket, print_every=1000):
     """Summarize bucket contents by directory"""
     d = {}
-    for i, (key, size, etag) in enumerate(list_bucket(s3, bucket)):
+    for i, (key, size, etag, last_modified) in enumerate(list_bucket(s3, bucket)):
         directory_name = "/".join(key.split("/")[0:-1]) + "/" if "/" in key else ""
         (sz, items) = d.get(directory_name, (0, 0))
         sz += size
