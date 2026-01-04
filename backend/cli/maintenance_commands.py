@@ -267,7 +267,7 @@ def format_size_kb(size_bytes: int) -> str:
     return f"{size_bytes / 1024:,.2f}"
 
 
-def print_report(issues: Dict[str, List], show_orphaned: bool = False):
+def print_report(issues: Dict[str, List]):
     """Print comparison report"""
 
     click.echo("\n" + "=" * 80)
@@ -329,33 +329,23 @@ def print_report(issues: Dict[str, List], show_orphaned: bool = False):
         click.echo("\n✅ All versions have valid photos")
 
     # Orphaned in S3
-    if show_orphaned:
-        if issues["orphaned_in_s3"]:
-            # Calculate total size
-            total_size = sum(item["size"] for item in issues["orphaned_in_s3"])
 
-            click.echo(
-                f"\n⚠️  ORPHANED IN S3: {len(issues['orphaned_in_s3'])} files "
-                f"({format_size_mb(total_size)} MB total)"
-            )
-            click.echo("-" * 80)
-            for item in issues["orphaned_in_s3"][:10]:
-                click.echo(f"  {item['s3_path']} ({format_size_kb(item['size'])} KB)")
+    if issues["orphaned_in_s3"]:
+        # Calculate total size
+        total_size = sum(item["size"] for item in issues["orphaned_in_s3"])
 
-            if len(issues["orphaned_in_s3"]) > 10:
-                click.echo(f"  ... and {len(issues['orphaned_in_s3']) - 10} more")
-        else:
-            click.echo("\n✅ No orphaned files in S3")
+        click.echo(
+            f"\n⚠️  ORPHANED IN S3: {len(issues['orphaned_in_s3'])} files "
+            f"({format_size_mb(total_size)} MB total)"
+        )
+        click.echo("-" * 80)
+        for item in issues["orphaned_in_s3"][:10]:
+            click.echo(f"  {item['s3_path']} ({format_size_kb(item['size'])} KB)")
+
+        if len(issues["orphaned_in_s3"]) > 10:
+            click.echo(f"  ... and {len(issues['orphaned_in_s3']) - 10} more")
     else:
-        if issues["orphaned_in_s3"]:
-            # Calculate total size
-            total_size = sum(item["size"] for item in issues["orphaned_in_s3"])
-
-            click.echo(
-                f"\n⚠️  ORPHANED IN S3: {len(issues['orphaned_in_s3'])} files "
-                f"({format_size_mb(total_size)} MB total)"
-            )
-            click.echo("    (use --show-orphaned to see details)")
+        click.echo("\n✅ No orphaned files in S3")
 
     # Summary
     click.echo("\n" + "=" * 80)
@@ -373,12 +363,10 @@ def print_report(issues: Dict[str, List], show_orphaned: bool = False):
         click.echo(f"⚠️  Found {total_issues} issues")
         click.echo(f"   - Missing in S3: {len(issues['missing_in_s3'])}")
         click.echo(f"   - Size mismatches: {len(issues['size_mismatch'])}")
-        click.echo(f"   - Orphaned versions: {len(issues['missing_photos'])}")
-        if show_orphaned:
-            total_size = sum(item["size"] for item in issues["orphaned_in_s3"])
-            click.echo(
-                f"   - Orphaned in S3: {len(issues['orphaned_in_s3'])} ({format_size_mb(total_size)} MB)"
-            )
+        total_size = sum(item["size"] for item in issues["orphaned_in_s3"])
+        click.echo(
+            f"   - Orphaned in S3: {len(issues['orphaned_in_s3'])} ({format_size_mb(total_size)} MB)"
+        )
 
 
 def export_issues(issues: Dict[str, List], output_file: str):
