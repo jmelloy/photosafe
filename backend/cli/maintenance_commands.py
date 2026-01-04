@@ -7,7 +7,7 @@ import os
 import sys
 import tempfile
 from typing import Any, Dict, List, Sequence, Tuple
-from urllib.parse import urlparse
+from urllib.parse import urlparse, unquote
 
 import boto3
 import click
@@ -144,7 +144,7 @@ def get_s3_objects_from_csv(csv_path: str) -> Dict[str, Dict[str, Any]]:
             for row in reader:
                 try:
                     # Strip whitespace from keys
-                    key = row["Key"].strip() if row.get("Key") else None
+                    key = unquote(row["Key"].strip()) if row.get("Key") else None
                     size_str = row["Size"].strip() if row.get("Size") else None
                     bucket = row.get("Bucket", "").strip() if row.get("Bucket") else ""
 
