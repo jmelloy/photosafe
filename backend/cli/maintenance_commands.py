@@ -6,13 +6,13 @@ import gzip
 import os
 import sys
 import tempfile
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Sequence, Tuple
 from urllib.parse import urlparse
 
 import boto3
 import click
-from sqlalchemy import select
-from sqlmodel import Session
+
+from sqlmodel import Session, select
 
 from app.database import engine
 from app.models import Version, Photo
@@ -169,7 +169,7 @@ def get_s3_objects_from_csv(csv_path: str) -> Dict[str, Dict[str, Any]]:
         raise
 
 
-def get_database_versions(db: Session) -> List[Tuple[Version,]]:
+def get_database_versions(db: Session) -> Sequence[Version]:
     """
     Get all versions from the database
 
@@ -184,7 +184,7 @@ def get_database_versions(db: Session) -> List[Tuple[Version,]]:
 
 
 def compare_versions(
-    versions: List[Tuple[Version,]],
+    versions: Sequence[Version],
     s3_objects: Dict[str, Dict[str, Any]],
 ) -> Dict[str, List]:
     """
@@ -207,8 +207,7 @@ def compare_versions(
 
     click.echo("\nComparing versions...")
 
-    for rec in versions:
-        version = rec[0]
+    for version in versions:
         s3_path = version.s3_path
 
         # Check if file exists in S3
@@ -256,34 +255,6 @@ def compare_versions(
     issues["orphaned_in_s3"] = orphaned_list
 
     return issues
-
-
-def check_photo_consistency(db: Session, versions: List[Version]) -> List[Dict]:
-    """
-    Check if all versions reference valid photos
-
-    Returns:
-        List of versions that reference non-existent photos
-    """
-    click.echo("Checking photo consistency...")
-
-    # Get all photo UUIDs
-    statement = select(Photo.uuid)
-    photo_uuids = {uuid for uuid in db.exec(statement).all()}
-
-    missing_photos = []
-    for version in versions:
-        if version.photo_uuid and version.photo_uuid not in photo_uuids:
-            missing_photos.append(
-                {
-                    "version_id": version.id,
-                    "photo_uuid": version.photo_uuid,
-                    "version": version.version,
-                    "s3_path": version.s3_path,
-                }
-            )
-
-    return missing_photos
 
 
 def format_size_mb(size_bytes: int) -> str:
@@ -575,10 +546,6 @@ def compare_versions_cmd(
 
                 # Compare
                 issues = compare_versions(versions, s3_objects)
-
-                # Check photo consistency
-                if check_photos:
-                    issues["missing_photos"] = check_photo_consistency(db, versions)
 
             except Exception as e:
                 click.echo(f"\n❌ Database error: {e}", err=True)
