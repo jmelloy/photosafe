@@ -271,14 +271,41 @@ const copyLink = async () => {
 
 const formatDate = (dateString?: string): string => {
   if (!dateString) return "Unknown";
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+
+  // The timestamp is in UTC, so append 'Z'
+  const utcDateString = `${dateString}Z`;
+
+  console.log(`Parsing date string: ${utcDateString}`);
+
+  const date = new Date(utcDateString);
+
+  // Check if date is valid
+  if (isNaN(date.getTime())) {
+    return "Invalid Date";
+  }
+
+  // Get the offset from EXIF data (e.g., "+05:00" or "-08:00")
+  const offsetTime = photo.value?.exif?.OffsetTime || photo.value?.exif?.OffsetTimeOriginal;
+
+  if (offsetTime) {
+    // Parse the offset (e.g., "+05:00" -> +5 hours)
+    const match = offsetTime.match(/([+-])(\d{2}):(\d{2})/);
+    if (match) {
+      const sign = match[1] === '+' ? 1 : -1;
+      const hours = parseInt(match[2], 10);
+      const minutes = parseInt(match[3], 10);
+      const offsetMs = sign * (hours * 60 + minutes) * 60 * 1000;
+
+      // Apply the offset to get local time
+      const localDate = new Date(date.getTime() + offsetMs);
+
+      return localDate.toLocaleString("en-US");
+    }
+  }
+
+  // If no offset, just format the UTC time
+  return date.toLocaleString("en-US");
+
 };
 
 const formatFileSize = (bytes?: number): string => {
@@ -307,24 +334,8 @@ const formatExifValue = (key: string, value: any): string => {
     key === "DateTimeDigitized" ||
     key === "DateTime"
   ) {
-    try {
-      // Replace colons with hyphens in date part for ISO 8601 format
-      // JavaScript Date constructor requires ISO format (YYYY-MM-DD) not EXIF format (YYYY:MM:DD)
-      const dateStr = String(value).replace(/^(\d{4}):(\d{2}):(\d{2})/, "$1-$2-$3");
-      const date = new Date(dateStr);
-      if (!isNaN(date.getTime())) {
-        return date.toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        });
-      }
-    } catch (e) {
-      // Fall back to original value if parsing fails
-    }
+
+    return String(value);
   }
   if (Array.isArray(value)) {
     // Rational number (fraction) - [numerator, denominator]
@@ -543,7 +554,6 @@ const formatExif = (exif: Record<string, any>): { important: Record<string, stri
 
   // Most important fields - shown by default
   const importantFields = [
-    "DateTimeOriginal",
     "Make",
     "Model",
     "LensModel",

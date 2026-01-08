@@ -728,6 +728,9 @@ def icloud(
                     )
                 )
 
+                if version == "original":
+                    data["file_size"] = details["size"]
+
             # Add photo to batch
             photo_batch.append(data)
 
