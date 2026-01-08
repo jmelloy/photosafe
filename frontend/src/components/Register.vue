@@ -5,61 +5,31 @@
       <form @submit.prevent="handleRegister">
         <div class="form-group">
           <label for="reg-username">Username</label>
-          <input
-            id="reg-username"
-            v-model="username"
-            type="text"
-            required
-            autocomplete="username"
-            placeholder="Choose a username"
-          />
+          <input id="reg-username" v-model="username" type="text" required autocomplete="username"
+            placeholder="Choose a username" />
         </div>
 
         <div class="form-group">
           <label for="reg-email">Email</label>
-          <input
-            id="reg-email"
-            v-model="email"
-            type="email"
-            required
-            autocomplete="email"
-            placeholder="Enter your email"
-          />
+          <input id="reg-email" v-model="email" type="email" required autocomplete="email"
+            placeholder="Enter your email" />
         </div>
 
         <div class="form-group">
           <label for="reg-name">Name (Optional)</label>
-          <input
-            id="reg-name"
-            v-model="name"
-            type="text"
-            autocomplete="name"
-            placeholder="Enter your name"
-          />
+          <input id="reg-name" v-model="name" type="text" autocomplete="name" placeholder="Enter your name" />
         </div>
 
         <div class="form-group">
           <label for="reg-password">Password</label>
-          <input
-            id="reg-password"
-            v-model="password"
-            type="password"
-            required
-            autocomplete="new-password"
-            placeholder="Choose a password"
-          />
+          <input id="reg-password" v-model="password" type="password" required autocomplete="new-password"
+            placeholder="Choose a password" />
         </div>
 
         <div class="form-group">
           <label for="reg-password-confirm">Confirm Password</label>
-          <input
-            id="reg-password-confirm"
-            v-model="passwordConfirm"
-            type="password"
-            required
-            autocomplete="new-password"
-            placeholder="Confirm your password"
-          />
+          <input id="reg-password-confirm" v-model="passwordConfirm" type="password" required
+            autocomplete="new-password" placeholder="Confirm your password" />
         </div>
 
         <div v-if="error" class="error-message">

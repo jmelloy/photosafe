@@ -3,27 +3,12 @@
     <div class="upload-card">
       <h2>Upload Photo</h2>
 
-      <div
-        class="drop-zone"
-        :class="{ 'drag-over': isDragging }"
-        @dragover.prevent="isDragging = true"
-        @dragleave.prevent="isDragging = false"
-        @drop.prevent="handleDrop"
-        @click="triggerFileInput"
-      >
+      <div class="drop-zone" :class="{ 'drag-over': isDragging }" @dragover.prevent="isDragging = true"
+        @dragleave.prevent="isDragging = false" @drop.prevent="handleDrop" @click="triggerFileInput">
         <div v-if="!uploading" class="drop-zone-content">
-          <svg
-            class="upload-icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-            />
+          <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
           </svg>
           <p class="upload-text">Click or drag & drop to upload</p>
           <p class="upload-hint">PNG, JPG, GIF up to 10MB</p>
@@ -35,13 +20,7 @@
         </div>
       </div>
 
-      <input
-        ref="fileInput"
-        type="file"
-        accept="image/*"
-        style="display: none"
-        @change="handleFileSelect"
-      />
+      <input ref="fileInput" type="file" accept="image/*" style="display: none" @change="handleFileSelect" />
     </div>
   </div>
 </template>
@@ -177,6 +156,7 @@ const uploadFile = async (file: File): Promise<void> => {
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }

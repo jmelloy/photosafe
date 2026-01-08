@@ -28,7 +28,8 @@
         <button @click="closePreview" class="preview-close">×</button>
         <div class="preview-info place-info">
           <h3>{{ selectedPhoto.place_name }}</h3>
-          <p v-if="selectedPhoto.city || selectedPhoto.state_province || selectedPhoto.country" class="preview-location">
+          <p v-if="selectedPhoto.city || selectedPhoto.state_province || selectedPhoto.country"
+            class="preview-location">
             {{ [selectedPhoto.city, selectedPhoto.state_province, selectedPhoto.country].filter(Boolean).join(", ") }}
           </p>
           <p class="preview-count">
@@ -111,10 +112,10 @@ const initMap = () => {
 
   // Add markers for each place summary
   const bounds: L.LatLngBoundsExpression = [];
-  
+
   placeSummaries.value.forEach((summary) => {
     if (summary.latitude == null || summary.longitude == null) return;
-    
+
     const lat = summary.latitude;
     const lng = summary.longitude;
     bounds.push([lat, lng]);
@@ -182,7 +183,7 @@ const formatDateRange = (startDate: string, endDate: string): string => {
   const end = new Date(endDate);
   const startYear = start.getFullYear();
   const endYear = end.getFullYear();
-  
+
   if (startYear === endYear) {
     return `Photos from ${startYear}`;
   }
@@ -279,6 +280,7 @@ onUnmounted(() => {
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }

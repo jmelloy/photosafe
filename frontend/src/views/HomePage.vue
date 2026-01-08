@@ -3,11 +3,7 @@
     <aside class="sidebar">
       <div class="sidebar-header">
         <h3>🔍 Filters</h3>
-        <button
-          v-if="hasActiveFilters"
-          @click="clearFilters"
-          class="clear-filters-btn"
-        >
+        <button v-if="hasActiveFilters" @click="clearFilters" class="clear-filters-btn">
           Clear All
         </button>
       </div>
@@ -15,12 +11,7 @@
       <!-- Search -->
       <div class="filter-section">
         <label class="filter-label">Search</label>
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Search photos..."
-          class="filter-input"
-        />
+        <input v-model="searchQuery" type="text" placeholder="Search photos..." class="filter-input" />
       </div>
 
       <!-- Albums -->
@@ -59,18 +50,8 @@
       <!-- Date Range -->
       <div class="filter-section">
         <label class="filter-label">Date Range</label>
-        <input
-          v-model="startDate"
-          type="date"
-          class="filter-input"
-          placeholder="Start date"
-        />
-        <input
-          v-model="endDate"
-          type="date"
-          class="filter-input"
-          placeholder="End date"
-        />
+        <input v-model="startDate" type="date" class="filter-input" placeholder="Start date" />
+        <input v-model="endDate" type="date" class="filter-input" placeholder="End date" />
       </div>
 
       <!-- Photo Type -->
@@ -115,14 +96,8 @@
     </aside>
 
     <div class="content">
-      <PhotoGallery
-        :photos="photos"
-        :loading="loading"
-        :loading-more="loadingMore"
-        :has-more="hasMore"
-        @delete-photo="handleDeletePhoto"
-        @load-more="loadMorePhotos"
-      />
+      <PhotoGallery :photos="photos" :loading="loading" :loading-more="loadingMore" :has-more="hasMore"
+        @delete-photo="handleDeletePhoto" @load-more="loadMorePhotos" />
     </div>
   </main>
 </template>

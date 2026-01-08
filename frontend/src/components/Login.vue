@@ -5,26 +5,14 @@
       <form @submit.prevent="handleLogin">
         <div class="form-group">
           <label for="username">Username</label>
-          <input
-            id="username"
-            v-model="username"
-            type="text"
-            required
-            autocomplete="username"
-            placeholder="Enter your username"
-          />
+          <input id="username" v-model="username" type="text" required autocomplete="username"
+            placeholder="Enter your username" />
         </div>
 
         <div class="form-group">
           <label for="password">Password</label>
-          <input
-            id="password"
-            v-model="password"
-            type="password"
-            required
-            autocomplete="current-password"
-            placeholder="Enter your password"
-          />
+          <input id="password" v-model="password" type="password" required autocomplete="current-password"
+            placeholder="Enter your password" />
         </div>
 
         <div v-if="error" class="error-message">

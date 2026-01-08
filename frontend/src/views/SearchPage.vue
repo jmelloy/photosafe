@@ -3,11 +3,7 @@
     <aside class="sidebar">
       <div class="sidebar-header">
         <h3>🔍 Advanced Search</h3>
-        <button
-          v-if="hasActiveFilters"
-          @click="clearFilters"
-          class="clear-filters-btn"
-        >
+        <button v-if="hasActiveFilters" @click="clearFilters" class="clear-filters-btn">
           Clear All
         </button>
       </div>
@@ -15,28 +11,16 @@
       <!-- Search Text -->
       <div class="filter-section">
         <label class="filter-label">Search Text</label>
-        <input
-          v-model="searchText"
-          type="text"
-          placeholder="Search in titles and descriptions..."
-          class="filter-input"
-        />
+        <input v-model="searchText" type="text" placeholder="Search in titles and descriptions..."
+          class="filter-input" />
       </div>
 
       <!-- Places Multi-Select -->
       <div class="filter-section" v-if="availableFilters.places.length > 0">
         <label class="filter-label">Places ({{ selectedPlaces.length }})</label>
         <div class="multi-select-container">
-          <label
-            v-for="place in availableFilters.places"
-            :key="place"
-            class="checkbox-label"
-          >
-            <input
-              type="checkbox"
-              :value="place"
-              v-model="selectedPlaces"
-            />
+          <label v-for="place in availableFilters.places" :key="place" class="checkbox-label">
+            <input type="checkbox" :value="place" v-model="selectedPlaces" />
             <span>{{ place }}</span>
           </label>
         </div>
@@ -46,16 +30,8 @@
       <div class="filter-section" v-if="availableFilters.labels.length > 0">
         <label class="filter-label">Labels ({{ selectedLabels.length }})</label>
         <div class="multi-select-container">
-          <label
-            v-for="label in availableFilters.labels"
-            :key="label"
-            class="checkbox-label"
-          >
-            <input
-              type="checkbox"
-              :value="label"
-              v-model="selectedLabels"
-            />
+          <label v-for="label in availableFilters.labels" :key="label" class="checkbox-label">
+            <input type="checkbox" :value="label" v-model="selectedLabels" />
             <span>{{ label }}</span>
           </label>
         </div>
@@ -65,16 +41,8 @@
       <div class="filter-section" v-if="availableFilters.keywords.length > 0">
         <label class="filter-label">Keywords ({{ selectedKeywords.length }})</label>
         <div class="multi-select-container">
-          <label
-            v-for="keyword in availableFilters.keywords"
-            :key="keyword"
-            class="checkbox-label"
-          >
-            <input
-              type="checkbox"
-              :value="keyword"
-              v-model="selectedKeywords"
-            />
+          <label v-for="keyword in availableFilters.keywords" :key="keyword" class="checkbox-label">
+            <input type="checkbox" :value="keyword" v-model="selectedKeywords" />
             <span>{{ keyword }}</span>
           </label>
         </div>
@@ -84,16 +52,8 @@
       <div class="filter-section" v-if="availableFilters.persons.length > 0">
         <label class="filter-label">People ({{ selectedPersons.length }})</label>
         <div class="multi-select-container">
-          <label
-            v-for="person in availableFilters.persons"
-            :key="person"
-            class="checkbox-label"
-          >
-            <input
-              type="checkbox"
-              :value="person"
-              v-model="selectedPersons"
-            />
+          <label v-for="person in availableFilters.persons" :key="person" class="checkbox-label">
+            <input type="checkbox" :value="person" v-model="selectedPersons" />
             <span>{{ person }}</span>
           </label>
         </div>
@@ -103,16 +63,8 @@
       <div class="filter-section" v-if="availableFilters.albums.length > 0">
         <label class="filter-label">Albums ({{ selectedAlbums.length }})</label>
         <div class="multi-select-container">
-          <label
-            v-for="album in availableFilters.albums"
-            :key="album"
-            class="checkbox-label"
-          >
-            <input
-              type="checkbox"
-              :value="album"
-              v-model="selectedAlbums"
-            />
+          <label v-for="album in availableFilters.albums" :key="album" class="checkbox-label">
+            <input type="checkbox" :value="album" v-model="selectedAlbums" />
             <span>{{ album }}</span>
           </label>
         </div>
@@ -122,16 +74,8 @@
       <div class="filter-section" v-if="availableFilters.libraries.length > 0">
         <label class="filter-label">Libraries ({{ selectedLibraries.length }})</label>
         <div class="multi-select-container">
-          <label
-            v-for="library in availableFilters.libraries"
-            :key="library"
-            class="checkbox-label"
-          >
-            <input
-              type="checkbox"
-              :value="library"
-              v-model="selectedLibraries"
-            />
+          <label v-for="library in availableFilters.libraries" :key="library" class="checkbox-label">
+            <input type="checkbox" :value="library" v-model="selectedLibraries" />
             <span>{{ library }}</span>
           </label>
         </div>
@@ -140,18 +84,8 @@
       <!-- Date Range -->
       <div class="filter-section">
         <label class="filter-label">Date Range</label>
-        <input
-          v-model="startDate"
-          type="date"
-          class="filter-input"
-          placeholder="Start date"
-        />
-        <input
-          v-model="endDate"
-          type="date"
-          class="filter-input"
-          placeholder="End date"
-        />
+        <input v-model="startDate" type="date" class="filter-input" placeholder="Start date" />
+        <input v-model="endDate" type="date" class="filter-input" placeholder="End date" />
       </div>
 
       <!-- Search Button -->
@@ -166,15 +100,8 @@
       <div v-if="searchPerformed && photos.length === 0 && !loading" class="no-results">
         <p>No photos found matching your search criteria.</p>
       </div>
-      <PhotoGallery
-        v-else
-        :photos="photos"
-        :loading="loading"
-        :loading-more="loadingMore"
-        :has-more="hasMore"
-        @delete-photo="handleDeletePhoto"
-        @load-more="loadMorePhotos"
-      />
+      <PhotoGallery v-else :photos="photos" :loading="loading" :loading-more="loadingMore" :has-more="hasMore"
+        @delete-photo="handleDeletePhoto" @load-more="loadMorePhotos" />
     </div>
   </main>
 </template>
