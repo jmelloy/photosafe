@@ -11,7 +11,8 @@
 
 services:
   db:
-    ports: !reset []
+    ports: 
+      []
   backend:
     volumes:
       # Remove source code mount for production
@@ -20,5 +21,6 @@ services:
   frontend:
     # Remove all volume mounts for production
     # The built files are baked into the Docker image
-    volumes: !reset []
+    volumes: 
+      []
 
