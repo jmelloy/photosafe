@@ -40,10 +40,6 @@
         <!-- Basic Information -->
         <div class="metadata-group">
           <h3>Basic Information</h3>
-          <div class="metadata-item">
-            <span class="label">UUID:</span>
-            <span class="value">{{ photo.uuid }}</span>
-          </div>
           <div class="metadata-item" v-if="photo.date">
             <span class="label">Date Taken:</span>
             <span class="value">{{ formatDate(photo.date) }}</span>
@@ -87,10 +83,7 @@
         </div>
 
         <!-- Albums -->
-        <div
-          class="metadata-group"
-          v-if="photo.albums && photo.albums.length > 0"
-        >
+        <div class="metadata-group" v-if="photo.albums && photo.albums.length > 0">
           <h3>Albums</h3>
           <div class="tags">
             <span v-for="album in photo.albums" :key="album" class="tag album">
@@ -100,27 +93,17 @@
         </div>
 
         <!-- Keywords -->
-        <div
-          class="metadata-group"
-          v-if="photo.keywords && photo.keywords.length > 0"
-        >
+        <div class="metadata-group" v-if="photo.keywords && photo.keywords.length > 0">
           <h3>Keywords</h3>
           <div class="tags">
-            <span
-              v-for="keyword in photo.keywords"
-              :key="keyword"
-              class="tag keyword"
-            >
+            <span v-for="keyword in photo.keywords" :key="keyword" class="tag keyword">
               🏷️ {{ keyword }}
             </span>
           </div>
         </div>
 
         <!-- Labels -->
-        <div
-          class="metadata-group"
-          v-if="photo.labels && photo.labels.length > 0"
-        >
+        <div class="metadata-group" v-if="photo.labels && photo.labels.length > 0">
           <h3>Labels</h3>
           <div class="tags">
             <span v-for="label in photo.labels" :key="label" class="tag label">
@@ -130,17 +113,10 @@
         </div>
 
         <!-- People -->
-        <div
-          class="metadata-group"
-          v-if="photo.persons && photo.persons.length > 0"
-        >
+        <div class="metadata-group" v-if="photo.persons && photo.persons.length > 0">
           <h3>People</h3>
           <div class="tags">
-            <span
-              v-for="person in photo.persons"
-              :key="person"
-              class="tag person"
-            >
+            <span v-for="person in photo.persons" :key="person" class="tag person">
               👤 {{ person }}
             </span>
           </div>
@@ -151,9 +127,7 @@
           <h3>Location</h3>
           <div class="metadata-item">
             <span class="label">Coordinates:</span>
-            <span class="value"
-              >{{ photo.latitude }}, {{ photo.longitude }}</span
-            >
+            <span class="value">{{ photo.latitude.toFixed(3) }}, {{ photo.longitude.toFixed(3) }}</span>
           </div>
           <div class="metadata-item" v-if="photo.place">
             <span class="label">Place:</span>
@@ -161,26 +135,43 @@
           </div>
           <!-- Map -->
           <div class="map-container">
-            <PhotoMap
-              :latitude="photo.latitude"
-              :longitude="photo.longitude"
-              :photo-title="photo.original_filename"
-            />
+            <PhotoMap :latitude="photo.latitude" :longitude="photo.longitude" :photo-title="photo.original_filename" />
           </div>
         </div>
 
         <!-- EXIF Data -->
-        <div class="metadata-group" v-if="photo.exif">
+        <div class="metadata-group" v-if="photo.exif && Object.keys(photo.exif).length > 0">
           <h3>EXIF Data</h3>
-          <div class="exif-data">
-            <div
-              v-for="[key, value] in Object.entries(photo.exif)"
-              :key="key"
-              class="metadata-item"
-            >
-              <span class="label">{{ formatExifKey(key) }}:</span>
-              <span class="value">{{ formatExifValue(value) }}</span>
+          <!-- Important fields -->
+          <div class="metadata-item" v-for="(value, key) in formattedExif.important" :key="key">
+            <span class="label">{{ key }}:</span>
+            <span class="value">{{ value }}</span>
+          </div>
+          <!-- Less important fields (collapsible) -->
+          <details v-if="formattedExif.additional && Object.keys(formattedExif.additional).length > 0"
+            class="exif-details">
+            <summary>Additional EXIF Data</summary>
+            <div class="metadata-item" v-for="(value, key) in formattedExif.additional" :key="key">
+              <span class="label">{{ key }}:</span>
+              <span class="value">{{ value }}</span>
             </div>
+          </details>
+        </div>
+
+        <!-- Technical Details -->
+        <div class="metadata-group">
+          <h3>Technical Details</h3>
+          <div class="metadata-item">
+            <span class="label">UUID:</span>
+            <span class="value code">{{ photo.uuid }}</span>
+          </div>
+          <div class="metadata-item" v-if="photo.masterFingerprint">
+            <span class="label">Fingerprint:</span>
+            <span class="value code">{{ photo.masterFingerprint }}</span>
+          </div>
+          <div class="metadata-item" v-if="photo.library">
+            <span class="label">Library:</span>
+            <span class="value">{{ photo.library }}</span>
           </div>
         </div>
       </div>
@@ -195,7 +186,7 @@ import { getPhoto } from "../api/photos";
 import type { Photo } from "../types/api";
 import PhotoMap from "../components/PhotoMap.vue";
 import { formatPlace } from "../utils/formatPlace";
-import { getDetailImageUrl } from "../utils/imageUrl";
+import { getDetailImageUrl, getShareUrl } from "../utils/imageUrl";
 
 interface PhotoDetailPageProps {
   uuid: string;
@@ -252,9 +243,19 @@ const goBack = () => {
 };
 
 const copyLink = async () => {
-  const url = window.location.href;
+  // Get the direct S3 URL for the medium/edited version
+  const shareUrl = getShareUrl(photo.value);
+
+  if (!shareUrl) {
+    copyLinkText.value = "✗ No Share URL";
+    setTimeout(() => {
+      copyLinkText.value = "🔗 Share Link";
+    }, 2000);
+    return;
+  }
+
   try {
-    await navigator.clipboard.writeText(url);
+    await navigator.clipboard.writeText(shareUrl);
     copyLinkText.value = "✓ Link Copied!";
     setTimeout(() => {
       copyLinkText.value = "🔗 Share Link";
@@ -282,23 +283,229 @@ const formatDate = (dateString?: string): string => {
 
 const formatFileSize = (bytes?: number): string => {
   if (!bytes) return "Unknown";
-  const mb = bytes / (1024 * 1024);
-  return `${mb.toFixed(2)} MB`;
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
 };
 
 const formatExifKey = (key: string): string => {
+  // Convert camelCase or PascalCase to Title Case with spaces
   return key
-    .replace(/([A-Z])/g, " $1")
-    .replace(/^./, (str) => str.toUpperCase())
+    .replace(/([A-Z])/g, " $1") // Add space before capital letters
+    .replace(/^./, (str) => str.toUpperCase()) // Capitalize first letter
     .trim();
 };
 
-const formatExifValue = (value: any): string => {
+const formatExifValue = (key: string, value: any): string => {
   if (value === null || value === undefined || value === "") {
     return "";
   }
 
-  // For numeric values, limit to 1 decimal point
+  // Format dates - convert from EXIF format "2025:12:15 14:03:35" to readable format
+  if (
+    key === "DateTimeOriginal" ||
+    key === "DateTimeDigitized" ||
+    key === "DateTime"
+  ) {
+    try {
+      // Replace colons with hyphens in date part for ISO 8601 format
+      // JavaScript Date constructor requires ISO format (YYYY-MM-DD) not EXIF format (YYYY:MM:DD)
+      const dateStr = String(value).replace(/^(\d{4}):(\d{2}):(\d{2})/, "$1-$2-$3");
+      const date = new Date(dateStr);
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        });
+      }
+    } catch (e) {
+      // Fall back to original value if parsing fails
+    }
+  }
+  if (Array.isArray(value)) {
+    // Rational number (fraction) - [numerator, denominator]
+    if (value.length === 2 && typeof value[0] === 'number' && typeof value[1] === 'number') {
+      const result = value[1];
+
+      // Special formatting for specific fields
+      if (key === 'FNumber' || key === 'ApertureValue') {
+        return `ƒ/${result.toFixed(2)}`;
+      }
+      if (key === 'ExposureTime') {
+        return result >= 1 ? `${result.toFixed(1)}s` : `1/${Math.round(1 / result)}s`;
+      }
+      if (key === 'FocalLength') {
+        return `${result.toFixed(1)}mm`;
+      }
+      if (key === 'ExposureBiasValue') {
+        return result === 0 ? '0 EV' : `${result > 0 ? '+' : ''}${result.toFixed(1)} EV`;
+      }
+      if (key === 'BrightnessValue') {
+        return `${result.toFixed(2)} EV`;
+      }
+      if (key === 'ShutterSpeedValue') {
+        return `${result.toFixed(2)} EV`;
+      }
+
+      return value.map((v: number) => v.toString()).join(", ");
+    }
+  }
+
+  // Format LensSpecification - convert nested array to readable format
+  if (key === "LensSpecification" && Array.isArray(value)) {
+    try {
+      // LensSpecification format: [[id, min_focal], [id, max_focal], [id, min_aperture], [id, max_aperture]]
+      // Each pair has a constant identifier (usually 4) and the actual value
+      // We extract the second element (index 1) which contains the specification value
+      const values = value.map((v) => (Array.isArray(v) && v.length >= 2 ? v[1] : v));
+      if (values.length >= 4) {
+        const minFocal = parseFloat(values[0]);
+        const maxFocal = parseFloat(values[1]);
+        const minAperture = parseFloat(values[2]);
+        const maxAperture = parseFloat(values[3]);
+
+        if (!isNaN(minFocal) && !isNaN(maxFocal) && !isNaN(minAperture) && !isNaN(maxAperture)) {
+          // Format as "min-max mm, f/aperture-aperture"
+          const focalRange = minFocal === maxFocal
+            ? `${minFocal.toFixed(1)}mm`
+            : `${minFocal.toFixed(1)}-${maxFocal.toFixed(1)}mm`;
+          const apertureRange = minAperture === maxAperture
+            ? `ƒ/${minAperture.toFixed(1)}`
+            : `ƒ/${minAperture.toFixed(1)}-${maxAperture.toFixed(1)}`;
+          return `${focalRange}, ${apertureRange}`;
+        }
+      }
+    } catch (e) {
+      // Fall back to string representation
+    }
+  }
+
+  // Format exposure time (shutter speed)
+  if (key === "ExposureTime" || key === "ShutterSpeedValue") {
+    const num = parseFloat(value);
+    if (num < 1) {
+      // Convert to fraction for fast shutter speeds
+      const denominator = Math.round(1 / num);
+      return `1/${denominator}s`;
+    }
+    return `${num}s`;
+  }
+
+  // Format aperture
+  if (key === "FNumber" || key === "ApertureValue") {
+    const num = parseFloat(value);
+    return `ƒ/${num.toFixed(1)}`;
+  }
+
+  // Format focal length
+  if (key === "FocalLength" || key === "FocalLenIn35mmFilm") {
+    const num = parseFloat(value);
+    return `${num.toFixed(0)}mm`;
+  }
+
+  // Format ISO
+  if (
+    key === "ISO" ||
+    key === "ISOSpeedRatings" ||
+    key === "PhotographicSensitivity"
+  ) {
+    return `ISO ${value}`;
+  }
+
+  // Handle specific enum fields
+  const enumMappings: { [key: string]: { [value: number]: string } } = {
+    Flash: {
+      0: 'No Flash',
+      1: 'Fired',
+      5: 'Fired, Return not detected',
+      7: 'Fired, Return detected',
+      8: 'On, Did not fire',
+      9: 'On, Fired',
+      13: 'On, Return not detected',
+      15: 'On, Return detected',
+      16: 'Off, Did not fire',
+      24: 'Auto, Did not fire',
+      25: 'Auto, Fired',
+      29: 'Auto, Fired, Return not detected',
+      31: 'Auto, Fired, Return detected'
+    },
+    ColorSpace: {
+      1: 'sRGB',
+      65535: 'Uncalibrated'
+    },
+    ExposureMode: {
+      0: 'Auto',
+      1: 'Manual',
+      2: 'Auto Bracket'
+    },
+    MeteringMode: {
+      0: 'Unknown',
+      1: 'Average',
+      2: 'Center Weighted Average',
+      3: 'Spot',
+      4: 'Multi-Spot',
+      5: 'Pattern',
+      6: 'Partial'
+    },
+    WhiteBalance: {
+      0: 'Auto',
+      1: 'Manual'
+    },
+    ExposureProgram: {
+      0: 'Not Defined',
+      1: 'Manual',
+      2: 'Program AE',
+      3: 'Aperture Priority',
+      4: 'Shutter Priority',
+      5: 'Creative Program',
+      6: 'Action Program',
+      7: 'Portrait Mode',
+      8: 'Landscape Mode'
+    },
+    SensingMethod: {
+      1: 'Not defined',
+      2: 'One-chip color area',
+      3: 'Two-chip color area',
+      4: 'Three-chip color area',
+      5: 'Color sequential area',
+      7: 'Trilinear',
+      8: 'Color sequential linear'
+    },
+    SceneType: {
+      1: 'Directly photographed'
+    },
+    CompositeImage: {
+      0: 'Unknown',
+      1: 'Not a Composite',
+      2: 'General Composite',
+      3: 'Composite with HDR'
+    }
+  };
+
+  if (enumMappings[key] && typeof value === 'number') {
+    return enumMappings[key][value] || `Unknown (${value})`;
+  }
+
+  // SubjectArea
+  if (key === 'SubjectArea') {
+    return `[${value.join(', ')}]`;
+  }
+
+  // ExifVersion
+  if (key === 'ExifVersion') {
+    return value.join('.');
+  }
+
+  // Handle dimensions
+  if (key === 'PixelXDimension' || key === 'PixelYDimension') {
+    return `${value}px`;
+  }
+
+  // For any other numeric value, limit to 1 decimal point
   const num = parseFloat(value);
   if (!isNaN(num) && isFinite(num)) {
     // Check if it's a float with decimals
@@ -310,6 +517,85 @@ const formatExifValue = (value: any): string => {
 
   return String(value);
 };
+
+const formatExif = (exif: Record<string, any>): { important: Record<string, string>; additional: Record<string, string> } => {
+  const important: Record<string, string> = {};
+  const additional: Record<string, string> = {};
+
+  // Common EXIF fields with friendly names
+  const fieldMappings: Record<string, string> = {
+    Make: "Camera Make",
+    Model: "Camera Model",
+    FNumber: "Aperture",
+    ApertureValue: "Aperture",
+    ExposureTime: "Shutter Speed",
+    ShutterSpeedValue: "Shutter Speed",
+    ISOSpeedRatings: "ISO",
+    PhotographicSensitivity: "ISO",
+    FocalLength: "Focal Length",
+    FocalLenIn35mmFilm: "Focal Length (35mm equiv)",
+    DateTimeOriginal: "Date Taken",
+    DateTime: "Modified",
+    DateTimeDigitized: "Date Digitized",
+    ExposureProgram: "Exposure Mode",
+    ExposureBiasValue: "Exposure Compensation",
+  };
+
+  // Most important fields - shown by default
+  const importantFields = [
+    "DateTimeOriginal",
+    "Make",
+    "Model",
+    "LensModel",
+    "LensSpecification",
+    "FocalLenIn35mmFilm",
+    "FNumber",
+    "ApertureValue",
+    "ExposureTime",
+    "ShutterSpeedValue",
+    "ISO",
+    "ISOSpeedRatings",
+    "PhotographicSensitivity",
+    "Flash"
+  ];
+
+  // Create a set for quick lookup
+  const importantFieldsSet = new Set(importantFields);
+
+  // Add important fields first
+  for (const key of importantFields) {
+    if (exif[key] !== null && exif[key] !== undefined && exif[key] !== "") {
+      const displayKey = fieldMappings[key] || formatExifKey(key);
+      const formattedValue = formatExifValue(key, exif[key]);
+      if (formattedValue && !important[displayKey]) {
+        important[displayKey] = formattedValue;
+      }
+    }
+  }
+
+  // Add remaining fields to additional
+  for (const [key, value] of Object.entries(exif)) {
+    if (value !== null && value !== undefined && value !== "") {
+      const displayKey = fieldMappings[key] || formatExifKey(key);
+      // Skip if already in important fields
+      if (!importantFieldsSet.has(key) && !important[displayKey]) {
+        const formattedValue = formatExifValue(key, value);
+        if (formattedValue) {
+          additional[displayKey] = formattedValue;
+        }
+      }
+    }
+  }
+
+  return { important, additional };
+};
+
+const formattedExif = computed(() => {
+  if (!photo.value?.exif) {
+    return { important: {}, additional: {} };
+  }
+  return formatExif(photo.value.exif);
+});
 
 const hasPhotoProperties = computed(() => {
   if (!photo.value) return false;
@@ -386,6 +672,7 @@ onMounted(() => {
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }
@@ -543,6 +830,14 @@ onMounted(() => {
   word-break: break-word;
 }
 
+.metadata-item .value.code {
+  font-family: "Courier New", monospace;
+  font-size: 0.875rem;
+  background: #2a2a2a;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
 .tags {
   display: flex;
   flex-wrap: wrap;
@@ -561,27 +856,34 @@ onMounted(() => {
 }
 
 .tag.favorite {
-  background: #ffd700;
-  color: #000;
-  border-color: #ffd700;
+  background: #fbbf24;
+  color: #1e1e1e;
+  border-color: #f59e0b;
+  font-weight: 600;
 }
 
 .tag.album {
   background: #667eea;
   color: white;
-  border-color: #667eea;
+  border-color: #5568d3;
 }
 
 .tag.keyword {
-  background: #48bb78;
+  background: #10b981;
   color: white;
-  border-color: #48bb78;
+  border-color: #059669;
+}
+
+.tag.label {
+  background: #8b5cf6;
+  color: white;
+  border-color: #7c3aed;
 }
 
 .tag.person {
-  background: #ed64a6;
+  background: #ec4899;
   color: white;
-  border-color: #ed64a6;
+  border-color: #db2777;
 }
 
 .exif-data {
@@ -615,5 +917,49 @@ onMounted(() => {
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid #3a3a3a;
+}
+
+/* EXIF details disclosure */
+.exif-details {
+  margin-top: 1rem;
+}
+
+.exif-details summary {
+  cursor: pointer;
+  color: #667eea;
+  font-weight: 500;
+  padding: 0.5rem 0;
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+}
+
+.exif-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.exif-details summary::before {
+  content: "▶";
+  display: inline-block;
+  margin-right: 0.5rem;
+  transition: transform 0.2s;
+  font-size: 0.75rem;
+}
+
+.exif-details[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.exif-details summary:hover {
+  color: #7c8ef8;
+}
+
+.exif-details[open] {
+  margin-bottom: 0.5rem;
+}
+
+.exif-details[open] .metadata-item:first-of-type {
+  margin-top: 0.75rem;
 }
 </style>

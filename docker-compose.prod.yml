@@ -1,10 +1,10 @@
 # Production override for PhotoSafe Docker Compose
 #
 # Usage:
-#   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 #
 # Or with environment file:
-#   docker-compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d
 #
 # This override file removes development volume mounts and uses the code
 # baked into the Docker images instead.

@@ -34,18 +34,10 @@ export const getDetailImageUrl = (photo: Photo | null): string => {
   if (photo.versions && photo.versions.length > 0) {
     // Sort versions by size/resolution to get the largest one
     const sortedVersions = [...photo.versions].sort((a, b) => {
-      // Primary sort by size (file size in bytes)
-      if (a.size && b.size) {
-        return b.size - a.size;
-      }
-      // Secondary sort by dimensions (width * height)
-      const aArea = (a.width || 0) * (a.height || 0);
-      const bArea = (b.width || 0) * (b.height || 0);
-      if (aArea !== bArea) {
-        return bArea - aArea;
-      }
-      // Tertiary: prefer original, then edited, then derivatives
       const versionPriority: Record<string, number> = {
+        full: 5,
+        large: 4,
+        medium: 4,
         original: 3,
         edited: 2,
       };
@@ -72,6 +64,52 @@ export const getDetailImageUrl = (photo: Photo | null): string => {
   ];
 
   const url = candidates.map(buildS3Url).find(Boolean) || photo.url || "";
+
+  return url;
+};
+
+/**
+ * Get the direct S3 share URL for a photo, prioritizing medium or edited versions
+ * @param photo - The photo object
+ * @returns The direct S3 URL for sharing, or empty string if not available
+ */
+export const getShareUrl = (photo: Photo | null): string => {
+  if (!photo) return "";
+
+  // Priority order: medium, edited, original
+  const versionPriority: Record<string, number> = {
+    full: 4,
+    medium: 3,
+    edited: 2,
+    original: 1,
+  };
+
+  // If versions array is available, find the best share version
+  if (photo.versions && photo.versions.length > 0) {
+    // Sort by priority
+    const sortedVersions = [...photo.versions].sort((a, b) => {
+      const aPriority = versionPriority[a.version] || 0;
+      const bPriority = versionPriority[b.version] || 0;
+      return bPriority - aPriority;
+    });
+
+    // Use the highest priority version
+    const bestVersion = sortedVersions[0];
+    if (bestVersion?.s3_path) {
+      const url = buildS3Url(bestVersion.s3_path);
+      if (url) return url;
+    }
+  }
+
+  // Fallback to individual S3 path fields
+  // Prioritize edited, then original
+  const candidates = [
+    photo.s3_edited_path,
+    photo.s3_original_path,
+    photo.s3_key_path,
+  ];
+
+  const url = candidates.map(buildS3Url).find(Boolean) || "";
 
   return url;
 };
