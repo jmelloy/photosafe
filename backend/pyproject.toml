@@ -31,6 +31,7 @@ dependencies = [
     "pytz>=2024.1",
     "ruff>=0.14.10",
     "python-gazetteer>=0.1.0",
+    "pillow-heif>=1.1.1",
 ]
 
 [project.optional-dependencies]

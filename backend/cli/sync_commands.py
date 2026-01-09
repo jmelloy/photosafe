@@ -9,6 +9,11 @@ from datetime import timezone
 import boto3
 import click
 from dateutil import parser
+from PIL import Image
+from pillow_heif import register_heif_opener
+
+register_heif_opener()
+
 
 # Constants
 MACOS_LIBRARY_NAME = "macOS Photos"
@@ -55,6 +60,21 @@ def sync():
     pass
 
 
+def get_filesize(path):
+    try:
+        return os.path.getsize(path)
+    except Exception:
+        return None
+
+
+def get_photo_size(path):
+    try:
+        with Image.open(path) as img:
+            return img.width, img.height
+    except Exception:
+        return None, None
+
+
 @sync.command()
 @click.option(
     "--bucket",
@@ -89,8 +109,96 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
 
     from cli.sync_tools import DateTimeEncoder, PhotoSafeAuth
 
+    def get_versions(photo: osxphotos.PhotoInfo):
+        vers = []
+        dt = photo.date.astimezone(timezone.utc).strftime("%Y/%m/%d")
+        uuid = photo._info["cloudAssetGUID"]
+
+        base = os.path.join(username, dt, uuid)
+        filename = photo.original_filename
+        if photo.path:
+            ext = os.path.splitext(photo.path)[1]
+            path = os.path.join(base, "original", filename)
+            size = get_filesize(photo.path)
+            width, height = get_photo_size(photo.path)
+            vers.append(
+                {
+                    "version": "original",
+                    "s3_path": path,
+                    "filename": filename,
+                    "width": width,
+                    "height": height,
+                    "size": size,
+                    "type": ext.lstrip(".").lower(),
+                    "path": photo.path,
+                }
+            )
+        if photo.path_live_photo:
+            ext = os.path.splitext(photo.path_live_photo)[1]
+            path = os.path.join(base, "live", os.path.splitext(filename)[0] + ext)
+            size = get_filesize(photo.path_live_photo)
+            width, height = get_photo_size(photo.path_live_photo)
+            vers.append(
+                {
+                    "version": "live",
+                    "s3_path": path,
+                    "filename": os.path.splitext(filename)[0] + ext,
+                    "width": width,
+                    "height": height,
+                    "size": size,
+                    "type": ext.lstrip(".").lower(),
+                    "path": photo.path_live_photo,
+                }
+            )
+
+        d = {path: get_photo_size(path) for path in photo.path_derivatives or []}
+        derivatives = sorted(
+            d.items(), key=lambda x: x[1][0] * x[1][1] if x[1][0] and x[1][1] else 0
+        )
+        if derivatives:
+            click.echo(f"Found {len(derivatives)} derivatives for photo {photo.uuid}")
+            thumbnail = derivatives[0][0]
+            ext = os.path.splitext(thumbnail)[1]
+            path = os.path.join(base, "thumbnail", os.path.splitext(filename)[0] + ext)
+            width, height = derivatives[0][1]
+
+            vers.append(
+                {
+                    "version": "thumb",
+                    "s3_path": path,
+                    "filename": os.path.splitext(filename)[0] + ext,
+                    "width": width,
+                    "height": height,
+                    "size": get_filesize(thumbnail),
+                    "type": ext.lstrip(".").lower(),
+                    "path": thumbnail,
+                }
+            )
+
+            medium = derivatives[-1][0]
+            if medium != thumbnail:
+                ext = os.path.splitext(medium)[1]
+                path = os.path.join(base, "medium", os.path.splitext(filename)[0] + ext)
+                width, height = derivatives[-1][1]
+                vers.append(
+                    {
+                        "version": "medium",
+                        "s3_path": path,
+                        "filename": os.path.splitext(filename)[0] + ext,
+                        "width": width,
+                        "height": height,
+                        "size": get_filesize(medium),
+                        "type": ext.lstrip(".").lower(),
+                        "path": medium,
+                    }
+                )
+        return vers
+
     photos_db = osxphotos.PhotosDB()
     base_path = photos_db.library_path
+    if not base_path:
+        click.echo("Error: Could not determine Photos library path", err=True)
+        raise click.Abort()
 
     # Initialize S3 client
     s3 = boto3.client("s3", "us-west-2")
@@ -178,7 +286,7 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
 
         p["uuid"] = photo._info["cloudAssetGUID"]
         for k, v in p.items():
-            if v and type(v) is str and base_path in v:
+            if base_path and v and type(v) is str and base_path in v:
                 p[k] = v.replace(base_path, "")
 
         # Clean up None values to prevent null insertions
@@ -202,7 +310,9 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
                 click.echo(f"Error deleting photo {photo.uuid}: {str(e)}", err=True)
                 return
 
-        p["search_info"] = photo.search_info.asdict()
+        if photo.search_info:
+            p["search_info"] = photo.search_info.asdict()
+
         # Write JSON file if requested
         if output_json:
             dt = photo.date.astimezone(timezone.utc)
@@ -220,117 +330,19 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
             )
 
             if r.status_code == 404:
-                # Photo not found on server
-                # Check if we should create it with versions
-                should_create = False
-                has_original = False
-
                 # Check if photo is not in trash
-                if not p.get("intrash", False):
-                    # Check if we have an original path (looking for /originals/ directory)
-                    if photo.path and "/originals/" in photo.path.lower():
-                        should_create = True
-                        has_original = True
-
-                if should_create:
+                if photo.path and "/originals/" in photo.path.lower():
                     click.echo(
                         f"Creating photo {p['uuid'].lower()} {photo.original_filename} with versions"
                     )
 
                     # Build versions list
-                    versions = []
-
-                    # Add original version if available
-                    if has_original and photo.path:
-                        base, ext = os.path.splitext(photo.path)
-                        versions.append(
-                            {
-                                "version": "original",
-                                "s3_path": f"{username}/originals/{p['uuid'][0:1]}/{p['uuid']}{ext}",
-                                "filename": photo.original_filename,
-                                "width": p.get("width"),
-                                "height": p.get("height"),
-                                "size": p.get("original_filesize"),
-                                "type": ext.lstrip(".").lower(),
-                            }
-                        )
-
-                    # Add edited version if available
-                    if hasattr(photo, "path_edited") and photo.path_edited:
-                        base, ext = os.path.splitext(photo.path_edited)
-                        versions.append(
-                            {
-                                "version": "edited",
-                                "s3_path": f"{username}/edited/{p['uuid'][0:1]}/{p['uuid']}{ext}",
-                                "filename": f"{os.path.splitext(photo.original_filename)[0]}_edited{ext}",
-                                "width": p.get("width"),
-                                "height": p.get("height"),
-                                "size": None,
-                                "type": ext.lstrip(".").lower(),
-                            }
-                        )
-
-                    # Add derivative/thumbnail versions if available
-                    # osxphotos doesn't expose path_derivatives directly in the public API,
-                    # but we can check for common derivative paths
-                    if hasattr(photo, "path_derivatives") and photo.path_derivatives:
-                        for i, deriv_path in enumerate(photo.path_derivatives):
-                            base, ext = os.path.splitext(deriv_path)
-                            versions.append(
-                                {
-                                    "version": f"derivative_{i}",
-                                    "s3_path": f"{username}/thumbnails/{p['uuid'][0:1]}/{p['uuid']}_{i}{ext}",
-                                    "filename": f"{os.path.splitext(photo.original_filename)[0]}_thumb_{i}{ext}",
-                                    "width": None,
-                                    "height": None,
-                                    "size": None,
-                                    "type": ext.lstrip(".").lower(),
-                                }
-                            )
-
-                    # Add versions to photo data
-                    if versions:
-                        p["versions"] = versions
-
-                    # Upload files to S3 before creating photo record
-                    try:
-                        # Upload original file
-                        if has_original and photo.path and os.path.exists(photo.path):
-                            base, ext = os.path.splitext(photo.path)
-                            s3_key = f"{username}/originals/{p['uuid'][0:1]}/{p['uuid']}{ext}"
-                            click.echo(f"Uploading original to S3: {s3_key}")
-                            s3.upload_file(photo.path, bucket, s3_key)
-
-                        # Upload edited file if available
-                        if (
-                            hasattr(photo, "path_edited")
-                            and photo.path_edited
-                            and os.path.exists(photo.path_edited)
-                        ):
-                            base, ext = os.path.splitext(photo.path_edited)
-                            s3_key = (
-                                f"{username}/edited/{p['uuid'][0:1]}/{p['uuid']}{ext}"
-                            )
-                            click.echo(f"Uploading edited to S3: {s3_key}")
-                            s3.upload_file(photo.path_edited, bucket, s3_key)
-
-                        # Upload derivative/thumbnail files if available
-                        if (
-                            hasattr(photo, "path_derivatives")
-                            and photo.path_derivatives
-                        ):
-                            for i, deriv_path in enumerate(photo.path_derivatives):
-                                if os.path.exists(deriv_path):
-                                    base, ext = os.path.splitext(deriv_path)
-                                    s3_key = f"{username}/thumbnails/{p['uuid'][0:1]}/{p['uuid']}_{i}{ext}"
-                                    click.echo(f"Uploading thumbnail to S3: {s3_key}")
-                                    s3.upload_file(deriv_path, bucket, s3_key)
-                    except Exception as upload_error:
-                        click.echo(
-                            f"Error uploading files to S3 for {photo.uuid}: {str(upload_error)}",
-                            err=True,
-                        )
-                        # Continue to create photo even if upload fails
+                    versions = get_versions(photo)
+                    for v in versions:
+                        # Remove local path from version info before sending to server
+                        if "path" in v:
+                            s3.upload_file(v["path"], bucket, v["s3_path"])
+                            del v["path"]
 
                     # Try to create the photo
                     try:
@@ -470,7 +482,7 @@ def icloud(
     import boto3
     from tqdm import tqdm
 
-    from cli.sync_tools import (
+    from .sync_tools import (
         DateTimeEncoder,
         PhotoSafeAuth,
         authenticate_icloud,
@@ -727,9 +739,6 @@ def icloud(
                         type=path.split(".")[-1].lower(),
                     )
                 )
-
-                if version == "original":
-                    data["file_size"] = details["size"]
 
             # Add photo to batch
             photo_batch.append(data)
