@@ -646,7 +646,9 @@ class Task(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True, index=True)
     name: str = Field(sa_type=String)
     task_type: str = Field(sa_type=String, index=True)
-    status: str = Field(default="pending", sa_type=String, index=True)  # pending, running, completed, failed
+    status: str = Field(
+        default="pending", sa_type=String, index=True
+    )  # pending, running, completed, failed
     progress: int = Field(default=0)  # 0-100
     total: Optional[int] = None
     processed: int = Field(default=0)

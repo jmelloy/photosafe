@@ -27,7 +27,7 @@ async def get_search_filters(
     current_user: User = Depends(get_current_active_user),
 ):
     """Get available search filter values from search_data table"""
-    
+
     # Get all search data entries for photos owned by current user
     # Join with photos to filter by owner
     query = (
@@ -37,9 +37,9 @@ async def get_search_filters(
         .where(Photo.deleted_at.is_(None))
         .distinct()
     )
-    
+
     results = db.exec(query).all()
-    
+
     # Organize by key
     filters = {
         "places": set(),
@@ -49,7 +49,7 @@ async def get_search_filters(
         "albums": set(),
         "libraries": set(),
     }
-    
+
     for key, value in results:
         if key == "place":
             filters["places"].add(value)
@@ -63,7 +63,7 @@ async def get_search_filters(
             filters["albums"].add(value)
         elif key == "library":
             filters["libraries"].add(value)
-    
+
     return SearchFiltersResponse(
         places=sorted(list(filters["places"])),
         labels=sorted(list(filters["labels"])),
@@ -92,12 +92,12 @@ async def search_photos(
 ):
     """
     Search photos using the search_data table with multiple filter criteria.
-    
+
     Multiple values for each filter can be provided as comma-separated strings.
     Photos matching ANY value in a filter category will be included (OR within category).
     Photos must match ALL specified filter categories (AND between categories).
-    
-    Example: places=Paris,London&labels=Sunset will find photos that are 
+
+    Example: places=Paris,London&labels=Sunset will find photos that are
     (in Paris OR London) AND (have Sunset label)
     """
     # Validate pagination parameters
@@ -107,7 +107,7 @@ async def search_photos(
         page_size = 50
     if page_size > 100:
         page_size = 100
-    
+
     # Start with base query for user's photos
     query = (
         select(Photo)
@@ -115,16 +115,16 @@ async def search_photos(
         .where(Photo.deleted_at.is_(None))
         .options(joinedload(Photo.versions))
     )
-    
+
     # Build search conditions from search_data table
     search_conditions = []
-    
+
     # Helper function to parse comma-separated values
     def parse_filter_values(value_str: Optional[str]) -> List[str]:
         if not value_str:
             return []
         return [v.strip() for v in value_str.split(",") if v.strip()]
-    
+
     # Parse filter values
     place_values = parse_filter_values(places)
     label_values = parse_filter_values(labels)
@@ -132,10 +132,10 @@ async def search_photos(
     person_values = parse_filter_values(persons)
     album_values = parse_filter_values(albums)
     library_values = parse_filter_values(libraries)
-    
+
     # For each filter category with values, find matching photo UUIDs
     matching_photo_sets = []
-    
+
     if place_values:
         place_query = (
             select(SearchData.photo_uuid)
@@ -145,7 +145,7 @@ async def search_photos(
         matching_photos = db.exec(place_query).all()
         if matching_photos:
             matching_photo_sets.append(set(matching_photos))
-    
+
     if label_values:
         label_query = (
             select(SearchData.photo_uuid)
@@ -155,7 +155,7 @@ async def search_photos(
         matching_photos = db.exec(label_query).all()
         if matching_photos:
             matching_photo_sets.append(set(matching_photos))
-    
+
     if keyword_values:
         keyword_query = (
             select(SearchData.photo_uuid)
@@ -165,7 +165,7 @@ async def search_photos(
         matching_photos = db.exec(keyword_query).all()
         if matching_photos:
             matching_photo_sets.append(set(matching_photos))
-    
+
     if person_values:
         person_query = (
             select(SearchData.photo_uuid)
@@ -175,7 +175,7 @@ async def search_photos(
         matching_photos = db.exec(person_query).all()
         if matching_photos:
             matching_photo_sets.append(set(matching_photos))
-    
+
     if album_values:
         album_query = (
             select(SearchData.photo_uuid)
@@ -185,7 +185,7 @@ async def search_photos(
         matching_photos = db.exec(album_query).all()
         if matching_photos:
             matching_photo_sets.append(set(matching_photos))
-    
+
     if library_values:
         library_query = (
             select(SearchData.photo_uuid)
@@ -195,7 +195,7 @@ async def search_photos(
         matching_photos = db.exec(library_query).all()
         if matching_photos:
             matching_photo_sets.append(set(matching_photos))
-    
+
     # Apply text search across title and description in search_data
     if search_text:
         text_query = (
@@ -206,7 +206,7 @@ async def search_photos(
         matching_photos = db.exec(text_query).all()
         if matching_photos:
             matching_photo_sets.append(set(matching_photos))
-    
+
     # Intersect all matching photo sets (AND logic between categories)
     if matching_photo_sets:
         final_photo_uuids = set.intersection(*matching_photo_sets)
@@ -227,7 +227,7 @@ async def search_photos(
             page_size=page_size,
             has_more=False,
         )
-    
+
     # Apply date range filters directly on Photo table
     if start_date:
         try:
@@ -235,7 +235,7 @@ async def search_photos(
             query = query.where(Photo.date >= start_dt)
         except ValueError:
             pass  # Skip invalid date format
-    
+
     if end_date:
         try:
             end_dt = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
@@ -244,20 +244,20 @@ async def search_photos(
             query = query.where(Photo.date <= end_dt)
         except ValueError:
             pass  # Skip invalid date format
-    
+
     # Calculate offset
     skip = (page - 1) * page_size
-    
+
     # Get photos with pagination (fetch one extra to check for more pages)
     photos = (
         db.exec(query.order_by(Photo.date.desc()).offset(skip).limit(page_size + 1))
         .unique()
         .all()
     )
-    
+
     # Check if there are more pages
     has_more = len(photos) > page_size
-    
+
     return PaginatedPhotosResponse(
         items=[create_photo_response(photo) for photo in photos[:page_size]],
         page=page,
