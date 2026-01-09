@@ -540,7 +540,7 @@ def compare_versions_cmd(
                 sys.exit(1)
 
         # Print report
-        print_report(issues, show_orphaned or delete_orphaned)
+        print_report(issues)
 
         # Track initial orphaned count before deletion
         initial_orphaned_count = len(issues["orphaned_in_s3"])

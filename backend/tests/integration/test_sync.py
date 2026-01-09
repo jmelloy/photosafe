@@ -124,7 +124,7 @@ class TestSyncCommands:
         # Mock S3
         mock_s3 = MagicMock()
         mock_boto3.client.return_value = mock_s3
-        
+
         # Mock authentication
         mock_auth = MagicMock()
         mock_auth_class.return_value = mock_auth
@@ -133,18 +133,18 @@ class TestSyncCommands:
             "created": 1,
             "updated": 0,
             "errors": 0,
-            "results": [{"success": True, "uuid": "test-uuid"}]
+            "results": [{"success": True, "uuid": "test-uuid"}],
         }
-        
+
         # Mock iCloud API with libraries and shared albums
         mock_api = MagicMock()
         mock_authenticate.return_value = mock_api
-        
+
         # Mock a regular library
         mock_library = MagicMock()
         mock_library.all.fetch_records.return_value = []
         mock_api.photos.libraries = {"Primary": mock_library}
-        
+
         # Mock shared albums
         mock_shared_album = MagicMock()
         mock_photo = MagicMock()
@@ -161,7 +161,7 @@ class TestSyncCommands:
                 "filename": "shared-photo.jpg",
                 "width": 1000,
                 "height": 1000,
-                "size": 1000000
+                "size": 1000000,
             }
         }
         mock_photo.dimensions = [1000, 1000]
@@ -175,15 +175,15 @@ class TestSyncCommands:
         mock_photo.item_type = "image"
         mock_photo.fields = {}
         mock_photo.download = MagicMock()
-        
+
         mock_shared_album.photos = [mock_photo]
         mock_api.photos.shared_albums = {"Family Photos": mock_shared_album}
-        
+
         # Mock albums (for album_contains function)
         mock_api.photos.albums = MagicMock()
         mock_api.photos.albums.get.return_value = []
         mock_api.photos.albums.items.return_value = []
-        
+
         # Mock list_bucket
         with patch("cli.sync_commands.list_bucket", return_value=[]):
             # Mock shutil.rmtree to avoid actual file operations
@@ -194,21 +194,29 @@ class TestSyncCommands:
                         sync,
                         [
                             "icloud",
-                            "--username", "test",
-                            "--password", "test",
-                            "--icloud-username", "test@icloud.com",
-                            "--icloud-password", "testpass",
-                            "--bucket", "test-bucket",
-                            "--base-url", "http://localhost:8000",
-                            "--stop-after", "10",
-                            "--batch-size", "5",
+                            "--username",
+                            "test",
+                            "--password",
+                            "test",
+                            "--icloud-username",
+                            "test@icloud.com",
+                            "--icloud-password",
+                            "testpass",
+                            "--bucket",
+                            "test-bucket",
+                            "--base-url",
+                            "http://localhost:8000",
+                            "--stop-after",
+                            "10",
+                            "--batch-size",
+                            "5",
                         ],
                     )
-        
+
         assert result.exit_code == 0
         assert "Processing shared albums" in result.output
         assert "Shared Album: Shared: Family Photos" in result.output
-        
+
         # Verify that photos were sent via batch POST
         assert mock_auth.post.called
 

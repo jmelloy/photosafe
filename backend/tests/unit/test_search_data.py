@@ -209,4 +209,6 @@ def test_populate_search_data_with_duplicates(db_session, test_user):
     assert search_dict["person"].count("John") == 1
 
     assert "album" in search_dict
-    assert search_dict["album"].count("Summer 2023") == 1  # only one "Summer 2023" entry
+    assert (
+        search_dict["album"].count("Summer 2023") == 1
+    )  # only one "Summer 2023" entry

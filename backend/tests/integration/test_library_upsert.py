@@ -200,13 +200,18 @@ def test_patch_photo_library_user_isolation(client, db_session):
     assert len(libraries) == 2
 
     from app.models import User
+
     # Get user IDs
     user1 = db_session.exec(select(User).where(User.username == "user1")).first()
     user2 = db_session.exec(select(User).where(User.username == "user2")).first()
 
     # Verify each user has their own library
-    user1_libs = db_session.exec(select(Library).where(Library.owner_id == user1.id)).all()
-    user2_libs = db_session.exec(select(Library).where(Library.owner_id == user2.id)).all()
+    user1_libs = db_session.exec(
+        select(Library).where(Library.owner_id == user1.id)
+    ).all()
+    user2_libs = db_session.exec(
+        select(Library).where(Library.owner_id == user2.id)
+    ).all()
     assert len(user1_libs) == 1
     assert len(user2_libs) == 1
     assert user1_libs[0].name == "Shared Name"

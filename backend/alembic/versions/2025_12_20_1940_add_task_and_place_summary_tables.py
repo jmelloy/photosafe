@@ -59,17 +59,35 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("place_name"),
     )
-    op.create_index(op.f("ix_place_summaries_id"), "place_summaries", ["id"], unique=False)
-    op.create_index(op.f("ix_place_summaries_place_name"), "place_summaries", ["place_name"], unique=True)
-    op.create_index(op.f("ix_place_summaries_country"), "place_summaries", ["country"], unique=False)
-    op.create_index(op.f("ix_place_summaries_state_province"), "place_summaries", ["state_province"], unique=False)
-    op.create_index(op.f("ix_place_summaries_city"), "place_summaries", ["city"], unique=False)
+    op.create_index(
+        op.f("ix_place_summaries_id"), "place_summaries", ["id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_place_summaries_place_name"),
+        "place_summaries",
+        ["place_name"],
+        unique=True,
+    )
+    op.create_index(
+        op.f("ix_place_summaries_country"), "place_summaries", ["country"], unique=False
+    )
+    op.create_index(
+        op.f("ix_place_summaries_state_province"),
+        "place_summaries",
+        ["state_province"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_place_summaries_city"), "place_summaries", ["city"], unique=False
+    )
 
 
 def downgrade() -> None:
     # Drop place_summaries table
     op.drop_index(op.f("ix_place_summaries_city"), table_name="place_summaries")
-    op.drop_index(op.f("ix_place_summaries_state_province"), table_name="place_summaries")
+    op.drop_index(
+        op.f("ix_place_summaries_state_province"), table_name="place_summaries"
+    )
     op.drop_index(op.f("ix_place_summaries_country"), table_name="place_summaries")
     op.drop_index(op.f("ix_place_summaries_place_name"), table_name="place_summaries")
     op.drop_index(op.f("ix_place_summaries_id"), table_name="place_summaries")

@@ -63,7 +63,9 @@ class TestGetS3ObjectsFromCsv:
         with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
             writer = csv.writer(f)
             writer.writerow(["Key", "Size", "LastModifiedDate", "ETag"])
-            writer.writerow(["photos/img1.jpg", "1024", "2023-01-01T00:00:00Z", '"abc123"'])
+            writer.writerow(
+                ["photos/img1.jpg", "1024", "2023-01-01T00:00:00Z", '"abc123"']
+            )
             csv_path = f.name
 
         try:
@@ -104,16 +106,20 @@ class TestCompareVersions:
 
         # Check orphaned files
         assert len(result["orphaned_in_s3"]) == 2
-        
+
         orphaned = result["orphaned_in_s3"]
         orphaned_paths = [item["s3_path"] for item in orphaned]
-        
+
         assert "photos/orphan1.jpg" in orphaned_paths
         assert "photos/orphan2.jpg" in orphaned_paths
 
         # Find orphan1 and orphan2
-        orphan1 = next(item for item in orphaned if item["s3_path"] == "photos/orphan1.jpg")
-        orphan2 = next(item for item in orphaned if item["s3_path"] == "photos/orphan2.jpg")
+        orphan1 = next(
+            item for item in orphaned if item["s3_path"] == "photos/orphan1.jpg"
+        )
+        orphan2 = next(
+            item for item in orphaned if item["s3_path"] == "photos/orphan2.jpg"
+        )
 
         assert orphan1["size"] == 512345
         assert orphan1["bucket"] == "test-bucket"
@@ -217,15 +223,23 @@ class TestPrintReport:
             "size_mismatch": [],
             "missing_photos": [],
             "orphaned_in_s3": [
-                {"s3_path": "photos/orphan1.jpg", "size": 512345, "bucket": "test-bucket"},
-                {"s3_path": "photos/orphan2.jpg", "size": 3145728, "bucket": "test-bucket"},
+                {
+                    "s3_path": "photos/orphan1.jpg",
+                    "size": 512345,
+                    "bucket": "test-bucket",
+                },
+                {
+                    "s3_path": "photos/orphan2.jpg",
+                    "size": 3145728,
+                    "bucket": "test-bucket",
+                },
             ],
         }
 
         print_report(issues, show_orphaned=True)
 
         captured = capsys.readouterr()
-        
+
         # Check that size is displayed
         assert "MB" in captured.out
         assert "KB" in captured.out
@@ -239,14 +253,18 @@ class TestPrintReport:
             "size_mismatch": [],
             "missing_photos": [],
             "orphaned_in_s3": [
-                {"s3_path": "photos/orphan1.jpg", "size": 512345, "bucket": "test-bucket"},
+                {
+                    "s3_path": "photos/orphan1.jpg",
+                    "size": 512345,
+                    "bucket": "test-bucket",
+                },
             ],
         }
 
         print_report(issues, show_orphaned=False)
 
         captured = capsys.readouterr()
-        
+
         # Check that count and total size are shown but not details
         assert "1 files" in captured.out
         assert "MB" in captured.out

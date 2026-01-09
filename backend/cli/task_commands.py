@@ -9,6 +9,7 @@ from typing import Optional
 
 from app.database import engine
 from app.models import Photo, Task, PlaceSummary
+from app.utils import update_place_summary_for_photo
 
 
 @click.group()
@@ -132,9 +133,7 @@ def lookup_places(limit: Optional[int], dry_run: bool):
         if dry_run:
             click.echo("\nDry run - would process the following photos:")
             for photo in photos[:10]:
-                click.echo(
-                    f"  - {photo.uuid}: ({photo.latitude}, {photo.longitude})"
-                )
+                click.echo(f"  - {photo.uuid}: ({photo.latitude}, {photo.longitude})")
             if len(photos) > 10:
                 click.echo(f"  ... and {len(photos) - 10} more")
             return 0
@@ -265,9 +264,7 @@ def update_place_summary(rebuild: bool):
 
             # Extract place name (use country if no specific name)
             place_name = (
-                photo.place.get("name")
-                or photo.place.get("country")
-                or "Unknown"
+                photo.place.get("name") or photo.place.get("country") or "Unknown"
             )
 
             if place_name not in place_aggregates:
@@ -301,9 +298,7 @@ def update_place_summary(rebuild: bool):
             try:
                 # Check if record exists
                 existing = db.exec(
-                    select(PlaceSummary).where(
-                        PlaceSummary.place_name == place_name
-                    )
+                    select(PlaceSummary).where(PlaceSummary.place_name == place_name)
                 ).first()
 
                 if existing:
@@ -344,6 +339,95 @@ def update_place_summary(rebuild: bool):
 
         click.echo("\nCompleted!")
         click.echo(f"  Updated: {processed} place summaries")
+
+        return 0
+
+
+@task.command("backfill-place-summaries")
+@click.option(
+    "--rebuild",
+    is_flag=True,
+    help="Clear and rebuild all place summaries from scratch",
+)
+@click.option(
+    "--batch-size",
+    type=int,
+    default=100,
+    help="Number of photos to process before committing",
+)
+def backfill_place_summaries(rebuild: bool, batch_size: int):
+    """
+    Backfill place summaries for all photos with place data.
+
+    This command will create or update place summary records for all photos
+    that have place data. Use --rebuild to clear existing summaries and rebuild
+    from scratch.
+    """
+    click.echo("Backfilling place summaries...")
+
+    with Session(engine) as db:
+        # Clear existing data if rebuilding
+        if rebuild:
+            click.echo("Clearing existing place summaries...")
+            count = db.exec(select(PlaceSummary)).all()
+            db.exec(PlaceSummary.__table__.delete())
+            db.commit()
+            click.echo(f"Deleted {len(count)} existing summaries")
+
+        # Get all photos with place data
+        query = select(Photo).where(
+            and_(
+                Photo.place.isnot(None),
+                Photo.place != {},
+            )
+        )
+
+        photos = db.exec(query).all()
+
+        if not photos:
+            click.echo("No photos found with place data")
+            return 0
+
+        click.echo(f"Found {len(photos)} photos with place data")
+
+        # Create task
+        task_record = create_task(
+            db, "Backfill place summaries", "backfill_place_summaries", len(photos)
+        )
+        mark_task_running(db, task_record)
+
+        click.echo(f"Task created with ID: {task_record.id}")
+
+        processed = 0
+        errors = 0
+
+        for photo in photos:
+            try:
+                update_place_summary_for_photo(photo, db)
+                processed += 1
+
+                # Commit in batches
+                if processed % batch_size == 0:
+                    db.commit()
+                    update_task_progress(db, task_record, processed)
+                    click.echo(f"Processed {processed}/{len(photos)} photos...")
+
+            except Exception as e:
+                errors += 1
+                click.echo(f"Error processing photo {photo.uuid}: {e}", err=True)
+
+        # Final commit and task update
+        db.commit()
+        mark_task_completed(db, task_record)
+
+        # Count unique place summaries created
+        summary_count = db.exec(select(PlaceSummary)).all()
+
+        click.echo("\nCompleted!")
+        click.echo(f"  Processed: {processed} photos")
+        click.echo(f"  Place summaries: {len(summary_count)}")
+        if errors > 0:
+            click.echo(f"  Errors: {errors}")
 
         return 0
 

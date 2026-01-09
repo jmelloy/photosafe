@@ -34,7 +34,7 @@ def test_get_search_filters(client, auth_headers, test_user, db_session):
             owner_id=test_user.id,
         ),
     ]
-    
+
     for photo in photos:
         db_session.add(photo)
     db_session.commit()
@@ -42,6 +42,7 @@ def test_get_search_filters(client, auth_headers, test_user, db_session):
     # Populate search_data via the photos endpoint
     # (The populate_search_data_for_photo is called automatically in photo create/update)
     from app.utils import populate_search_data_for_photo
+
     for photo in photos:
         populate_search_data_for_photo(photo, db_session)
     db_session.commit()
@@ -88,13 +89,14 @@ def test_search_photos_by_label(client, auth_headers, test_user, db_session):
         labels=["mountain"],
         owner_id=test_user.id,
     )
-    
+
     db_session.add(photo1)
     db_session.add(photo2)
     db_session.commit()
 
     # Populate search_data
     from app.utils import populate_search_data_for_photo
+
     populate_search_data_for_photo(photo1, db_session)
     populate_search_data_for_photo(photo2, db_session)
     db_session.commit()
@@ -139,7 +141,7 @@ def test_search_photos_multiple_filters(client, auth_headers, test_user, db_sess
         keywords=["work"],
         owner_id=test_user.id,
     )
-    
+
     db_session.add(photo1)
     db_session.add(photo2)
     db_session.add(photo3)
@@ -147,6 +149,7 @@ def test_search_photos_multiple_filters(client, auth_headers, test_user, db_sess
 
     # Populate search_data
     from app.utils import populate_search_data_for_photo
+
     for photo in [photo1, photo2, photo3]:
         populate_search_data_for_photo(photo, db_session)
     db_session.commit()
@@ -188,7 +191,7 @@ def test_search_photos_multiple_values(client, auth_headers, test_user, db_sessi
         labels=["beach"],
         owner_id=test_user.id,
     )
-    
+
     db_session.add(photo1)
     db_session.add(photo2)
     db_session.add(photo3)
@@ -196,6 +199,7 @@ def test_search_photos_multiple_values(client, auth_headers, test_user, db_sessi
 
     # Populate search_data
     from app.utils import populate_search_data_for_photo
+
     for photo in [photo1, photo2, photo3]:
         populate_search_data_for_photo(photo, db_session)
     db_session.commit()
@@ -239,7 +243,7 @@ def test_search_photos_text_search(client, auth_headers, test_user, db_session):
         title="Beach Day",
         owner_id=test_user.id,
     )
-    
+
     db_session.add(photo1)
     db_session.add(photo2)
     db_session.add(photo3)
@@ -247,6 +251,7 @@ def test_search_photos_text_search(client, auth_headers, test_user, db_session):
 
     # Populate search_data
     from app.utils import populate_search_data_for_photo
+
     for photo in [photo1, photo2, photo3]:
         populate_search_data_for_photo(photo, db_session)
     db_session.commit()
