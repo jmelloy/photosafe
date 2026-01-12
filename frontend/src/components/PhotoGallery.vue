@@ -50,6 +50,7 @@
 import { ref, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRouter } from "vue-router";
 import type { Photo } from "../types/api";
+import { formatDate } from "../utils/format";
 
 interface PhotoGalleryProps {
   photos: Photo[];
@@ -69,18 +70,6 @@ const router = useRouter();
 
 const loadMoreTrigger = ref<HTMLElement | null>(null);
 let observer: IntersectionObserver | null = null;
-
-const formatDate = (dateString?: string): string => {
-  if (!dateString) return "Unknown";
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
 
 const openPhoto = (photo: Photo): void => {
   // Navigate to photo detail page

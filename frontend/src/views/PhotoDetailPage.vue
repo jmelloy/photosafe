@@ -187,6 +187,7 @@ import type { Photo } from "../types/api";
 import PhotoMap from "../components/PhotoMap.vue";
 import { formatPlace } from "../utils/formatPlace";
 import { getDetailImageUrl, getShareUrl } from "../utils/imageUrl";
+import { formatDate as formatDateUtil, formatFileSize } from "../utils/format";
 
 interface PhotoDetailPageProps {
   uuid: string;
@@ -272,47 +273,12 @@ const copyLink = async () => {
 const formatDate = (dateString?: string): string => {
   if (!dateString) return "Unknown";
 
-  // The timestamp is in UTC, so append 'Z'
-  const utcDateString = `${dateString}Z`;
-
-  console.log(`Parsing date string: ${utcDateString}`);
-
-  const date = new Date(utcDateString);
-
-  // Check if date is valid
-  if (isNaN(date.getTime())) {
-    return "Invalid Date";
-  }
-
   // Get the offset from EXIF data (e.g., "+05:00" or "-08:00")
   const offsetTime = photo.value?.exif?.OffsetTime || photo.value?.exif?.OffsetTimeOriginal;
 
-  if (offsetTime) {
-    // Parse the offset (e.g., "+05:00" -> +5 hours)
-    const match = offsetTime.match(/([+-])(\d{2}):(\d{2})/);
-    if (match) {
-      const sign = match[1] === '+' ? 1 : -1;
-      const hours = parseInt(match[2], 10);
-      const minutes = parseInt(match[3], 10);
-      const offsetMs = sign * (hours * 60 + minutes) * 60 * 1000;
-
-      // Apply the offset to get local time
-      const localDate = new Date(date.getTime() + offsetMs);
-
-      return localDate.toLocaleString("en-US");
-    }
-  }
-
-  // If no offset, just format the UTC time
-  return date.toLocaleString("en-US");
-
-};
-
-const formatFileSize = (bytes?: number): string => {
-  if (!bytes) return "Unknown";
-  if (bytes < 1024) return bytes + " B";
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  return formatDateUtil(dateString, {
+    exifOffset: offsetTime,
+  });
 };
 
 const formatExifKey = (key: string): string => {

@@ -57,6 +57,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { getPlaceSummaries } from "../api/places";
 import type { PlaceSummary } from "../types/api";
+import { formatDateRange } from "../utils/format";
 
 const router = useRouter();
 const mapContainer = ref<HTMLElement | null>(null);
@@ -176,18 +177,6 @@ const initMap = () => {
   if (bounds.length > 0) {
     map.fitBounds(bounds, { padding: [50, 50] });
   }
-};
-
-const formatDateRange = (startDate: string, endDate: string): string => {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const startYear = start.getFullYear();
-  const endYear = end.getFullYear();
-
-  if (startYear === endYear) {
-    return `Photos from ${startYear}`;
-  }
-  return `${startYear} - ${endYear}`;
 };
 
 const goBack = () => {
