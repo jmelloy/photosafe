@@ -7,8 +7,7 @@
 
     <!-- Loading state -->
     <div v-if="loading" class="loading">
-      <div class="spinner"></div>
-      <p>Loading photo...</p>
+      <LoadingSpinner message="Loading photo..." />
     </div>
 
     <!-- Error state -->
@@ -185,6 +184,7 @@ import { useRouter } from "vue-router";
 import { getPhoto } from "../api/photos";
 import type { Photo } from "../types/api";
 import PhotoMap from "../components/PhotoMap.vue";
+import LoadingSpinner from "../components/LoadingSpinner.vue";
 import { formatPlace } from "../utils/formatPlace";
 import { getDetailImageUrl, getShareUrl } from "../utils/imageUrl";
 import { formatDate as formatDateUtil, formatFileSize } from "../utils/format";
@@ -613,25 +613,6 @@ onMounted(() => {
   justify-content: center;
   min-height: 400px;
   color: #e0e0e0;
-}
-
-.spinner {
-  border: 4px solid #3a3a3a;
-  border-top: 4px solid #667eea;
-  border-radius: 50%;
-  width: 50px;
-  height: 50px;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
 }
 
 .error-state {
