@@ -51,7 +51,7 @@ export function formatDate(
   }
 
   // Default: full format with time
-  return date.toLocaleDateString("en-US", {
+  return date.toLocaleString("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
