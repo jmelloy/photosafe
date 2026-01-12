@@ -81,4 +81,9 @@ describe("formatDateRange", () => {
     const result = formatDateRange("2024-01-01T00:00:00", "2024-12-31T00:00:00");
     expect(result).toBe("Photos from 2024");
   });
+
+  it("should handle invalid dates gracefully", () => {
+    const result = formatDateRange("invalid-date", "2024-12-31T00:00:00");
+    expect(result).toBe("Invalid date range");
+  });
 });

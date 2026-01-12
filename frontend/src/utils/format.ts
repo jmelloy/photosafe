@@ -7,6 +7,8 @@
  * @param dateString - ISO date string (assumed to be UTC if no timezone)
  * @param options - Optional formatting options
  * @returns Formatted date string
+ * 
+ * @note Currently uses 'en-US' locale. Future enhancement: make locale configurable
  */
 export function formatDate(
   dateString?: string,
@@ -77,10 +79,18 @@ export function formatFileSize(bytes?: number): string {
  * @param startDate - Start date string
  * @param endDate - End date string
  * @returns Formatted date range string
+ * 
+ * @note Assumes valid ISO date strings. Invalid dates may produce unexpected results.
  */
 export function formatDateRange(startDate: string, endDate: string): string {
   const start = new Date(startDate);
   const end = new Date(endDate);
+  
+  // Handle invalid dates gracefully
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    return "Invalid date range";
+  }
+  
   const startYear = start.getFullYear();
   const endYear = end.getFullYear();
 
