@@ -3,51 +3,63 @@
  */
 
 /**
+ * Type guard for Axios-like error responses
+ */
+interface AxiosLikeError {
+  response?: {
+    status?: number;
+    data?: { detail?: string };
+  };
+  message?: string;
+  code?: string;
+}
+
+function isAxiosLikeError(error: unknown): error is AxiosLikeError {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    ("response" in error || "message" in error || "code" in error)
+  );
+}
+
+/**
  * Format an API error for display to users
  * @param error - The error object from the API call
  * @returns A user-friendly error message
  */
 export function formatApiError(error: unknown): string {
   // Handle Axios-like errors
-  if (typeof error === "object" && error !== null && "response" in error) {
-    const axiosError = error as {
-      response?: {
-        status?: number;
-        data?: { detail?: string };
-      };
-      message?: string;
-      code?: string;
-    };
+  if (isAxiosLikeError(error)) {
 
     // Handle specific HTTP status codes
-    if (axiosError.response?.status === 401) {
+    if (error.response?.status === 401) {
       return "Invalid username or password";
     }
 
-    if (axiosError.response?.status === 403) {
+    if (error.response?.status === 403) {
       return "You don't have permission to perform this action";
     }
 
-    if (axiosError.response?.status === 404) {
+    if (error.response?.status === 404) {
       return "The requested resource was not found";
     }
 
     // Handle network errors
     if (
-      axiosError.code === "ECONNREFUSED" ||
-      axiosError.message?.includes("Network Error")
+      error.code === "ECONNREFUSED" ||
+      error.message?.includes("Network Error")
     ) {
       return "Cannot connect to server. Is the backend running?";
     }
 
     // Return detailed error message if available
-    if (axiosError.response?.data?.detail) {
-      return axiosError.response.data.detail;
+    if (error.response?.data?.detail) {
+      return error.response.data.detail;
     }
 
     // Return generic message with error text if available
-    if (axiosError.message) {
-      return `An error occurred: ${axiosError.message}`;
+    if (error.message) {
+      return `An error occurred: ${error.message}`;
     }
   }
 
@@ -64,19 +76,12 @@ export function logError(context: string, error: unknown): void {
   console.error(`[${context}] Error:`, error);
 
   // Log additional details for Axios-like errors
-  if (typeof error === "object" && error !== null && "response" in error) {
-    const axiosError = error as {
-      response?: {
-        status?: number;
-        data?: unknown;
-      };
-      message?: string;
-    };
+  if (isAxiosLikeError(error)) {
 
     console.error(`[${context}] Details:`, {
-      message: axiosError.message,
-      status: axiosError.response?.status,
-      data: axiosError.response?.data,
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
     });
   }
 }

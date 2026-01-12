@@ -8,7 +8,7 @@
  * @param options - Optional formatting options
  * @returns Formatted date string
  * 
- * @note Currently uses 'en-US' locale. Future enhancement: make locale configurable
+ * @todo Make locale configurable for internationalization
  */
 export function formatDate(
   dateString?: string,
@@ -76,11 +76,11 @@ export function formatFileSize(bytes?: number): string {
 
 /**
  * Formats a date range, showing only years if the range spans multiple years
- * @param startDate - Start date string
- * @param endDate - End date string
- * @returns Formatted date range string
+ * @param startDate - Start date string (ISO format)
+ * @param endDate - End date string (ISO format)
+ * @returns Formatted date range string, or "Invalid date range" if dates are invalid
  * 
- * @note Assumes valid ISO date strings. Invalid dates may produce unexpected results.
+ * @note Validates dates and handles invalid inputs gracefully
  */
 export function formatDateRange(startDate: string, endDate: string): string {
   const start = new Date(startDate);
