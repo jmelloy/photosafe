@@ -37,6 +37,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { login } from "../api/auth";
+import { formatApiError, logError } from "../utils/errorHandling";
 
 interface LoginEmits {
   (e: "login-success"): void;
@@ -59,24 +60,9 @@ const handleLogin = async () => {
     await login(username.value, password.value);
     console.log("[Login] Login successful");
     emit("login-success");
-  } catch (err: any) {
-    console.error("Login error:", err);
-    console.error("Login error details:", {
-      message: err.message,
-      response: err.response,
-      status: err.response?.status,
-      data: err.response?.data,
-    });
-    if (err.response?.status === 401) {
-      error.value = "Invalid username or password";
-    } else if (
-      err.code === "ECONNREFUSED" ||
-      err.message?.includes("Network Error")
-    ) {
-      error.value = "Cannot connect to server. Is the backend running?";
-    } else {
-      error.value = `An error occurred: ${err.message || "Please try again."}`;
-    }
+  } catch (err: unknown) {
+    logError("Login", err);
+    error.value = formatApiError(err);
   } finally {
     loading.value = false;
   }
