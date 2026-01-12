@@ -15,8 +15,7 @@
         </div>
 
         <div v-else class="uploading">
-          <div class="spinner"></div>
-          <p>Uploading...</p>
+          <LoadingSpinner message="Uploading..." />
         </div>
       </div>
 
@@ -28,6 +27,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { uploadPhoto } from "../api/photos";
+import LoadingSpinner from "./LoadingSpinner.vue";
 
 interface PhotoUploadEmits {
   (e: "photo-uploaded"): void;
@@ -141,24 +141,5 @@ const uploadFile = async (file: File): Promise<void> => {
   flex-direction: column;
   align-items: center;
   gap: 1rem;
-}
-
-.spinner {
-  width: 48px;
-  height: 48px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #667eea;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
 }
 </style>

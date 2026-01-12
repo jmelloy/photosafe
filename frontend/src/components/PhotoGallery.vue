@@ -8,8 +8,7 @@
     </div>
 
     <div v-if="loading" class="loading">
-      <div class="spinner"></div>
-      <p>Loading photos...</p>
+      <LoadingSpinner message="Loading photos..." />
     </div>
 
     <div v-else-if="photos.length === 0" class="empty-state">
@@ -39,8 +38,7 @@
     <!-- Infinite scroll trigger (outside v-else so it's always present) -->
     <div ref="loadMoreTrigger" class="load-more-trigger" v-if="!loading && hasMore">
       <div v-if="loadingMore" class="loading-more">
-        <div class="spinner-small"></div>
-        <p>Loading more photos...</p>
+        <LoadingSpinner size="small" message="Loading more photos..." />
       </div>
     </div>
   </div>
@@ -50,6 +48,8 @@
 import { ref, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRouter } from "vue-router";
 import type { Photo } from "../types/api";
+import { formatDate } from "../utils/format";
+import LoadingSpinner from "./LoadingSpinner.vue";
 
 interface PhotoGalleryProps {
   photos: Photo[];
@@ -69,18 +69,6 @@ const router = useRouter();
 
 const loadMoreTrigger = ref<HTMLElement | null>(null);
 let observer: IntersectionObserver | null = null;
-
-const formatDate = (dateString?: string): string => {
-  if (!dateString) return "Unknown";
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
 
 const openPhoto = (photo: Photo): void => {
   // Navigate to photo detail page
@@ -182,26 +170,6 @@ onBeforeUnmount(() => {
   justify-content: center;
   padding: 4rem 2rem;
   color: #b0b0b0;
-}
-
-.spinner {
-  width: 48px;
-  height: 48px;
-  border: 4px solid #3a3a3a;
-  border-top: 4px solid #667eea;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 1rem;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
 }
 
 .empty-icon {
@@ -320,14 +288,5 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 1rem;
   color: #b0b0b0;
-}
-
-.spinner-small {
-  width: 32px;
-  height: 32px;
-  border: 3px solid #3a3a3a;
-  border-top: 3px solid #667eea;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
 }
 </style>

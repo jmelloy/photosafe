@@ -58,6 +58,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { register } from "../api/auth";
+import { formatApiError, logError } from "../utils/errorHandling";
 
 interface RegisterEmits {
   (e: "register-success"): void;
@@ -100,13 +101,9 @@ const handleRegister = async () => {
     setTimeout(() => {
       emit("register-success");
     }, 1000);
-  } catch (err: any) {
-    console.error("Registration error:", err);
-    if (err.response?.data?.detail) {
-      error.value = err.response.data.detail;
-    } else {
-      error.value = "An error occurred. Please try again.";
-    }
+  } catch (err: unknown) {
+    logError("Registration", err);
+    error.value = formatApiError(err);
   } finally {
     loading.value = false;
   }

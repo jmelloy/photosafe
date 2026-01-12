@@ -7,8 +7,7 @@
 
     <!-- Loading state -->
     <div v-if="loading" class="loading">
-      <div class="spinner"></div>
-      <p>Loading photo...</p>
+      <LoadingSpinner message="Loading photo..." />
     </div>
 
     <!-- Error state -->
@@ -185,8 +184,11 @@ import { useRouter } from "vue-router";
 import { getPhoto } from "../api/photos";
 import type { Photo } from "../types/api";
 import PhotoMap from "../components/PhotoMap.vue";
+import LoadingSpinner from "../components/LoadingSpinner.vue";
 import { formatPlace } from "../utils/formatPlace";
 import { getDetailImageUrl, getShareUrl } from "../utils/imageUrl";
+import { formatDate as formatDateUtil, formatFileSize } from "../utils/format";
+import { formatApiError, logError } from "../utils/errorHandling";
 
 interface PhotoDetailPageProps {
   uuid: string;
@@ -200,17 +202,6 @@ const loading = ref<boolean>(true);
 const error = ref<string>("");
 const copyLinkText = ref<string>("🔗 Share Link");
 
-// Type guard for Axios-like error responses
-interface AxiosLikeError {
-  response?: {
-    status?: number;
-  };
-}
-
-function isAxiosLikeError(error: unknown): error is AxiosLikeError {
-  return typeof error === "object" && error !== null && "response" in error;
-}
-
 const loadPhoto = async () => {
   loading.value = true;
   error.value = "";
@@ -218,18 +209,8 @@ const loadPhoto = async () => {
   try {
     photo.value = await getPhoto(props.uuid);
   } catch (err: unknown) {
-    console.error("Failed to load photo:", err);
-    if (isAxiosLikeError(err)) {
-      if (err.response?.status === 404) {
-        error.value = "The photo you're looking for doesn't exist.";
-      } else if (err.response?.status === 403) {
-        error.value = "You don't have permission to view this photo.";
-      } else {
-        error.value = "Failed to load photo. Please try again.";
-      }
-    } else {
-      error.value = "Failed to load photo. Please try again.";
-    }
+    logError("Load photo", err);
+    error.value = formatApiError(err);
   } finally {
     loading.value = false;
   }
@@ -272,47 +253,12 @@ const copyLink = async () => {
 const formatDate = (dateString?: string): string => {
   if (!dateString) return "Unknown";
 
-  // The timestamp is in UTC, so append 'Z'
-  const utcDateString = `${dateString}Z`;
-
-  console.log(`Parsing date string: ${utcDateString}`);
-
-  const date = new Date(utcDateString);
-
-  // Check if date is valid
-  if (isNaN(date.getTime())) {
-    return "Invalid Date";
-  }
-
   // Get the offset from EXIF data (e.g., "+05:00" or "-08:00")
   const offsetTime = photo.value?.exif?.OffsetTime || photo.value?.exif?.OffsetTimeOriginal;
 
-  if (offsetTime) {
-    // Parse the offset (e.g., "+05:00" -> +5 hours)
-    const match = offsetTime.match(/([+-])(\d{2}):(\d{2})/);
-    if (match) {
-      const sign = match[1] === '+' ? 1 : -1;
-      const hours = parseInt(match[2], 10);
-      const minutes = parseInt(match[3], 10);
-      const offsetMs = sign * (hours * 60 + minutes) * 60 * 1000;
-
-      // Apply the offset to get local time
-      const localDate = new Date(date.getTime() + offsetMs);
-
-      return localDate.toLocaleString("en-US");
-    }
-  }
-
-  // If no offset, just format the UTC time
-  return date.toLocaleString("en-US");
-
-};
-
-const formatFileSize = (bytes?: number): string => {
-  if (!bytes) return "Unknown";
-  if (bytes < 1024) return bytes + " B";
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  return formatDateUtil(dateString, {
+    exifOffset: offsetTime,
+  });
 };
 
 const formatExifKey = (key: string): string => {
@@ -667,25 +613,6 @@ onMounted(() => {
   justify-content: center;
   min-height: 400px;
   color: #e0e0e0;
-}
-
-.spinner {
-  border: 4px solid #3a3a3a;
-  border-top: 4px solid #667eea;
-  border-radius: 50%;
-  width: 50px;
-  height: 50px;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
 }
 
 .error-state {

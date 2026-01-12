@@ -7,8 +7,7 @@
 
     <!-- Loading state -->
     <div v-if="loading" class="loading">
-      <div class="spinner"></div>
-      <p>Loading photos with location data...</p>
+      <LoadingSpinner message="Loading photos with location data..." />
     </div>
 
     <!-- No photos state -->
@@ -57,6 +56,8 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { getPlaceSummaries } from "../api/places";
 import type { PlaceSummary } from "../types/api";
+import { formatDateRange } from "../utils/format";
+import LoadingSpinner from "../components/LoadingSpinner.vue";
 
 const router = useRouter();
 const mapContainer = ref<HTMLElement | null>(null);
@@ -178,18 +179,6 @@ const initMap = () => {
   }
 };
 
-const formatDateRange = (startDate: string, endDate: string): string => {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const startYear = start.getFullYear();
-  const endYear = end.getFullYear();
-
-  if (startYear === endYear) {
-    return `Photos from ${startYear}`;
-  }
-  return `${startYear} - ${endYear}`;
-};
-
 const goBack = () => {
   router.push("/");
 };
@@ -264,26 +253,6 @@ onUnmounted(() => {
   flex: 1;
   color: #e0e0e0;
   padding: 4rem;
-}
-
-.spinner {
-  border: 4px solid #3a3a3a;
-  border-top: 4px solid #667eea;
-  border-radius: 50%;
-  width: 50px;
-  height: 50px;
-  animation: spin 1s linear infinite;
-  margin-bottom: 1rem;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
 }
 
 .empty-icon {
