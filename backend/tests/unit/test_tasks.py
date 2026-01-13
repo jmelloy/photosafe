@@ -295,3 +295,71 @@ class TestPlaceSummaryAPI:
         assert response.status_code == 200
         summaries = response.json()
         assert len(summaries) == 5
+
+    def test_place_summary_level_filtering(self, client, auth_token, db_session):
+        """Test filtering place summaries by level"""
+        # Create summaries with different levels of detail
+        summary1 = PlaceSummary(
+            place_name="World Place",
+            country="Unknown",
+            photo_count=10,
+        )
+        summary2 = PlaceSummary(
+            place_name="Country Place",
+            country="USA",
+            photo_count=20,
+        )
+        summary3 = PlaceSummary(
+            place_name="State Place",
+            country="USA",
+            state_province="California",
+            photo_count=30,
+        )
+        summary4 = PlaceSummary(
+            place_name="City Place",
+            country="USA",
+            state_province="California",
+            city="San Francisco",
+            photo_count=40,
+        )
+        db_session.add_all([summary1, summary2, summary3, summary4])
+        db_session.commit()
+
+        # Test default level (2) - should return all places
+        response = client.get(
+            "/api/place-summaries",
+            headers={"Authorization": f"Bearer {auth_token}"},
+        )
+        assert response.status_code == 200
+        summaries = response.json()
+        assert len(summaries) == 4
+
+        # Test level 0 - should return all places
+        response = client.get(
+            "/api/place-summaries?level=0",
+            headers={"Authorization": f"Bearer {auth_token}"},
+        )
+        assert response.status_code == 200
+        summaries = response.json()
+        assert len(summaries) == 4
+
+        # Test level 3 - should only return places with state_province
+        response = client.get(
+            "/api/place-summaries?level=3",
+            headers={"Authorization": f"Bearer {auth_token}"},
+        )
+        assert response.status_code == 200
+        summaries = response.json()
+        assert len(summaries) == 2
+        assert all(s["state_province"] is not None for s in summaries)
+
+        # Test level 6 - should only return places with city
+        response = client.get(
+            "/api/place-summaries?level=6",
+            headers={"Authorization": f"Bearer {auth_token}"},
+        )
+        assert response.status_code == 200
+        summaries = response.json()
+        assert len(summaries) == 1
+        assert summaries[0]["city"] is not None
+        assert summaries[0]["place_name"] == "City Place"

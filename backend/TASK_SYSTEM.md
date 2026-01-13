@@ -106,15 +106,28 @@ photosafe task list --limit 50
 Get a list of place summaries with photo counts and date ranges.
 
 Query Parameters:
+- `level` (default: 2, range: 0-10): Zoom/aggregation level controlling place detail
+  - 0-2: Show all places (default)
+  - 3-5: Only show places with state/province information
+  - 6+: Only show places with city information
 - `country` (optional): Filter by country
 - `state_province` (optional): Filter by state/province
 - `limit` (default: 100, max: 1000): Maximum results
 - `offset` (default: 0): Pagination offset
 
-Example:
+Examples:
 ```bash
+# Get all places (default level 2)
 curl -H "Authorization: Bearer $TOKEN" \
   "http://localhost:8000/api/place-summaries?country=USA&limit=50"
+
+# Get only city-level places (level 6+)
+curl -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:8000/api/place-summaries?level=6&limit=50"
+
+# Get only state-level places (level 3-5)
+curl -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:8000/api/place-summaries?level=4&country=USA"
 ```
 
 **GET `/api/place-summaries/{id}`**

@@ -2,6 +2,7 @@ import api from "./client";
 import type { PlaceSummary } from "../types/api";
 
 export interface PlaceSummaryFilters {
+  level?: number;
   country?: string;
   state_province?: string;
   limit?: number;
@@ -14,6 +15,7 @@ export const getPlaceSummaries = async (
   const params: any = {};
 
   if (filters) {
+    if (filters.level !== undefined) params.level = filters.level;
     if (filters.country) params.country = filters.country;
     if (filters.state_province) params.state_province = filters.state_province;
     if (filters.limit !== undefined) params.limit = filters.limit;

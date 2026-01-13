@@ -13,6 +13,7 @@ router = APIRouter()
 
 @router.get("/place-summaries", response_model=List[PlaceSummaryRead])
 def get_place_summaries(
+    level: int = Query(2, ge=0, le=10, description="Zoom/aggregation level (0=world, 2=country, 5=state, 8=city)"),
     country: Optional[str] = Query(None, description="Filter by country"),
     state_province: Optional[str] = Query(None, description="Filter by state/province"),
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of results"),
@@ -25,8 +26,22 @@ def get_place_summaries(
 
     Returns aggregated place data with photo counts and date ranges.
     This is much faster than querying all photos for map display.
+    
+    The level parameter controls aggregation:
+    - 0-2: Show all places (default)
+    - 3-5: Filter to places with state/province
+    - 6+: Filter to places with city
     """
     query = select(PlaceSummary).order_by(PlaceSummary.photo_count.desc())
+
+    # Apply level-based filtering
+    if level >= 6:
+        # City level - require city to be set
+        query = query.where(PlaceSummary.city.isnot(None))
+    elif level >= 3:
+        # State/province level - require state_province to be set
+        query = query.where(PlaceSummary.state_province.isnot(None))
+    # Level 0-2: No additional filtering (show all places)
 
     # Apply filters
     if country:
