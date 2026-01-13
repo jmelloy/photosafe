@@ -8,9 +8,9 @@ from pathlib import Path
 from typing import List, Optional, Dict
 
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import joinedload
 from sqlalchemy import func, or_
-from sqlmodel import select
+from sqlmodel import select, Session
 
 from ..database import get_db
 from ..models import (
@@ -30,7 +30,6 @@ from ..utils import (
     handle_library_upsert,
     create_photo_response,
     populate_search_data_for_photo,
-    update_place_summary_for_photo,
 )
 
 router = APIRouter(prefix="/api/photos", tags=["photos"])
@@ -226,9 +225,6 @@ async def batch_create_or_update_photos(
                 # Update search_data
                 populate_search_data_for_photo(existing, db)
 
-                # Update place summary if place data exists
-                update_place_summary_for_photo(existing, db)
-
                 db.flush()
                 results.append(
                     BatchPhotoResult(
@@ -260,9 +256,6 @@ async def batch_create_or_update_photos(
 
                 # Populate search_data
                 populate_search_data_for_photo(db_photo, db)
-
-                # Update place summary if place data exists
-                update_place_summary_for_photo(db_photo, db)
 
                 db.flush()
                 results.append(

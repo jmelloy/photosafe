@@ -7,6 +7,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Table,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB, ARRAY, UUID
 from datetime import datetime, timezone
@@ -662,15 +663,22 @@ class Task(SQLModel, table=True):
 
 
 class PlaceSummary(SQLModel, table=True):
-    """Summary table for place data to enable efficient map queries"""
+    """Summary table for place data to enable efficient map queries
+    
+    One record per unique location (latitude, longitude pair).
+    Aggregates data from all photos at that location.
+    """
 
     __tablename__ = "place_summaries"
+    __table_args__ = (
+        UniqueConstraint('latitude', 'longitude', name='uq_place_summaries_lat_lon'),
+    )
 
     id: Optional[int] = Field(default=None, primary_key=True, index=True)
-    place_name: str = Field(sa_type=String, index=True, unique=True)
-    # Geographic info
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
+    place_name: str = Field(sa_type=String, index=True)
+    # Geographic info with unique constraint on coordinates
+    latitude: Optional[float] = Field(default=None, index=True)
+    longitude: Optional[float] = Field(default=None, index=True)
     # Aggregated data
     photo_count: int = Field(default=0)
     first_photo_date: Optional[datetime] = None

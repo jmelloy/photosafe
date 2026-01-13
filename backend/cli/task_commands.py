@@ -9,7 +9,7 @@ from typing import Optional
 
 from app.database import engine
 from app.models import Photo, Task, PlaceSummary
-from app.utils import update_place_summary_for_photo
+from app.utils import bulk_update_place_summaries
 
 
 @click.group()
@@ -374,60 +374,51 @@ def backfill_place_summaries(rebuild: bool, batch_size: int):
             db.commit()
             click.echo(f"Deleted {len(count)} existing summaries")
 
-        # Get all photos with place data
+        # Get count of photos with place data for task tracking
         query = select(Photo).where(
             and_(
                 Photo.place.isnot(None),
                 Photo.place != {},
+                Photo.latitude.isnot(None),
+                Photo.longitude.isnot(None),
             )
         )
 
         photos = db.exec(query).all()
+        photo_count = len(photos)
 
         if not photos:
             click.echo("No photos found with place data")
             return 0
 
-        click.echo(f"Found {len(photos)} photos with place data")
+        click.echo(f"Found {photo_count} photos with place data")
 
         # Create task
         task_record = create_task(
-            db, "Backfill place summaries", "backfill_place_summaries", len(photos)
+            db, "Backfill place summaries", "backfill_place_summaries", photo_count
         )
         mark_task_running(db, task_record)
 
         click.echo(f"Task created with ID: {task_record.id}")
 
-        processed = 0
-        errors = 0
+        try:
+            # Use bulk operation instead of per-photo loop
+            summary_count = bulk_update_place_summaries(db)
+            
+            click.echo(f"Processed {photo_count} photos...")
+            
+            # Update task progress
+            update_task_progress(db, task_record, photo_count)
+            mark_task_completed(db, task_record)
 
-        for photo in photos:
-            try:
-                update_place_summary_for_photo(photo, db)
-                processed += 1
-
-                # Commit in batches
-                if processed % batch_size == 0:
-                    db.commit()
-                    update_task_progress(db, task_record, processed)
-                    click.echo(f"Processed {processed}/{len(photos)} photos...")
-
-            except Exception as e:
-                errors += 1
-                click.echo(f"Error processing photo {photo.uuid}: {e}", err=True)
-
-        # Final commit and task update
-        db.commit()
-        mark_task_completed(db, task_record)
-
-        # Count unique place summaries created
-        summary_count = db.exec(select(PlaceSummary)).all()
-
-        click.echo("\nCompleted!")
-        click.echo(f"  Processed: {processed} photos")
-        click.echo(f"  Place summaries: {len(summary_count)}")
-        if errors > 0:
-            click.echo(f"  Errors: {errors}")
+            click.echo("\nCompleted!")
+            click.echo(f"  Processed: {photo_count} photos")
+            click.echo(f"  Place summaries created: {summary_count}")
+            
+        except Exception as e:
+            click.echo(f"Error during bulk update: {e}", err=True)
+            mark_task_failed(db, task_record, str(e))
+            raise
 
         return 0
 

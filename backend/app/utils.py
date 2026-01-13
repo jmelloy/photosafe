@@ -333,89 +333,92 @@ def populate_search_data_for_all_photos(db: Session) -> int:
     return count
 
 
-def update_place_summary_for_photo(photo: Photo, db: Session) -> None:
-    """Update place summary for a single photo with place data using PostgreSQL upsert
+def bulk_update_place_summaries(db: Session) -> int:
+    """Bulk update place summaries for all photos with place data
 
-    Creates or updates a PlaceSummary record based on the photo's place information.
-    Uses PostgreSQL's INSERT ... ON CONFLICT DO UPDATE for atomic upserts.
-    If the photo has no place data, this function does nothing.
+    Replaces all existing place summaries with fresh aggregations from photos.
+    Uses a single SQL query to group photos by location and place data,
+    calculating statistics like photo counts, date ranges, and selecting the
+    most detailed place data for each unique location.
+
+    The unique constraint on (latitude, longitude) ensures one summary per location.
 
     Args:
-        photo: Photo model instance to process
         db: Database session
+
+    Returns:
+        Number of place summaries created/updated
     """
-    if not photo.place:
-        return
-
-    # Deserialize place data if needed
-    place_data = (
-        deserialize_json_field(photo.place)
-        if isinstance(photo.place, str)
-        else photo.place
-    )
-    if not place_data or not isinstance(place_data, dict):
-        return
-
-    # Extract place name (use country if no specific name)
-    place_name = (
-        place_data.get("name")
-        or place_data.get("name_user_defined")
-        or place_data.get("name_locality")
-        or place_data.get("country")
-        or place_data.get("name_country")
-        or "Unknown"
-    )
-
-    # Extract place hierarchy fields
-    country = place_data.get("country") or place_data.get("name_country")
-    state_province = (
-        place_data.get("admin1")
-        or place_data.get("name_administrative_area")
-        or place_data.get("name_sub_administrative_area")
-    )
-    city = (
-        place_data.get("admin2")
-        or place_data.get("name_locality")
-        or place_data.get("name_sub_locality")
-    )
-
-    # Use PostgreSQL upsert with raw SQL for atomic operation
     from sqlalchemy import text
 
+    # First, clear existing summaries to avoid conflicts
+    db.execute(text("DELETE FROM place_summaries"))
+
+    # Bulk insert with aggregated data from photos
+    # Group by latitude and longitude, selecting the most detailed place data
     sql = text(
         """
+        WITH aggregated_places AS (
+            SELECT 
+                latitude, 
+                longitude,
+                count(*) as photo_count,
+                min(date) as first_photo_date,
+                max(date) as last_photo_date,
+                -- Select place with longest JSON representation (most detailed)
+                (array_agg(place ORDER BY length(place::text) DESC))[1] as place_data
+            FROM photos
+            WHERE place IS NOT NULL 
+                AND place <> '{}'::jsonb 
+                AND latitude IS NOT NULL 
+                AND longitude IS NOT NULL
+            GROUP BY latitude, longitude
+        )
         INSERT INTO place_summaries 
-            (place_name, latitude, longitude, photo_count, first_photo_date, last_photo_date, 
-             country, state_province, city, place_data, updated_at)
-        VALUES 
-            (:place_name, :latitude, :longitude, 1, :photo_date, :photo_date,
-             :country, :state_province, :city, :place_data, :updated_at)
-        ON CONFLICT (place_name) 
-        DO UPDATE SET
-            photo_count = place_summaries.photo_count + 1,
-            first_photo_date = LEAST(place_summaries.first_photo_date, EXCLUDED.first_photo_date),
-            last_photo_date = GREATEST(place_summaries.last_photo_date, EXCLUDED.last_photo_date),
-            latitude = COALESCE(place_summaries.latitude, EXCLUDED.latitude),
-            longitude = COALESCE(place_summaries.longitude, EXCLUDED.longitude),
-            country = COALESCE(place_summaries.country, EXCLUDED.country),
-            state_province = COALESCE(place_summaries.state_province, EXCLUDED.state_province),
-            city = COALESCE(place_summaries.city, EXCLUDED.city),
-            place_data = COALESCE(place_summaries.place_data, EXCLUDED.place_data),
-            updated_at = EXCLUDED.updated_at
+            (latitude, longitude, place_name, country, state_province, city, 
+             photo_count, first_photo_date, last_photo_date, place_data, updated_at)
+        SELECT 
+            latitude, 
+            longitude,
+            COALESCE(
+                place_data->>'name',
+                place_data->>'name_user_defined',
+                place_data->>'name_locality',
+                place_data->>'country',
+                place_data->>'name_country',
+                'Unknown'
+            ) AS place_name,
+            COALESCE(
+                place_data->>'country',
+                place_data->'names'->'country'->>0,
+                place_data->>'name_country'
+            ) AS country,
+            COALESCE(
+                place_data->'names'->'state_province'->>0,
+                place_data->>'admin1',
+                place_data->>'name_administrative_area',
+                place_data->>'name_sub_administrative_area'
+            ) AS state_province,
+            COALESCE(
+                place_data->'names'->'city'->>0,
+                place_data->>'admin2',
+                place_data->>'name_locality',
+                place_data->>'name_sub_locality'
+            ) AS city,
+            photo_count,
+            first_photo_date,
+            last_photo_date,
+            place_data,
+            NOW() as updated_at
+        FROM aggregated_places
     """
     )
 
-    db.execute(
-        sql,
-        {
-            "place_name": place_name,
-            "latitude": photo.latitude,
-            "longitude": photo.longitude,
-            "photo_date": photo.date,
-            "country": country,
-            "state_province": state_province,
-            "city": city,
-            "place_data": json.dumps(place_data) if place_data else None,
-            "updated_at": datetime.now(timezone.utc),
-        },
-    )
+    result = db.execute(sql)
+    db.commit()
+
+    # Count the number of summaries created
+    count_result = db.execute(text("SELECT COUNT(*) FROM place_summaries"))
+    row_count = count_result.scalar() or 0
+
+    return row_count
