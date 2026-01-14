@@ -25,7 +25,7 @@
           </div>
           <nav class="nav-menu">
             <RouterLink to="/" class="nav-link">
-              <span>🏠 Gallery</span>
+              <span>🏠 Home</span>
             </RouterLink>
             <RouterLink to="/search" class="nav-link">
               <span>🔍 Search</span>
