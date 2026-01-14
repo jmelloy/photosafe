@@ -139,19 +139,42 @@ const persons = ref<string[]>([]);
 const loadFiltersFromUrl = () => {
   const query = route.query;
   
-  if (query.search) searchQuery.value = query.search as string;
-  if (query.album) selectedAlbum.value = query.album as string;
-  if (query.library) selectedLibrary.value = query.library as string;
-  if (query.person) selectedPerson.value = query.person as string;
-  if (query.start_date) startDate.value = query.start_date as string;
-  if (query.end_date) endDate.value = query.end_date as string;
-  if (query.favorite === "true") filterFavorites.value = true;
-  if (query.isphoto === "true") filterPhotos.value = true;
-  if (query.ismovie === "true") filterVideos.value = true;
-  if (query.screenshot === "true") filterScreenshots.value = true;
-  if (query.panorama === "true") filterPanoramas.value = true;
-  if (query.portrait === "true") filterPortraits.value = true;
-  if (query.has_location === "true") filterHasLocation.value = true;
+  // Helper to safely get string value from query param
+  // LocationQueryValue is string | null, so LocationQueryValue[] is (string | null)[]
+  const getStringParam = (value: string | (string | null)[] | null | undefined): string => {
+    if (!value) return "";
+    if (Array.isArray(value)) {
+      const first = value[0];
+      return first || "";
+    }
+    return value;
+  };
+  
+  const searchParam = getStringParam(query.search);
+  if (searchParam) searchQuery.value = searchParam;
+  
+  const albumParam = getStringParam(query.album);
+  if (albumParam) selectedAlbum.value = albumParam;
+  
+  const libraryParam = getStringParam(query.library);
+  if (libraryParam) selectedLibrary.value = libraryParam;
+  
+  const personParam = getStringParam(query.person);
+  if (personParam) selectedPerson.value = personParam;
+  
+  const startDateParam = getStringParam(query.start_date);
+  if (startDateParam) startDate.value = startDateParam;
+  
+  const endDateParam = getStringParam(query.end_date);
+  if (endDateParam) endDate.value = endDateParam;
+  
+  if (getStringParam(query.favorite) === "true") filterFavorites.value = true;
+  if (getStringParam(query.isphoto) === "true") filterPhotos.value = true;
+  if (getStringParam(query.ismovie) === "true") filterVideos.value = true;
+  if (getStringParam(query.screenshot) === "true") filterScreenshots.value = true;
+  if (getStringParam(query.panorama) === "true") filterPanoramas.value = true;
+  if (getStringParam(query.portrait) === "true") filterPortraits.value = true;
+  if (getStringParam(query.has_location) === "true") filterHasLocation.value = true;
 };
 
 // Update URL with current filter values

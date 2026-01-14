@@ -150,27 +150,55 @@ const availableFilters = ref<AvailableSearchFilters>({
 const loadFiltersFromUrl = () => {
   const query = route.query;
   
-  if (query.search_text) searchText.value = query.search_text as string;
-  if (query.places) {
-    selectedPlaces.value = (query.places as string).split(",").filter(Boolean);
+  // Helper to safely get string value from query param
+  // LocationQueryValue is string | null, so LocationQueryValue[] is (string | null)[]
+  const getStringParam = (value: string | (string | null)[] | null | undefined): string => {
+    if (!value) return "";
+    if (Array.isArray(value)) {
+      const first = value[0];
+      return first || "";
+    }
+    return value;
+  };
+  
+  const searchTextParam = getStringParam(query.search_text);
+  if (searchTextParam) searchText.value = searchTextParam;
+  
+  const placesParam = getStringParam(query.places);
+  if (placesParam) {
+    selectedPlaces.value = placesParam.split(",").filter(Boolean);
   }
-  if (query.labels) {
-    selectedLabels.value = (query.labels as string).split(",").filter(Boolean);
+  
+  const labelsParam = getStringParam(query.labels);
+  if (labelsParam) {
+    selectedLabels.value = labelsParam.split(",").filter(Boolean);
   }
-  if (query.keywords) {
-    selectedKeywords.value = (query.keywords as string).split(",").filter(Boolean);
+  
+  const keywordsParam = getStringParam(query.keywords);
+  if (keywordsParam) {
+    selectedKeywords.value = keywordsParam.split(",").filter(Boolean);
   }
-  if (query.persons) {
-    selectedPersons.value = (query.persons as string).split(",").filter(Boolean);
+  
+  const personsParam = getStringParam(query.persons);
+  if (personsParam) {
+    selectedPersons.value = personsParam.split(",").filter(Boolean);
   }
-  if (query.albums) {
-    selectedAlbums.value = (query.albums as string).split(",").filter(Boolean);
+  
+  const albumsParam = getStringParam(query.albums);
+  if (albumsParam) {
+    selectedAlbums.value = albumsParam.split(",").filter(Boolean);
   }
-  if (query.libraries) {
-    selectedLibraries.value = (query.libraries as string).split(",").filter(Boolean);
+  
+  const librariesParam = getStringParam(query.libraries);
+  if (librariesParam) {
+    selectedLibraries.value = librariesParam.split(",").filter(Boolean);
   }
-  if (query.start_date) startDate.value = query.start_date as string;
-  if (query.end_date) endDate.value = query.end_date as string;
+  
+  const startDateParam = getStringParam(query.start_date);
+  if (startDateParam) startDate.value = startDateParam;
+  
+  const endDateParam = getStringParam(query.end_date);
+  if (endDateParam) endDate.value = endDateParam;
 };
 
 // Update URL with current filter values

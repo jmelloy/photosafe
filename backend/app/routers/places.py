@@ -48,6 +48,9 @@ def get_place_summaries(
         truncated_lon = func.round(PlaceSummary.longitude, precision)
         
         # Build aggregation query
+        # Note: Using func.max() for place_name selects an arbitrary name from grouped locations.
+        # This is acceptable since nearby locations often share similar names, and the primary
+        # purpose is to show approximate location and photo count at reduced precision levels.
         query = (
             select(
                 truncated_lat.label('latitude'),

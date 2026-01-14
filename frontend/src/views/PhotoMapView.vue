@@ -57,7 +57,7 @@ import { ref, onMounted, onUnmounted, computed, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { getPlaceSummaries } from "../api/places";
+import { getPlaceSummaries, type PlaceSummaryFilters } from "../api/places";
 import type { PlaceSummary } from "../types/api";
 import { formatDateRange } from "../utils/format";
 import LoadingSpinner from "../components/LoadingSpinner.vue";
@@ -99,7 +99,7 @@ const loadPlaceSummaries = async (precision?: number) => {
     // Fetch place summaries - these are pre-aggregated by the backend
     // The backend default limit is 100, but we increase it for the map view
     // to show more locations. Consider implementing pagination if needed.
-    const filters: any = { limit: 1000 };
+    const filters: PlaceSummaryFilters = { limit: 1000 };
     if (precision !== undefined) {
       filters.precision = precision;
     }
