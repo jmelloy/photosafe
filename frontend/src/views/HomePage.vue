@@ -109,6 +109,7 @@ import PhotoGallery from "../components/PhotoGallery.vue";
 import { getPhotos, deletePhoto, getAvailableFilters } from "../api/photos";
 import type { Photo } from "../types/api";
 import type { PhotoFilters } from "../api/photos";
+import { getStringParam } from "../utils/queryParams";
 
 const route = useRoute();
 const router = useRouter();
@@ -138,17 +139,6 @@ const persons = ref<string[]>([]);
 // Load filters from URL query params
 const loadFiltersFromUrl = () => {
   const query = route.query;
-  
-  // Helper to safely get string value from query param
-  // LocationQueryValue is string | null, so LocationQueryValue[] is (string | null)[]
-  const getStringParam = (value: string | (string | null)[] | null | undefined): string => {
-    if (!value) return "";
-    if (Array.isArray(value)) {
-      const first = value[0];
-      return first || "";
-    }
-    return value;
-  };
   
   const searchParam = getStringParam(query.search);
   if (searchParam) searchQuery.value = searchParam;

@@ -262,6 +262,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   if (map) {
+    // map.remove() handles cleanup of all event listeners including zoomend
     map.remove();
     map = null;
   }

@@ -114,6 +114,7 @@ import { searchPhotos, getSearchFilters } from "../api/search";
 import { deletePhoto } from "../api/photos";
 import type { Photo } from "../types/api";
 import type { SearchFilters, AvailableSearchFilters } from "../api/search";
+import { getStringParam } from "../utils/queryParams";
 
 const route = useRoute();
 const router = useRouter();
@@ -149,17 +150,6 @@ const availableFilters = ref<AvailableSearchFilters>({
 // Load filters from URL query params
 const loadFiltersFromUrl = () => {
   const query = route.query;
-  
-  // Helper to safely get string value from query param
-  // LocationQueryValue is string | null, so LocationQueryValue[] is (string | null)[]
-  const getStringParam = (value: string | (string | null)[] | null | undefined): string => {
-    if (!value) return "";
-    if (Array.isArray(value)) {
-      const first = value[0];
-      return first || "";
-    }
-    return value;
-  };
   
   const searchTextParam = getStringParam(query.search_text);
   if (searchTextParam) searchText.value = searchTextParam;
