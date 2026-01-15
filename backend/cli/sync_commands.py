@@ -344,6 +344,9 @@ def macos(bucket, base_url, username, password, output_json, skip_blocks_check):
                             s3.upload_file(v["path"], bucket, v["s3_path"])
                             del v["path"]
 
+                    # Add versions to photo data
+                    p["versions"] = versions
+
                     # Try to create the photo
                     try:
                         r = auth.post(
