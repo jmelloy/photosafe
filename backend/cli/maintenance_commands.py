@@ -20,6 +20,10 @@ from app.models import Version, Photo
 from cli.sync_tools import list_bucket
 
 
+# Expected S3 CSV column names
+S3_CSV_COLUMNS = ["bucket", "key", "size", "lastmodifieddate", "etag"]
+
+
 @click.group()
 def maintenance():
     """Maintenance and diagnostic commands"""
@@ -127,9 +131,10 @@ def get_s3_objects_from_csv(csv_path: str) -> Dict[str, Dict[str, Any]]:
             first_line = f.readline().strip()
             f.seek(0)  # Reset to beginning
             
-            # Check if first line looks like a header
-            first_values = first_line.split(',')
-            is_header = any(val.strip().lower() in ['bucket', 'key', 'size', 'lastmodifieddate', 'etag'] 
+            # Check if first line looks like a header by parsing it properly
+            reader_sample = csv.reader([first_line], skipinitialspace=True)
+            first_values = next(reader_sample)
+            is_header = any(val.strip().lower() in S3_CSV_COLUMNS 
                           for val in first_values)
             
             if is_header:
