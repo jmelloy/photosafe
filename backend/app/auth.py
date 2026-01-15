@@ -226,9 +226,16 @@ def verify_personal_access_token(db: Session, token: str) -> Optional[PersonalAc
     Returns:
         PersonalAccessToken object if valid, None otherwise
     """
-    # Get all PATs (we need to check each one since tokens are hashed)
-    # In a production system with many tokens, you might want to optimize this
-    # by using a different hashing strategy or caching mechanism
+    # Get all PATs (we need to check each one since tokens are hashed with bcrypt)
+    # 
+    # Performance Note: This loads all PATs to check each hash. This is acceptable
+    # because users typically have only a few PATs (5-20 max). Bcrypt verification
+    # is fast enough for this scale (~10ms per token).
+    #
+    # For systems with hundreds of tokens per user, consider optimizations like:
+    # - Store first 8 chars of token unhashed for quick lookup
+    # - Use a faster hash like SHA256 with HMAC
+    # - Implement token caching
     pats = db.exec(select(PersonalAccessToken)).all()
     
     for pat in pats:
@@ -239,8 +246,8 @@ def verify_personal_access_token(db: Session, token: str) -> Optional[PersonalAc
                 if pat.expires_at is not None and datetime.now(timezone.utc) > pat.expires_at:
                     return None
                 return pat
-        except Exception:
-            # Invalid hash format or other error, skip this token
+        except (ValueError, UnicodeDecodeError):
+            # Invalid hash format, malformed token, or encoding error - skip this token
             continue
     
     return None
