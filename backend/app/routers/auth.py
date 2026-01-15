@@ -2,34 +2,35 @@
 
 from datetime import datetime, timedelta, timezone
 from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from sqlmodel import select
 
+from ..auth import (
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    REFRESH_TOKEN_EXPIRE_DAYS,
+    authenticate_user,
+    create_access_token,
+    create_personal_access_token,
+    create_refresh_token,
+    get_current_active_user,
+    get_password_hash,
+    revoke_personal_access_token,
+    verify_refresh_token,
+)
 from ..database import get_db
 from ..models import (
-    User,
-    UserCreate,
-    UserRead,
-    Token,
-    RefreshTokenRequest,
     PersonalAccessToken,
     PersonalAccessTokenCreate,
     PersonalAccessTokenRead,
     PersonalAccessTokenResponse,
-)
-from ..auth import (
-    authenticate_user,
-    create_access_token,
-    create_refresh_token,
-    verify_refresh_token,
-    get_password_hash,
-    get_current_active_user,
-    create_personal_access_token,
-    revoke_personal_access_token,
-    ACCESS_TOKEN_EXPIRE_MINUTES,
-    REFRESH_TOKEN_EXPIRE_DAYS,
+    RefreshTokenRequest,
+    Token,
+    User,
+    UserCreate,
+    UserRead,
 )
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])

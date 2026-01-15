@@ -1,17 +1,19 @@
 """Authentication utilities for JWT-based auth"""
 
-from datetime import datetime, timedelta, timezone
-from typing import Optional
 import os
 import secrets
+from datetime import datetime, timedelta, timezone
+from typing import Optional
+
 import bcrypt
-from jose import JWTError, jwt, ExpiredSignatureError
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from jose import ExpiredSignatureError, JWTError, jwt
 from sqlalchemy.orm import Session
 from sqlmodel import select
+
 from .database import get_db
-from .models import User, PersonalAccessToken
+from .models import PersonalAccessToken, User
 
 # Configuration
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")

@@ -1,20 +1,21 @@
 """Database models using SQLModel"""
 
-from sqlmodel import SQLModel, Field, Relationship, Column
+import os
+import uuid as pkg_uuid
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 from sqlalchemy import (
-    String,
-    Text,
     DateTime,
     ForeignKey,
+    String,
     Table,
+    Text,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import JSONB, ARRAY, UUID
-from datetime import datetime, timezone
-from typing import Optional, List, Dict, Any
-from pathlib import Path
-import uuid as pkg_uuid
-import os
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
+from sqlmodel import Column, Field, Relationship, SQLModel
 
 # S3 base URL from environment or default
 S3_BASE_URL = os.getenv("S3_BASE_URL", "https://photos.melloy.life")
