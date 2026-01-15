@@ -4,6 +4,7 @@ import type { PlaceSummary } from "../types/api";
 export interface PlaceSummaryFilters {
   country?: string;
   state_province?: string;
+  precision?: number; // Decimal places to truncate lat/long (0-6)
   limit?: number;
   offset?: number;
 }
@@ -16,6 +17,7 @@ export const getPlaceSummaries = async (
   if (filters) {
     if (filters.country) params.country = filters.country;
     if (filters.state_province) params.state_province = filters.state_province;
+    if (filters.precision !== undefined) params.precision = filters.precision;
     if (filters.limit !== undefined) params.limit = filters.limit;
     if (filters.offset !== undefined) params.offset = filters.offset;
   }

@@ -104,10 +104,15 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import PhotoGallery from "../components/PhotoGallery.vue";
 import { getPhotos, deletePhoto, getAvailableFilters } from "../api/photos";
 import type { Photo } from "../types/api";
 import type { PhotoFilters } from "../api/photos";
+import { getStringParam } from "../utils/queryParams";
+
+const route = useRoute();
+const router = useRouter();
 
 const photos = ref<Photo[]>([]);
 const loading = ref<boolean>(false);
@@ -130,6 +135,59 @@ const filterHasLocation = ref<boolean>(false);
 const albums = ref<string[]>([]);
 const libraries = ref<string[]>([]);
 const persons = ref<string[]>([]);
+
+// Load filters from URL query params
+const loadFiltersFromUrl = () => {
+  const query = route.query;
+  
+  const searchParam = getStringParam(query.search);
+  if (searchParam) searchQuery.value = searchParam;
+  
+  const albumParam = getStringParam(query.album);
+  if (albumParam) selectedAlbum.value = albumParam;
+  
+  const libraryParam = getStringParam(query.library);
+  if (libraryParam) selectedLibrary.value = libraryParam;
+  
+  const personParam = getStringParam(query.person);
+  if (personParam) selectedPerson.value = personParam;
+  
+  const startDateParam = getStringParam(query.start_date);
+  if (startDateParam) startDate.value = startDateParam;
+  
+  const endDateParam = getStringParam(query.end_date);
+  if (endDateParam) endDate.value = endDateParam;
+  
+  if (getStringParam(query.favorite) === "true") filterFavorites.value = true;
+  if (getStringParam(query.isphoto) === "true") filterPhotos.value = true;
+  if (getStringParam(query.ismovie) === "true") filterVideos.value = true;
+  if (getStringParam(query.screenshot) === "true") filterScreenshots.value = true;
+  if (getStringParam(query.panorama) === "true") filterPanoramas.value = true;
+  if (getStringParam(query.portrait) === "true") filterPortraits.value = true;
+  if (getStringParam(query.has_location) === "true") filterHasLocation.value = true;
+};
+
+// Update URL with current filter values
+const updateUrlParams = () => {
+  const query: Record<string, string> = {};
+  
+  if (searchQuery.value) query.search = searchQuery.value;
+  if (selectedAlbum.value) query.album = selectedAlbum.value;
+  if (selectedLibrary.value) query.library = selectedLibrary.value;
+  if (selectedPerson.value) query.person = selectedPerson.value;
+  if (startDate.value) query.start_date = startDate.value;
+  if (endDate.value) query.end_date = endDate.value;
+  if (filterFavorites.value) query.favorite = "true";
+  if (filterPhotos.value) query.isphoto = "true";
+  if (filterVideos.value) query.ismovie = "true";
+  if (filterScreenshots.value) query.screenshot = "true";
+  if (filterPanoramas.value) query.panorama = "true";
+  if (filterPortraits.value) query.portrait = "true";
+  if (filterHasLocation.value) query.has_location = "true";
+  
+  // Update URL without reloading the page
+  router.replace({ query });
+};
 
 const buildFilters = (): PhotoFilters => {
   const filters: PhotoFilters = {};
@@ -171,6 +229,9 @@ const loadPhotos = async (reset: boolean = true) => {
     }
 
     hasMore.value = response.has_more;
+    
+    // Update URL with current filter values
+    updateUrlParams();
   } catch (error: unknown) {
     console.error("Failed to load photos:", error);
     alert("Failed to load photos. Please try again.");
@@ -232,6 +293,9 @@ const clearFilters = () => {
   filterPanoramas.value = false;
   filterPortraits.value = false;
   filterHasLocation.value = false;
+  
+  // Clear URL params
+  router.replace({ query: {} });
 };
 
 // Watch for filter changes and reload photos
@@ -272,6 +336,8 @@ const handleDeletePhoto = async (photoId: string) => {
 
 onMounted(() => {
   loadAvailableFilters();
+  // Load filters from URL before loading photos
+  loadFiltersFromUrl();
   loadPhotos();
 });
 </script>

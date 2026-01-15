@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
+from sqlalchemy import func
 from typing import List, Optional
 
 from app.database import get_db
@@ -15,6 +16,12 @@ router = APIRouter()
 def get_place_summaries(
     country: Optional[str] = Query(None, description="Filter by country"),
     state_province: Optional[str] = Query(None, description="Filter by state/province"),
+    precision: Optional[int] = Query(
+        None, 
+        ge=0, 
+        le=6, 
+        description="Decimal places to truncate lat/long (0-6). Groups nearby locations."
+    ),
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of results"),
     offset: int = Query(0, ge=0, description="Number of results to skip"),
     db: Session = Depends(get_db),
@@ -25,20 +32,88 @@ def get_place_summaries(
 
     Returns aggregated place data with photo counts and date ranges.
     This is much faster than querying all photos for map display.
+    
+    The precision parameter allows grouping of nearby locations:
+    - 0: ~111km precision (country level)
+    - 1: ~11km precision (city level)
+    - 2: ~1.1km precision (neighborhood)
+    - 3: ~110m precision (street)
+    - 4: ~11m precision (building)
+    - 5: ~1.1m precision (tree)
+    - 6: ~11cm precision (exact location)
     """
-    query = select(PlaceSummary).order_by(PlaceSummary.photo_count.desc())
+    if precision is not None:
+        # Use SQL ROUND function to truncate coordinates and group by them
+        truncated_lat = func.round(PlaceSummary.latitude, precision)
+        truncated_lon = func.round(PlaceSummary.longitude, precision)
+        
+        # Build aggregation query
+        # Note: Using func.max() for place_name selects an arbitrary name from grouped locations.
+        # This is acceptable since nearby locations often share similar names, and the primary
+        # purpose is to show approximate location and photo count at reduced precision levels.
+        query = (
+            select(
+                truncated_lat.label('latitude'),
+                truncated_lon.label('longitude'),
+                func.max(PlaceSummary.place_name).label('place_name'),
+                func.sum(PlaceSummary.photo_count).label('photo_count'),
+                func.min(PlaceSummary.first_photo_date).label('first_photo_date'),
+                func.max(PlaceSummary.last_photo_date).label('last_photo_date'),
+                func.max(PlaceSummary.country).label('country'),
+                func.max(PlaceSummary.state_province).label('state_province'),
+                func.max(PlaceSummary.city).label('city'),
+                func.max(PlaceSummary.id).label('id'),
+                func.max(PlaceSummary.updated_at).label('updated_at'),
+            )
+            .where(PlaceSummary.latitude.isnot(None), PlaceSummary.longitude.isnot(None))
+            .group_by(truncated_lat, truncated_lon)
+            .order_by(func.sum(PlaceSummary.photo_count).desc())
+        )
+        
+        # Apply filters
+        if country:
+            query = query.where(PlaceSummary.country == country)
+        if state_province:
+            query = query.where(PlaceSummary.state_province == state_province)
+        
+        # Apply pagination
+        query = query.offset(offset).limit(limit)
+        
+        results = db.exec(query).all()
+        
+        # Convert results to PlaceSummaryRead objects
+        return [
+            PlaceSummaryRead(
+                id=row.id,
+                place_name=row.place_name,
+                latitude=row.latitude,
+                longitude=row.longitude,
+                photo_count=row.photo_count,
+                first_photo_date=row.first_photo_date,
+                last_photo_date=row.last_photo_date,
+                country=row.country,
+                state_province=row.state_province,
+                city=row.city,
+                place_data=None,
+                updated_at=row.updated_at,
+            )
+            for row in results
+        ]
+    else:
+        # Original query without precision grouping
+        query = select(PlaceSummary).order_by(PlaceSummary.photo_count.desc())
 
-    # Apply filters
-    if country:
-        query = query.where(PlaceSummary.country == country)
-    if state_province:
-        query = query.where(PlaceSummary.state_province == state_province)
+        # Apply filters
+        if country:
+            query = query.where(PlaceSummary.country == country)
+        if state_province:
+            query = query.where(PlaceSummary.state_province == state_province)
 
-    # Apply pagination
-    query = query.offset(offset).limit(limit)
+        # Apply pagination
+        query = query.offset(offset).limit(limit)
 
-    summaries = db.exec(query).all()
-    return summaries
+        summaries = db.exec(query).all()
+        return summaries
 
 
 @router.get("/place-summaries/{summary_id}", response_model=PlaceSummaryRead)

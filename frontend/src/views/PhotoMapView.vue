@@ -37,6 +37,9 @@
           <p v-if="selectedPhoto.first_photo_date && selectedPhoto.last_photo_date" class="preview-date">
             {{ formatDateRange(selectedPhoto.first_photo_date, selectedPhoto.last_photo_date) }}
           </p>
+          <button @click="viewPhotosAtLocation" class="view-photos-btn">
+            View Photos
+          </button>
         </div>
       </div>
     </div>
@@ -54,7 +57,7 @@ import { ref, onMounted, onUnmounted, computed, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { getPlaceSummaries } from "../api/places";
+import { getPlaceSummaries, type PlaceSummaryFilters } from "../api/places";
 import type { PlaceSummary } from "../types/api";
 import { formatDateRange } from "../utils/format";
 import LoadingSpinner from "../components/LoadingSpinner.vue";
@@ -64,6 +67,7 @@ const mapContainer = ref<HTMLElement | null>(null);
 const placeSummaries = ref<PlaceSummary[]>([]);
 const loading = ref<boolean>(true);
 const selectedPhoto = ref<PlaceSummary | null>(null);
+const currentPrecision = ref<number | undefined>(undefined);
 
 let map: L.Map | null = null;
 const markers: L.Marker[] = [];
@@ -76,17 +80,49 @@ const totalPhotoCount = computed(() => {
   return placeSummaries.value.reduce((sum, summary) => sum + summary.photo_count, 0);
 });
 
-const loadPlaceSummaries = async () => {
+// Map zoom level to coordinate precision
+// Lower zoom = less precise (fewer decimal places)
+// Higher zoom = more precise (more decimal places)
+const getZoomPrecision = (zoom: number): number | undefined => {
+  if (zoom <= 3) return 0; // Country level
+  if (zoom <= 5) return 1; // Large region
+  if (zoom <= 7) return 2; // State/Province
+  if (zoom <= 10) return 3; // City
+  if (zoom <= 13) return 4; // Neighborhood
+  if (zoom <= 16) return 5; // Street
+  return undefined; // Full precision for max zoom
+};
+
+const loadPlaceSummaries = async (precision?: number) => {
   loading.value = true;
   try {
     // Fetch place summaries - these are pre-aggregated by the backend
     // The backend default limit is 100, but we increase it for the map view
     // to show more locations. Consider implementing pagination if needed.
-    placeSummaries.value = await getPlaceSummaries({ limit: 1000 });
+    const filters: PlaceSummaryFilters = { limit: 1000 };
+    if (precision !== undefined) {
+      filters.precision = precision;
+    }
+    placeSummaries.value = await getPlaceSummaries(filters);
   } catch (error) {
     console.error("Failed to load place summaries:", error);
   } finally {
     loading.value = false;
+  }
+};
+
+const updateMapPrecision = async (zoom: number) => {
+  const newPrecision = getZoomPrecision(zoom);
+  if (newPrecision !== currentPrecision.value) {
+    currentPrecision.value = newPrecision;
+    await loadPlaceSummaries(newPrecision);
+    // Clear existing markers
+    markers.forEach(marker => marker.remove());
+    markers.length = 0;
+    // Re-add markers with new data
+    if (map && placeSummaries.value.length > 0) {
+      addMarkersToMap();
+    }
   }
 };
 
@@ -98,28 +134,14 @@ const createMarkerIcon = (photoCount: number): string => {
   `;
 };
 
-const initMap = () => {
-  if (!mapContainer.value || placeSummaries.value.length === 0) return;
-
-  // Create map
-  map = L.map(mapContainer.value).setView([0, 0], 2);
-
-  // Add OpenStreetMap tile layer
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    maxZoom: 19,
-  }).addTo(map);
-
-  // Add markers for each place summary
-  const bounds: L.LatLngBoundsExpression = [];
+const addMarkersToMap = () => {
+  if (!map) return;
 
   placeSummaries.value.forEach((summary) => {
     if (summary.latitude == null || summary.longitude == null) return;
 
     const lat = summary.latitude;
     const lng = summary.longitude;
-    bounds.push([lat, lng]);
 
     // Create custom icon with photo count
     const photoCount = summary.photo_count;
@@ -172,6 +194,36 @@ const initMap = () => {
 
     markers.push(marker);
   });
+};
+
+const initMap = () => {
+  if (!mapContainer.value || placeSummaries.value.length === 0) return;
+
+  // Create map
+  map = L.map(mapContainer.value).setView([0, 0], 2);
+
+  // Add OpenStreetMap tile layer
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19,
+  }).addTo(map);
+
+  // Listen to zoom changes to update precision
+  map.on('zoomend', () => {
+    const zoom = map?.getZoom() || 2;
+    updateMapPrecision(zoom);
+  });
+
+  // Add markers for each place summary
+  const bounds: L.LatLngBoundsExpression = [];
+
+  placeSummaries.value.forEach((summary) => {
+    if (summary.latitude == null || summary.longitude == null) return;
+    bounds.push([summary.latitude, summary.longitude]);
+  });
+
+  addMarkersToMap();
 
   // Fit map to show all markers
   if (bounds.length > 0) {
@@ -187,6 +239,18 @@ const closePreview = () => {
   selectedPhoto.value = null;
 };
 
+const viewPhotosAtLocation = () => {
+  if (!selectedPhoto.value) return;
+  
+  // Navigate to search page with place filter
+  router.push({
+    path: "/search",
+    query: {
+      places: selectedPhoto.value.place_name,
+    },
+  });
+};
+
 onMounted(async () => {
   await loadPlaceSummaries();
   if (placeSummaries.value.length > 0) {
@@ -198,6 +262,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   if (map) {
+    // map.remove() handles cleanup of all event listeners including zoomend
     map.remove();
     map = null;
   }
@@ -369,6 +434,30 @@ onUnmounted(() => {
   margin: 0;
   color: #b0b0b0;
   font-size: 0.875rem;
+}
+
+.view-photos-btn {
+  margin-top: 1rem;
+  width: 100%;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.view-photos-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.view-photos-btn:active {
+  transform: translateY(0);
 }
 
 .stats-bar {

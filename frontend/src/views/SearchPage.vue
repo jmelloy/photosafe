@@ -108,11 +108,16 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import PhotoGallery from "../components/PhotoGallery.vue";
 import { searchPhotos, getSearchFilters } from "../api/search";
 import { deletePhoto } from "../api/photos";
 import type { Photo } from "../types/api";
 import type { SearchFilters, AvailableSearchFilters } from "../api/search";
+import { getStringParam } from "../utils/queryParams";
+
+const route = useRoute();
+const router = useRouter();
 
 const photos = ref<Photo[]>([]);
 const loading = ref<boolean>(false);
@@ -141,6 +146,68 @@ const availableFilters = ref<AvailableSearchFilters>({
   albums: [],
   libraries: [],
 });
+
+// Load filters from URL query params
+const loadFiltersFromUrl = () => {
+  const query = route.query;
+  
+  const searchTextParam = getStringParam(query.search_text);
+  if (searchTextParam) searchText.value = searchTextParam;
+  
+  const placesParam = getStringParam(query.places);
+  if (placesParam) {
+    selectedPlaces.value = placesParam.split(",").filter(Boolean);
+  }
+  
+  const labelsParam = getStringParam(query.labels);
+  if (labelsParam) {
+    selectedLabels.value = labelsParam.split(",").filter(Boolean);
+  }
+  
+  const keywordsParam = getStringParam(query.keywords);
+  if (keywordsParam) {
+    selectedKeywords.value = keywordsParam.split(",").filter(Boolean);
+  }
+  
+  const personsParam = getStringParam(query.persons);
+  if (personsParam) {
+    selectedPersons.value = personsParam.split(",").filter(Boolean);
+  }
+  
+  const albumsParam = getStringParam(query.albums);
+  if (albumsParam) {
+    selectedAlbums.value = albumsParam.split(",").filter(Boolean);
+  }
+  
+  const librariesParam = getStringParam(query.libraries);
+  if (librariesParam) {
+    selectedLibraries.value = librariesParam.split(",").filter(Boolean);
+  }
+  
+  const startDateParam = getStringParam(query.start_date);
+  if (startDateParam) startDate.value = startDateParam;
+  
+  const endDateParam = getStringParam(query.end_date);
+  if (endDateParam) endDate.value = endDateParam;
+};
+
+// Update URL with current filter values
+const updateUrlParams = () => {
+  const query: Record<string, string> = {};
+  
+  if (searchText.value) query.search_text = searchText.value;
+  if (selectedPlaces.value.length > 0) query.places = selectedPlaces.value.join(",");
+  if (selectedLabels.value.length > 0) query.labels = selectedLabels.value.join(",");
+  if (selectedKeywords.value.length > 0) query.keywords = selectedKeywords.value.join(",");
+  if (selectedPersons.value.length > 0) query.persons = selectedPersons.value.join(",");
+  if (selectedAlbums.value.length > 0) query.albums = selectedAlbums.value.join(",");
+  if (selectedLibraries.value.length > 0) query.libraries = selectedLibraries.value.join(",");
+  if (startDate.value) query.start_date = startDate.value;
+  if (endDate.value) query.end_date = endDate.value;
+  
+  // Update URL without reloading the page
+  router.replace({ query });
+};
 
 const buildFilters = (): SearchFilters => {
   const filters: SearchFilters = {};
@@ -179,6 +246,9 @@ const performSearch = async (reset: boolean = true) => {
     }
 
     hasMore.value = response.has_more;
+    
+    // Update URL with current filter values
+    updateUrlParams();
   } catch (error: unknown) {
     console.error("Failed to search photos:", error);
     alert("Failed to search photos. Please try again.");
@@ -231,6 +301,9 @@ const clearFilters = () => {
   endDate.value = "";
   photos.value = [];
   searchPerformed.value = false;
+  
+  // Clear URL params
+  router.replace({ query: {} });
 };
 
 const handleDeletePhoto = async (photoId: string) => {
@@ -248,6 +321,11 @@ const handleDeletePhoto = async (photoId: string) => {
 
 onMounted(() => {
   loadAvailableFilters();
+  // Load filters from URL and perform search if any filters are present
+  loadFiltersFromUrl();
+  if (hasActiveFilters.value) {
+    performSearch();
+  }
 });
 </script>
 
