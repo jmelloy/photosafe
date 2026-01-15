@@ -2,7 +2,7 @@
   <div class="map-view">
     <div class="map-view-header">
       <h1>📍 Photo Map</h1>
-      <button @click="goBack" class="back-button">← Back to Gallery</button>
+      <button @click="goBack" class="back-button">← Back to Home</button>
     </div>
 
     <!-- Loading state -->
@@ -15,7 +15,7 @@
       <div class="empty-icon">📍</div>
       <h2>No Photos with Location Data</h2>
       <p>Photos with GPS coordinates will appear on this map.</p>
-      <button @click="goBack" class="back-button-alt">Go Back to Gallery</button>
+      <button @click="goBack" class="back-button-alt">Go Back to Home</button>
     </div>
 
     <!-- Map view -->

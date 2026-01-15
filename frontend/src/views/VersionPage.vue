@@ -33,7 +33,7 @@
     </div>
 
     <div class="actions">
-      <button @click="$router.push('/')" class="btn-back">Back to Gallery</button>
+      <button @click="$router.push('/')" class="btn-back">Back to Home</button>
     </div>
   </div>
 </template>

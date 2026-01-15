@@ -2,7 +2,7 @@
   <div class="photo-detail-page">
     <!-- Back button -->
     <div class="back-button-container">
-      <button @click="goBack" class="back-button">← Back to Gallery</button>
+      <button @click="goBack" class="back-button">← Back to Home</button>
     </div>
 
     <!-- Loading state -->
@@ -16,7 +16,7 @@
       <h2>Photo Not Found</h2>
       <p>{{ error }}</p>
       <button @click="goBack" class="back-button-alt">
-        Go Back to Gallery
+        Go Back to Home
       </button>
     </div>
 
