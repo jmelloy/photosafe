@@ -4,6 +4,7 @@
 import concurrent.futures
 import json
 import os
+import shutil
 from datetime import timezone
 
 import boto3
@@ -480,7 +481,6 @@ def icloud(
 ):
     """Sync photos from iCloud"""
     import mimetypes
-    import shutil
 
     import boto3
     from tqdm import tqdm
