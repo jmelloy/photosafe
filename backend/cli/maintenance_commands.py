@@ -360,6 +360,9 @@ def print_report(issues: Dict[str, List], show_orphaned: bool = True):
 
             if len(issues["orphaned_in_s3"]) > 10:
                 click.echo(f"  ... and {len(issues['orphaned_in_s3']) - 10} more")
+        else:
+            # Just show count and total size
+            click.echo("  (use --show-orphaned to see details)")
     else:
         click.echo("\n✅ No orphaned files in S3")
 
