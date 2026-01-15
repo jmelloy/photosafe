@@ -1,6 +1,5 @@
 """Tests for Personal Access Token functionality"""
 
-import pytest
 from datetime import datetime, timedelta, timezone
 
 

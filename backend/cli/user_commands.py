@@ -138,17 +138,17 @@ def create_token(username: str, name: str, expires_in_days: int):
         # Create token
         pat, token = create_personal_access_token(db, user, name, expires_in_days)
         
-        click.echo(f"\n✓ Personal Access Token created successfully!")
+        click.echo("\n✓ Personal Access Token created successfully!")
         click.echo(f"  Token ID:    {pat.id}")
         click.echo(f"  Name:        {pat.name}")
         click.echo(f"  Created:     {pat.created_at}")
         if pat.expires_at:
             click.echo(f"  Expires:     {pat.expires_at}")
         else:
-            click.echo(f"  Expires:     Never")
+            click.echo("  Expires:     Never")
         click.echo(f"\n  Token:       {token}")
-        click.echo(f"\n⚠ WARNING: Store this token securely!")
-        click.echo(f"  This is the only time it will be shown.\n")
+        click.echo("\n⚠ WARNING: Store this token securely!")
+        click.echo("  This is the only time it will be shown.\n")
     except Exception as e:
         db.rollback()
         click.echo(f"Error creating token: {str(e)}", err=True)
@@ -187,9 +187,7 @@ def list_tokens(username: str):
             created = token.created_at.strftime("%Y-%m-%d %H:%M")
             
             # Check if expired
-            is_expired = False
             if token.expires_at and datetime.now(token.expires_at.tzinfo or None) > token.expires_at:
-                is_expired = True
                 expires = f"{expires} (EXPIRED)"
             
             click.echo(f"{token.id:<6} {token.name:<30} {created:<20} {last_used:<20} {expires:<20}")
