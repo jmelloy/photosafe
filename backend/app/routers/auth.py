@@ -1,13 +1,24 @@
 """Authentication API endpoints"""
 
 from datetime import datetime, timedelta, timezone
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from sqlmodel import select
 
 from ..database import get_db
-from ..models import User, UserCreate, UserRead, Token, RefreshTokenRequest
+from ..models import (
+    User,
+    UserCreate,
+    UserRead,
+    Token,
+    RefreshTokenRequest,
+    PersonalAccessToken,
+    PersonalAccessTokenCreate,
+    PersonalAccessTokenRead,
+    PersonalAccessTokenResponse,
+)
 from ..auth import (
     authenticate_user,
     create_access_token,
@@ -15,6 +26,8 @@ from ..auth import (
     verify_refresh_token,
     get_password_hash,
     get_current_active_user,
+    create_personal_access_token,
+    revoke_personal_access_token,
     ACCESS_TOKEN_EXPIRE_MINUTES,
     REFRESH_TOKEN_EXPIRE_DAYS,
 )
@@ -130,3 +143,56 @@ async def refresh_token(request: RefreshTokenRequest, db: Session = Depends(get_
 async def get_current_user_info(current_user: User = Depends(get_current_active_user)):
     """Get current user information"""
     return current_user
+
+
+# ============= PERSONAL ACCESS TOKEN ENDPOINTS =============
+
+
+@router.post("/tokens", response_model=PersonalAccessTokenResponse, status_code=201)
+async def create_token(
+    token_data: PersonalAccessTokenCreate,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """Create a new Personal Access Token
+    
+    The token value is only shown once in the response.
+    Store it securely as it cannot be retrieved later.
+    """
+    pat, token = create_personal_access_token(
+        db, current_user, token_data.name, token_data.expires_in_days
+    )
+    
+    return PersonalAccessTokenResponse(
+        id=pat.id,
+        user_id=pat.user_id,
+        name=pat.name,
+        token=token,
+        created_at=pat.created_at,
+        expires_at=pat.expires_at,
+    )
+
+
+@router.get("/tokens", response_model=List[PersonalAccessTokenRead])
+async def list_tokens(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """List all Personal Access Tokens for the current user"""
+    tokens = db.exec(
+        select(PersonalAccessToken).where(PersonalAccessToken.user_id == current_user.id)
+    ).all()
+    return tokens
+
+
+@router.delete("/tokens/{token_id}", status_code=204)
+async def delete_token(
+    token_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """Revoke (delete) a Personal Access Token"""
+    success = revoke_personal_access_token(db, current_user, token_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Token not found")
+    return None
