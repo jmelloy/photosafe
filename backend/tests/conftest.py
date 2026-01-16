@@ -18,6 +18,7 @@ from app.models import (
     album_photos,
     Task,
     PlaceSummary,
+    PersonalAccessToken,
 )
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -124,7 +125,7 @@ def db_session(engine):
     with engine.begin() as connection:
         # Delete in order to respect foreign key constraints
         connection.execute(album_photos.delete())
-        for table in [Version, Photo, Album, Library, User, Task, PlaceSummary]:
+        for table in [Version, Photo, Album, Library, PersonalAccessToken, User, Task, PlaceSummary]:
             connection.execute(table.__table__.delete())
 
 
