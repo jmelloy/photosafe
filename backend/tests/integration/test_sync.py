@@ -185,7 +185,7 @@ class TestSyncCommands:
         mock_api.photos.albums.items.return_value = []
 
         # Mock list_bucket
-        with patch("cli.sync_commands.list_bucket", return_value=[]):
+        with patch("cli.sync_tools.list_bucket", return_value=[]):
             # Mock shutil.rmtree to avoid actual file operations
             with patch("cli.sync_commands.shutil.rmtree"):
                 # Mock os.makedirs

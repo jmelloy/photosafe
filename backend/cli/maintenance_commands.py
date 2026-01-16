@@ -20,6 +20,10 @@ from app.models import Version, Photo
 from cli.sync_tools import list_bucket
 
 
+# Expected S3 CSV column names
+S3_CSV_COLUMNS = ["bucket", "key", "size", "lastmodifieddate", "etag"]
+
+
 @click.group()
 def maintenance():
     """Maintenance and diagnostic commands"""
@@ -112,6 +116,7 @@ def get_s3_objects_from_csv(csv_path: str) -> Dict[str, Dict[str, Any]]:
     Get all objects from S3 CSV export with their sizes and bucket info
 
     Expected CSV format: Bucket, Key, Size, LastModifiedDate, ETag
+    (Bucket column is optional)
 
     Returns:
         Dict mapping s3_path -> {"size": int, "bucket": str}
@@ -122,23 +127,31 @@ def get_s3_objects_from_csv(csv_path: str) -> Dict[str, Dict[str, Any]]:
 
     try:
         with open(csv_path, "r", encoding="utf-8") as f:
-            # CSV format is: Bucket, Key, Size, LastModifiedDate, ETag
-            # Columns may have spaces after commas
-            fieldnames = ["Bucket", "Key", "Size", "LastModifiedDate", "ETag"]
-            reader = csv.DictReader(
-                f,
-                skipinitialspace=True,
-                fieldnames=fieldnames,
-            )
-
-            # Check if we have the Key and Size columns at minimum
-            if "Key" not in fieldnames or "Size" not in fieldnames:
-                click.echo(f"Available columns: {fieldnames}")
-                raise ValueError(
-                    f"CSV must have 'Key' and 'Size' columns. Found: {fieldnames}"
+            # Read the first line to detect the header
+            first_line = f.readline().strip()
+            f.seek(0)  # Reset to beginning
+            
+            # Check if first line looks like a header by parsing it properly
+            reader_sample = csv.reader([first_line], skipinitialspace=True)
+            first_values = next(reader_sample)
+            is_header = any(val.strip().lower() in S3_CSV_COLUMNS 
+                          for val in first_values)
+            
+            if is_header:
+                # Use the actual header from the file
+                reader = csv.DictReader(f, skipinitialspace=True)
+                # Get the actual fieldnames from the CSV
+                actual_fieldnames = reader.fieldnames
+                click.echo(f"CSV columns: {', '.join(actual_fieldnames)}")
+            else:
+                # No header, use default fieldnames
+                fieldnames = ["Bucket", "Key", "Size", "LastModifiedDate", "ETag"]
+                reader = csv.DictReader(
+                    f,
+                    skipinitialspace=True,
+                    fieldnames=fieldnames,
                 )
-
-            click.echo(f"CSV columns: {', '.join(fieldnames)}")
+                click.echo(f"CSV columns: {', '.join(fieldnames)}")
 
             total_count = 0
             for row in reader:
@@ -267,8 +280,13 @@ def format_size_kb(size_bytes: int) -> str:
     return f"{size_bytes / 1024:,.2f}"
 
 
-def print_report(issues: Dict[str, List]):
-    """Print comparison report"""
+def print_report(issues: Dict[str, List], show_orphaned: bool = True):
+    """Print comparison report
+    
+    Args:
+        issues: Dictionary of issues found during comparison
+        show_orphaned: If True, show details of orphaned files. If False, only show count and total size.
+    """
 
     click.echo("\n" + "=" * 80)
     click.echo("COMPARISON REPORT")
@@ -338,12 +356,18 @@ def print_report(issues: Dict[str, List]):
             f"\n⚠️  ORPHANED IN S3: {len(issues['orphaned_in_s3'])} files "
             f"({format_size_mb(total_size)} MB total)"
         )
-        click.echo("-" * 80)
-        for item in issues["orphaned_in_s3"][:10]:
-            click.echo(f"  {item['s3_path']} ({format_size_kb(item['size'])} KB)")
+        
+        if show_orphaned:
+            # Show detailed information about orphaned files
+            click.echo("-" * 80)
+            for item in issues["orphaned_in_s3"][:10]:
+                click.echo(f"  {item['s3_path']} ({format_size_kb(item['size'])} KB)")
 
-        if len(issues["orphaned_in_s3"]) > 10:
-            click.echo(f"  ... and {len(issues['orphaned_in_s3']) - 10} more")
+            if len(issues["orphaned_in_s3"]) > 10:
+                click.echo(f"  ... and {len(issues['orphaned_in_s3']) - 10} more")
+        else:
+            # Just show count and total size
+            click.echo("  (use --show-orphaned to see details)")
     else:
         click.echo("\n✅ No orphaned files in S3")
 
