@@ -49,6 +49,7 @@ class User(SQLModel, table=True):
     photos: List["Photo"] = Relationship(back_populates="owner")
     libraries: List["Library"] = Relationship(back_populates="owner")
     personal_access_tokens: List["PersonalAccessToken"] = Relationship(back_populates="user")
+    apple_credentials: List["AppleCredential"] = Relationship(back_populates="user")
 
 
 class PersonalAccessToken(SQLModel, table=True):
@@ -63,9 +64,63 @@ class PersonalAccessToken(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     last_used_at: Optional[datetime] = None
     expires_at: Optional[datetime] = None  # Optional expiration
-    
+
     # Relationships
     user: Optional["User"] = Relationship(back_populates="personal_access_tokens")
+
+
+class AppleCredential(SQLModel, table=True):
+    """Apple/iCloud credentials for a user"""
+
+    __tablename__ = "apple_credentials"
+
+    id: Optional[int] = Field(default=None, primary_key=True, index=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    apple_id: str = Field(sa_type=String, index=True)  # iCloud username/email
+    encrypted_password: str = Field(sa_type=Text)  # Encrypted password
+    is_active: bool = Field(default=True)
+    requires_2fa: bool = Field(default=False)  # Whether 2FA is enabled
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(
+            DateTime,
+            default=lambda: datetime.now(timezone.utc),
+            onupdate=lambda: datetime.now(timezone.utc),
+        ),
+    )
+    last_authenticated_at: Optional[datetime] = None
+
+    # Relationships
+    user: Optional["User"] = Relationship(back_populates="apple_credentials")
+    auth_sessions: List["AppleAuthSession"] = Relationship(
+        back_populates="credential", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+
+
+class AppleAuthSession(SQLModel, table=True):
+    """Apple authentication session with cookies and 2FA state"""
+
+    __tablename__ = "apple_auth_sessions"
+
+    id: Optional[int] = Field(default=None, primary_key=True, index=True)
+    credential_id: int = Field(foreign_key="apple_credentials.id", index=True)
+    session_data: Dict[str, Any] = Field(
+        sa_column=Column(JSONB, nullable=True)
+    )  # Encrypted session cookies and tokens
+    is_authenticated: bool = Field(default=False)
+    requires_2fa: bool = Field(default=False)
+    awaiting_2fa_code: bool = Field(default=False)
+    trusted_devices: Optional[List[Dict[str, Any]]] = Field(
+        default=None, sa_column=Column(JSONB, nullable=True)
+    )  # For 2SA
+    session_token: Optional[str] = Field(default=None, sa_type=String, index=True, unique=True)  # Unique token for this auth session
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    expires_at: Optional[datetime] = None
+    last_used_at: Optional[datetime] = None
+
+    # Relationships
+    credential: Optional["AppleCredential"] = Relationship(back_populates="auth_sessions")
 
 
 class Library(SQLModel, table=True):
@@ -818,3 +873,72 @@ class PersonalAccessTokenResponse(SQLModel):
 
     class Config:
         from_attributes = True
+
+
+class AppleCredentialRead(SQLModel):
+    """AppleCredential read schema - for API responses"""
+
+    id: int
+    user_id: int
+    apple_id: str
+    is_active: bool
+    requires_2fa: bool
+    created_at: datetime
+    updated_at: datetime
+    last_authenticated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AppleCredentialCreate(SQLModel):
+    """AppleCredential create schema - for API requests"""
+
+    apple_id: str
+    password: str  # Plain text password - will be encrypted on storage
+
+
+class AppleCredentialUpdate(SQLModel):
+    """AppleCredential update schema - for API requests"""
+
+    password: Optional[str] = None  # Plain text password - will be encrypted on storage
+    is_active: Optional[bool] = None
+
+
+class AppleAuthSessionRead(SQLModel):
+    """AppleAuthSession read schema - for API responses"""
+
+    id: int
+    credential_id: int
+    is_authenticated: bool
+    requires_2fa: bool
+    awaiting_2fa_code: bool
+    trusted_devices: Optional[List[Dict[str, Any]]] = None
+    session_token: Optional[str] = None
+    created_at: datetime
+    expires_at: Optional[datetime] = None
+    last_used_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AppleAuthInitiateRequest(SQLModel):
+    """Request to initiate Apple authentication"""
+
+    credential_id: int
+
+
+class AppleAuth2FARequest(SQLModel):
+    """Request to submit 2FA code"""
+
+    session_token: str
+    code: str
+
+
+class AppleAuth2FAResponse(SQLModel):
+    """Response after submitting 2FA code"""
+
+    success: bool
+    message: str
+    session: Optional[AppleAuthSessionRead] = None

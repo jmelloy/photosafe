@@ -461,6 +461,16 @@ def dump_macos(limit):
 @click.option("--password", required=True, envvar="PASSWORD", help="API password")
 @click.option("--icloud-username", envvar="ICLOUD_USERNAME", help="iCloud username")
 @click.option("--icloud-password", envvar="ICLOUD_PASSWORD", help="iCloud password")
+@click.option(
+    "--use-stored-credentials",
+    is_flag=True,
+    help="Use stored Apple credentials from database (requires prior authentication via web interface)",
+)
+@click.option(
+    "--credential-id",
+    type=int,
+    help="Specific credential ID to use from database (optional, requires --use-stored-credentials)",
+)
 @click.option("--stop-after", default=1000, help="Stop after N existing photos")
 @click.option("--offset", default=0, help="Offset for fetching photos")
 @click.option(
@@ -474,6 +484,8 @@ def icloud(
     password,
     icloud_username,
     icloud_password,
+    use_stored_credentials,
+    credential_id,
     stop_after,
     offset,
     batch_size,
@@ -489,6 +501,7 @@ def icloud(
         DateTimeEncoder,
         PhotoSafeAuth,
         authenticate_icloud,
+        get_icloud_from_stored_credentials,
         list_bucket,
     )
 
@@ -498,7 +511,24 @@ def icloud(
     auth = PhotoSafeAuth(base_url, username, password)
 
     # Authenticate with iCloud
-    api = authenticate_icloud(icloud_username, icloud_password)
+    if use_stored_credentials:
+        # Use stored credentials from database
+        if credential_id:
+            api = get_icloud_from_stored_credentials(credential_id=credential_id)
+        else:
+            # Use credentials for the authenticated user
+            api = get_icloud_from_stored_credentials(user_id=auth.user["id"])
+
+        if not api:
+            click.echo(
+                "Failed to authenticate with stored credentials. "
+                "Please ensure you have authenticated via the web interface at /settings/apple",
+                err=True
+            )
+            raise click.Abort()
+    else:
+        # Use traditional username/password authentication
+        api = authenticate_icloud(icloud_username, icloud_password)
 
     def upload_photo(photo, version, path):
         os.makedirs(os.path.split(path)[0], exist_ok=True)
