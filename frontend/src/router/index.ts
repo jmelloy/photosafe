@@ -28,6 +28,11 @@ const routes: RouteRecordRaw[] = [
     name: "version",
     component: () => import("../views/VersionPage.vue"),
   },
+  {
+    path: "/settings/apple",
+    name: "apple-settings",
+    component: () => import("../views/AppleSettingsPage.vue"),
+  },
 ];
 
 const router = createRouter({

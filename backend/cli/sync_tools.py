@@ -275,3 +275,69 @@ def authenticate_icloud(icloud_username, icloud_password):
             raise click.Abort()
 
     return api
+
+
+def get_icloud_from_stored_credentials(credential_id=None, user_id=None):
+    """Get authenticated iCloud API from stored credentials in database
+
+    Args:
+        credential_id: Specific credential ID to use (optional)
+        user_id: User ID to get credentials for (optional)
+
+    Returns:
+        PyiCloudService instance or None if no valid credentials found
+    """
+    from app.apple_auth import AppleAuthService
+    from app.database import SessionLocal
+    from sqlmodel import select
+
+    db = SessionLocal()
+    try:
+        apple_auth_service = AppleAuthService()
+
+        if credential_id:
+            # Use specific credential
+            api = apple_auth_service.get_authenticated_api(db, credential_id)
+            if api:
+                click.echo(f"Using stored Apple credentials (ID: {credential_id})")
+                return api
+            else:
+                click.echo(
+                    f"No valid authenticated session found for credential ID {credential_id}. "
+                    "Please authenticate via the web interface at /settings/apple",
+                    err=True
+                )
+                return None
+        elif user_id:
+            # Get first active credential for user
+            from app.models import AppleCredential
+            credential = db.exec(
+                select(AppleCredential)
+                .where(AppleCredential.user_id == user_id, AppleCredential.is_active == True)
+                .order_by(AppleCredential.last_authenticated_at.desc())
+            ).first()
+
+            if credential:
+                api = apple_auth_service.get_authenticated_api(db, credential.id)
+                if api:
+                    click.echo(f"Using stored Apple credentials for {credential.apple_id}")
+                    return api
+                else:
+                    click.echo(
+                        f"No valid authenticated session found. "
+                        "Please authenticate via the web interface at /settings/apple",
+                        err=True
+                    )
+                    return None
+            else:
+                click.echo(
+                    "No Apple credentials found in database. "
+                    "Please add credentials via the web interface at /settings/apple",
+                    err=True
+                )
+                return None
+        else:
+            click.echo("Either credential_id or user_id must be provided", err=True)
+            return None
+    finally:
+        db.close()
