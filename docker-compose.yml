@@ -119,7 +119,8 @@ services:
       - VITE_API_URL=${VITE_API_URL:-http://backend:8000}
       - GIT_SHA=${GIT_SHA:-dev}
     # Development default includes npm install, production uses preview
-    command: ${FRONTEND_COMMAND:-sh -c "npm install && npm run dev -- --host 0.0.0.0"}
+    # Added --force flag to enable polling for file changes in Docker
+    command: ${FRONTEND_COMMAND:-sh -c "npm install && npm run dev -- --host 0.0.0.0 --force"}
     depends_on:
       - backend
     restart: ${RESTART_POLICY:-unless-stopped}
