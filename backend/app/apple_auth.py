@@ -21,12 +21,19 @@ class AppleAuthService:
         # Get encryption key from environment or generate one
         # In production, this should be stored securely in environment variables
         encryption_key = os.getenv("APPLE_CREDENTIALS_ENCRYPTION_KEY")
-        if not encryption_key:
+        if not encryption_key and os.getenv("ENV") == "development":
             # Generate a key if not set (for development)
             # WARNING: This should be set in production to persist across restarts
             encryption_key = Fernet.generate_key().decode()
+        else:
+            if not encryption_key:
+                raise ValueError("Encryption key for Apple credentials is not set")
 
-        self.cipher = Fernet(encryption_key.encode() if isinstance(encryption_key, str) else encryption_key)
+        self.cipher = Fernet(
+            encryption_key.encode()
+            if isinstance(encryption_key, str)
+            else encryption_key
+        )
 
     def _encrypt_password(self, password: str) -> str:
         """Encrypt a password for storage"""
@@ -45,7 +52,9 @@ class AppleAuthService:
     def _decrypt_session_data(self, encrypted_data: dict) -> dict:
         """Decrypt session data"""
         if "encrypted" in encrypted_data:
-            return json.loads(self.cipher.decrypt(encrypted_data["encrypted"].encode()).decode())
+            return json.loads(
+                self.cipher.decrypt(encrypted_data["encrypted"].encode()).decode()
+            )
         return encrypted_data
 
     def create_credential(
@@ -55,8 +64,7 @@ class AppleAuthService:
         # Check if credential already exists for this user and apple_id
         existing = db.exec(
             select(AppleCredential).where(
-                AppleCredential.user_id == user_id,
-                AppleCredential.apple_id == apple_id
+                AppleCredential.user_id == user_id, AppleCredential.apple_id == apple_id
             )
         ).first()
 
@@ -81,7 +89,9 @@ class AppleAuthService:
         db.refresh(credential)
         return credential
 
-    def get_credential(self, db: Session, credential_id: int) -> Optional[AppleCredential]:
+    def get_credential(
+        self, db: Session, credential_id: int
+    ) -> Optional[AppleCredential]:
         """Get a credential by ID"""
         return db.exec(
             select(AppleCredential).where(AppleCredential.id == credential_id)
@@ -89,9 +99,11 @@ class AppleAuthService:
 
     def get_user_credentials(self, db: Session, user_id: int) -> list[AppleCredential]:
         """Get all credentials for a user"""
-        return list(db.exec(
-            select(AppleCredential).where(AppleCredential.user_id == user_id)
-        ).all())
+        return list(
+            db.exec(
+                select(AppleCredential).where(AppleCredential.user_id == user_id)
+            ).all()
+        )
 
     def delete_credential(self, db: Session, credential_id: int) -> bool:
         """Delete a credential and all its sessions"""
@@ -142,7 +154,7 @@ class AppleAuthService:
             auth_session.awaiting_2fa_code = True
 
             # For 2SA (two-step auth), get trusted devices
-            if hasattr(api, 'trusted_devices') and api.trusted_devices:
+            if hasattr(api, "trusted_devices") and api.trusted_devices:
                 auth_session.trusted_devices = api.trusted_devices
         else:
             # No 2FA required, authentication successful
@@ -151,7 +163,7 @@ class AppleAuthService:
             credential.last_authenticated_at = datetime.now(timezone.utc)
 
             # Store session data (cookies)
-            if hasattr(api, 'session') and hasattr(api.session, 'cookies'):
+            if hasattr(api, "session") and hasattr(api.session, "cookies"):
                 cookies_dict = dict_from_cookiejar(api.session.cookies)
                 auth_session.session_data = self._encrypt_session_data(cookies_dict)
 
@@ -222,7 +234,7 @@ class AppleAuthService:
         credential.requires_2fa = True
 
         # Store session data (cookies)
-        if hasattr(api, 'session') and hasattr(api.session, 'cookies'):
+        if hasattr(api, "session") and hasattr(api.session, "cookies"):
             cookies_dict = dict_from_cookiejar(api.session.cookies)
             auth_session.session_data = self._encrypt_session_data(cookies_dict)
 
@@ -259,7 +271,9 @@ class AppleAuthService:
             return None
 
         # Check if session is expired
-        if auth_session.expires_at and auth_session.expires_at < datetime.now(timezone.utc):
+        if auth_session.expires_at and auth_session.expires_at < datetime.now(
+            timezone.utc
+        ):
             return None
 
         # Decrypt password
@@ -272,7 +286,7 @@ class AppleAuthService:
             # Restore session cookies if available
             if auth_session.session_data:
                 session_data = self._decrypt_session_data(auth_session.session_data)
-                if hasattr(api, 'session') and session_data:
+                if hasattr(api, "session") and session_data:
                     for key, value in session_data.items():
                         api.session.cookies.set(key, value)
 
