@@ -88,6 +88,7 @@ services:
       - DEBUG=${DEBUG:-false}
       - DEBUG_SQL=${DEBUG_SQL:-false}
       - GIT_SHA=${GIT_SHA:-dev}
+      - APPLE_CREDENTIALS_ENCRYPTION_KEY=${APPLE_CREDENTIALS_ENCRYPTION_KEY:-}
     # Development default includes --reload, production should not
     command: ${BACKEND_COMMAND:-sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"}
     depends_on:
