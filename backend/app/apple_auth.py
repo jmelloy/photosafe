@@ -8,6 +8,7 @@ from typing import Optional, Tuple
 
 from cryptography.fernet import Fernet
 from pyicloud import PyiCloudService
+from requests.utils import dict_from_cookiejar
 from sqlmodel import Session, select
 
 from app.models import AppleAuthSession, AppleCredential
@@ -151,7 +152,7 @@ class AppleAuthService:
 
             # Store session data (cookies)
             if hasattr(api, 'session') and hasattr(api.session, 'cookies'):
-                cookies_dict = dict(api.session.cookies)
+                cookies_dict = dict_from_cookiejar(api.session.cookies)
                 auth_session.session_data = self._encrypt_session_data(cookies_dict)
 
         # Set expiration (7 days from now)
@@ -222,7 +223,7 @@ class AppleAuthService:
 
         # Store session data (cookies)
         if hasattr(api, 'session') and hasattr(api.session, 'cookies'):
-            cookies_dict = dict(api.session.cookies)
+            cookies_dict = dict_from_cookiejar(api.session.cookies)
             auth_session.session_data = self._encrypt_session_data(cookies_dict)
 
         db.add(auth_session)
