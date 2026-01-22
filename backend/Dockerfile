@@ -1,7 +1,7 @@
 FROM python:3.13-slim
 
 WORKDIR /app
-COPY --from=ghcr.io/astral-sh/uv:0.9.16 /uv /uvx /bin/
+RUN pip install --system uv
 
 # Install PostgreSQL client tools and git
 RUN apt-get update && apt-get install -y \
@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
 
 # Install dependencies
 COPY pyproject.toml .
-RUN uv pip install --system .[icloud]
+RUN uv pip install --system .
 
 COPY app ./app
 COPY cli ./cli
