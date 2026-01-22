@@ -32,15 +32,14 @@ dependencies = [
     "ruff>=0.14.10",
     "python-gazetteer>=0.1.0",
     "pillow-heif>=1.1.1",
+    "pyicloud @ git+https://github.com/jmelloy/pyicloud.git",
 ]
 
 [project.optional-dependencies]
 macos = [
     "osxphotos>=0.60",
 ]
-icloud = [
-    "pyicloud @ git+https://github.com/jmelloy/pyicloud.git",
-]
+
 test = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
