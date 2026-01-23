@@ -36,8 +36,8 @@ npm run test:run         # Tests
 
 ### Docker
 ```bash
-docker-compose up --build        # Dev: all services
-./build.sh && docker-compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d  # Production
+cp docker-compose.override.yml.example docker-compose.override.yml && docker-compose up --build  # Dev: all services
+./build.sh && docker-compose --env-file .env.production up -d  # Production
 docker compose --profile test up -d test-db  # Test DB (port 5433)
 ```
 
@@ -52,7 +52,7 @@ docker compose --profile test up -d test-db  # Test DB (port 5433)
 
 1. **Python 3.13+ required** - Backend fails on 3.12. Use Docker or install 3.13.
 2. **Test DB port 5433** - Avoids conflicts with dev DB on 5432
-3. **Production requires docker-compose.prod.yml** - Removes volume mounts (code baked in images)
+3. **Docker development** - Copy docker-compose.override.yml.example to docker-compose.override.yml for dev setup
 4. **Always run migrations** - "Target database not up to date"? Run `alembic upgrade head`
 
 ## Environment Variables
@@ -65,7 +65,8 @@ docker compose --profile test up -d test-db  # Test DB (port 5433)
 - `backend/pyproject.toml` - Python deps, ruff config, CLI entry point
 - `backend/pytest.ini` - Test paths, markers
 - `frontend/vite.config.ts` - Vitest config, proxy
-- `docker-compose.yml` + `docker-compose.prod.yml` - Dev/prod services
+- `docker-compose.yml` - Production-ready config
+- `docker-compose.override.yml.example` - Development overrides
 
 ## Development Workflows
 
@@ -93,7 +94,7 @@ See backend/SYNC_COMMANDS.md and backend/TASK_SYSTEM.md for details.
 
 1. **ALWAYS run `alembic upgrade head`** before backend start/changes
 2. **Test DB uses port 5433** (not 5432)
-3. **Production requires docker-compose.prod.yml** (removes volume mounts)
+3. **Docker development** - Copy docker-compose.override.yml.example to docker-compose.override.yml
 4. **Python 3.13+ strictly required**
 5. **Use `npm ci` in CI** not `npm install`
 6. **Use backend/run_tests.sh** for hassle-free testing

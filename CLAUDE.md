@@ -28,7 +28,8 @@ cd frontend
 npm ci
 npm run dev
 
-# Docker
+# Docker - Development
+cp docker-compose.override.yml.example docker-compose.override.yml
 docker-compose up --build
 ```
 
@@ -152,7 +153,7 @@ Structure: `photosafe {user|library|import|sync|task|maintenance} [command] [opt
 5. **Missing env vars**: Copy `backend/.env.example` to `.env`, generate SECRET_KEY with `openssl rand -hex 32`
 6. **Broken images**: Use `photo.url` not `photo.path` or `photo.s3_key_path`
 7. **Token refresh race**: Handled in `frontend/src/api/client.ts` with request queue
-8. **Production volumes**: Use `docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d`
+8. **Docker development**: Copy `docker-compose.override.yml.example` to `docker-compose.override.yml` for development with hot-reload
 
 ## Environment Variables
 

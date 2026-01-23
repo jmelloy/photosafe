@@ -14,7 +14,8 @@ Photo gallery with FastAPI backend, Vue 3 frontend, and CLI tools.
 ## Quick Start
 
 ```bash
-# Docker (recommended)
+# Docker - Development (recommended)
+cp docker-compose.override.yml.example docker-compose.override.yml
 docker-compose up --build
 # Frontend: http://localhost:5173 | Backend: http://localhost:8000 | Docs: http://localhost:8000/docs
 
@@ -54,7 +55,7 @@ Full docs at http://localhost:8000/docs
 ```bash
 cp .env.production.example .env.production  # Set strong POSTGRES_PASSWORD
 ./build.sh
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d
+docker-compose --env-file .env.production up -d
 ```
 
 ## Contributing
