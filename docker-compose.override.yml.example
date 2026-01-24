@@ -1,0 +1,65 @@
+# Development override for PhotoSafe Docker Compose
+#
+# Usage:
+#   1. Copy this file: cp docker-compose.override.yml.example docker-compose.override.yml
+#   2. Run: docker-compose up --build
+#
+# Docker Compose automatically merges docker-compose.override.yml with docker-compose.yml
+# when running `docker-compose up`. This allows the main docker-compose.yml to be
+# production-ready while development settings are kept in the override file.
+#
+# This override file adds:
+#   - Source code volume mounts for hot-reloading
+#   - Development commands (--reload, npm run dev)
+#   - Exposed database port for local tools
+#   - Development environment variables
+
+services:
+  db:
+    # Expose database port for local development tools
+    ports:
+      - "5432:5432"
+
+  backend:
+    # Mount source code for hot-reloading in development
+    volumes:
+      - ./backend:/app
+      - ./backend/uploads:/app/uploads
+      - backend_pycache:/app/__pycache__
+    environment:
+      - ENV=development
+      - GIT_SHA=dev
+    # Development command with --reload for hot-reloading
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    # Use unless-stopped for development (easier to stop/start)
+    restart: unless-stopped
+
+  frontend:
+    # Mount source code for hot-reloading in development
+    volumes:
+      - ./frontend:/app
+      - /app/dist
+      - frontend_node_modules:/app/node_modules
+    environment:
+      - GIT_SHA=dev
+    # Development command with npm install and dev server
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    ports:
+      # Use different default port for development
+      - "5173:5173"
+    # Use unless-stopped for development (easier to stop/start)
+    restart: unless-stopped
+
+  cli:
+    # Mount source code for development
+    volumes:
+      - ./backend:/app
+      - ./backend/uploads:/app/uploads
+      - backend_pycache:/app/__pycache__
+    environment:
+      - GIT_SHA=dev
+
+volumes:
+  # Additional volumes for development
+  frontend_node_modules:
+  backend_pycache:

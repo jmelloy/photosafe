@@ -1,15 +1,15 @@
 # PhotoSafe Docker Compose Configuration
 #
-# This configuration supports both development and production environments
-# using environment variables to control behavior.
+# This is the production-ready configuration. For development, copy
+# docker-compose.override.yml.example to docker-compose.override.yml.
 #
-# Development Usage (default):
-#   docker-compose up --build
+# Production Usage (default):
+#   docker-compose up -d
 #
-# Production Usage:
-#   Use docker-compose.prod.yml override to disable volume mounts:
-#   1. Create .env.production from .env.production.example
-#   2. docker-compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d
+# Development Usage:
+#   1. Copy docker-compose.override.yml.example to docker-compose.override.yml
+#   2. docker-compose up --build
+#   Note: Docker Compose automatically merges docker-compose.override.yml if it exists
 #
 # Environment Variables (with defaults):
 #   - POSTGRES_DB: Database name (default: photosafe)
@@ -17,14 +17,12 @@
 #   - POSTGRES_PASSWORD: Database password (default: photosafe)
 #   - VITE_API_URL: Frontend API URL (default: http://backend:8000)
 #   - BACKEND_PORT: Backend port mapping (default: 8000:8000)
-#   - FRONTEND_PORT: Frontend port mapping (default: 5173:5173)
-#   - BACKEND_COMMAND: Backend startup command (default: dev mode with --reload)
-#   - FRONTEND_COMMAND: Frontend startup command (default: dev mode)
-#   - RESTART_POLICY: Container restart policy (default: unless-stopped)
+#   - FRONTEND_PORT: Frontend port mapping (default: 5000:5173)
+#   - RESTART_POLICY: Container restart policy (default: always)
 #
 # Security Notes for Production:
 #   - Always set a strong POSTGRES_PASSWORD
-#   - Don't expose database port (comment out or remove port mapping)
+#   - Database port is not exposed externally
 #   - Use a reverse proxy (nginx/traefik) in front of backend/frontend
 #   - Consider using Docker secrets for sensitive data
 
@@ -38,15 +36,15 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-photosafe}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    # Database port is not exposed in production for security
+    # Override in docker-compose.override.yml for local development
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-photosafe}"]
       interval: 5s
       timeout: 5s
       retries: 5
       start_period: 10s
-    restart: ${RESTART_POLICY:-unless-stopped}
+    restart: ${RESTART_POLICY:-always}
     networks:
       - photosafe-network
 
@@ -58,7 +56,7 @@ services:
       POSTGRES_USER: ${TEST_POSTGRES_USER:-photosafe}
       POSTGRES_PASSWORD: ${TEST_POSTGRES_PASSWORD:-photosafe}
     ports:
-      - "${TEST_DB_PORT:-5433:5432}"
+      - "${TEST_DB_PORT:-5433}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${TEST_POSTGRES_USER:-photosafe}"]
       interval: 5s
@@ -78,26 +76,25 @@ services:
     container_name: photosafe-backend
     ports:
       - "${BACKEND_PORT:-8000:8000}"
+    # Production: only mount uploads directory, no source code
+    # Override in docker-compose.override.yml for development
     volumes:
-      - ./backend:/app
       - ./backend/uploads:/app/uploads
-      - backend_pycache:/app/__pycache__
     environment:
       - PYTHONUNBUFFERED=1
       - DATABASE_URL=postgresql://${POSTGRES_USER:-photosafe}:${POSTGRES_PASSWORD:-photosafe}@db:5432/${POSTGRES_DB:-photosafe}
       - DEBUG=${DEBUG:-false}
       - DEBUG_SQL=${DEBUG_SQL:-false}
-      - GIT_SHA=${GIT_SHA:-dev}
+      - GIT_SHA=${GIT_SHA:-production}
       - APPLE_CREDENTIALS_ENCRYPTION_KEY=${APPLE_CREDENTIALS_ENCRYPTION_KEY:-}
-      - ENV=${ENV:-development}
-    # Development default includes --reload, production should not
-    command: ${BACKEND_COMMAND:-sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"}
+      - ENV=${ENV:-production}
+    # Production command without --reload
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
     depends_on:
       db:
         condition: service_healthy
-    restart: ${RESTART_POLICY:-unless-stopped}
+    restart: ${RESTART_POLICY:-always}
     healthcheck:
-      # Health check for production
       test: ["CMD-SHELL", 'python -c "import urllib.request; urllib.request.urlopen(''http://localhost:8000/'')" || exit 1']
       interval: 30s
       timeout: 10s
@@ -112,21 +109,18 @@ services:
       dockerfile: Dockerfile
     container_name: photosafe-frontend
     ports:
-      - "${FRONTEND_PORT:-5173:5173}"
-    volumes:
-      - ./frontend:/app
-      - /app/dist
-      - frontend_node_modules:/app/node_modules
+      - "${FRONTEND_PORT:-5000:5173}"
+    # Production: no volume mounts, built files are in the image
+    # Override in docker-compose.override.yml for development
     environment:
       - VITE_API_URL=${VITE_API_URL:-http://backend:8000}
-      - GIT_SHA=${GIT_SHA:-dev}
-    # Development default includes npm install, production uses preview
-    command: ${FRONTEND_COMMAND:-sh -c "npm install && npm run dev -- --host 0.0.0.0"}
+      - GIT_SHA=${GIT_SHA:-production}
+    # Production command uses preview mode
+    command: npm run preview -- --host 0.0.0.0
     depends_on:
       - backend
-    restart: ${RESTART_POLICY:-unless-stopped}
+    restart: ${RESTART_POLICY:-always}
     healthcheck:
-      # Health check for production
       test: ["CMD-SHELL", 'node -e "require(''http'').get(''http://localhost:5173'', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on(''error'', () => process.exit(1))" || exit 1']
       interval: 30s
       timeout: 10s
@@ -141,13 +135,11 @@ services:
       dockerfile: Dockerfile
     container_name: photosafe-cli
     volumes:
-      - ./backend:/app
       - ./backend/uploads:/app/uploads
-      - backend_pycache:/app/__pycache__
     environment:
       - PYTHONUNBUFFERED=1
       - DATABASE_URL=postgresql://${POSTGRES_USER:-photosafe}:${POSTGRES_PASSWORD:-photosafe}@db:5432/${POSTGRES_DB:-photosafe}
-      - GIT_SHA=${GIT_SHA:-dev}
+      - GIT_SHA=${GIT_SHA:-production}
       - ICLOUD_USERNAME=${ICLOUD_USERNAME:-}
       - ICLOUD_PASSWORD=${ICLOUD_PASSWORD:-}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
@@ -170,8 +162,6 @@ volumes:
     driver: local
   uploads_data:
     driver: local
-  frontend_node_modules:
-  backend_pycache:
 
 networks:
   photosafe-network:
