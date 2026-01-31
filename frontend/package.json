@@ -19,7 +19,7 @@
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
-    "@types/node": "^25.0.10",
+    "@types/node": "^25.1.0",
     "@vitejs/plugin-vue": "^6.0.3",
     "@vitest/ui": "^4.0.18",
     "@vue/test-utils": "^2.4.6",
