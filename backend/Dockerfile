@@ -1,7 +1,7 @@
 FROM python:3.13-slim
 
 WORKDIR /app
-RUN pip install --system uv
+RUN pip install uv
 
 # Install PostgreSQL client tools and git
 RUN apt-get update && apt-get install -y \
