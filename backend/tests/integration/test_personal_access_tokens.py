@@ -54,7 +54,9 @@ def test_create_personal_access_token_with_expiration(client, test_user):
     assert data["expires_at"] is not None
     
     # Check expiration is approximately 30 days from now
-    expires_at = datetime.fromisoformat(data["expires_at"].replace("Z", "+00:00"))
+    # Remove timezone info if present (Z suffix) and parse as UTC
+    expires_at_str = data["expires_at"].replace("Z", "").replace("+00:00", "")
+    expires_at = datetime.fromisoformat(expires_at_str).replace(tzinfo=timezone.utc)
     expected_expiry = datetime.now(timezone.utc) + timedelta(days=30)
     time_diff = abs((expires_at - expected_expiry).total_seconds())
     assert time_diff < 60  # Within 1 minute
