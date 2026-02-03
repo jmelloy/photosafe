@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci
+RUN npm ci --prefer-offline --no-audit
 
 # Copy source code
 COPY . .
@@ -32,7 +32,7 @@ ARG VITE_VERSION=^7.3.0
 
 # Install only production dependencies and vite (needed for preview server)
 # Separate commands to maintain lockfile integrity
-RUN npm ci --omit=dev --no-save
+RUN npm ci --omit=dev --no-save --prefer-offline --no-audit
 RUN npm install --no-save vite@${VITE_VERSION}
 
 # Copy built files from builder stage
