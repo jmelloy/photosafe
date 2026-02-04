@@ -40,6 +40,9 @@ cd backend
 # Set the test database URL environment variable
 export TEST_DATABASE_URL="postgresql://photosafe:photosafe@localhost:5433/photosafe_test"
 
+# Set the Apple credentials encryption key for tests
+export APPLE_CREDENTIALS_ENCRYPTION_KEY="T1lmgBYDgxCurwiSjGvaJxKwPxPrmtOTbTFJsrm205M="
+
 # Activate virtual environment if it exists
 if [ -d ".venv" ]; then
     source .venv/bin/activate
