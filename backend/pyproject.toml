@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "photosafe"
-version = "2026.2.37"
+version = "2026.2.38"
 description = "PhotoSafe Gallery - A modern photo gallery application"
 readme = "README.md"
 requires-python = ">=3.13"
