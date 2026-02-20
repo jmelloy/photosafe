@@ -1,0 +1,116 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: photosafe
+  labels:
+    app.kubernetes.io/name: backend
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: photosafe
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8000
+      targetPort: 8000
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: backend
+    app.kubernetes.io/component: api
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: photosafe
+  labels:
+    app.kubernetes.io/name: backend
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: photosafe
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: backend
+      app.kubernetes.io/component: api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: backend
+        app.kubernetes.io/component: api
+        app.kubernetes.io/part-of: photosafe
+    spec:
+      initContainers:
+        - name: run-migrations
+          image: ghcr.io/OWNER/photosafe-backend:latest
+          command: ["alembic", "upgrade", "head"]
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(DATABASE_HOST):$(DATABASE_PORT)/$(POSTGRES_DB)"
+          envFrom:
+            - configMapRef:
+                name: photosafe-config
+            - secretRef:
+                name: photosafe-secrets
+      containers:
+        - name: backend
+          image: ghcr.io/OWNER/photosafe-backend:latest
+          ports:
+            - containerPort: 8000
+          command:
+            - uvicorn
+            - app.main:app
+            - --host
+            - "0.0.0.0"
+            - --port
+            - "8000"
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(DATABASE_HOST):$(DATABASE_PORT)/$(POSTGRES_DB)"
+            - name: GIT_SHA
+              value: "unknown"
+          envFrom:
+            - configMapRef:
+                name: photosafe-config
+            - secretRef:
+                name: photosafe-secrets
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/uploads
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: photosafe-uploads
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: photosafe-uploads
+  namespace: photosafe
+  labels:
+    app.kubernetes.io/name: backend
+    app.kubernetes.io/component: storage
+    app.kubernetes.io/part-of: photosafe
+spec:
+  accessModes: ["ReadWriteMany"]
+  resources:
+    requests:
+      storage: 50Gi

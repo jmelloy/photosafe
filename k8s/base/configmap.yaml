@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: photosafe-config
+  namespace: photosafe
+  labels:
+    app.kubernetes.io/name: photosafe
+    app.kubernetes.io/part-of: photosafe
+data:
+  POSTGRES_DB: photosafe
+  POSTGRES_USER: photosafe
+  DATABASE_HOST: postgres
+  DATABASE_PORT: "5432"
+  PYTHONUNBUFFERED: "1"
+  ENV: production
+  DEBUG: "false"
+  DEBUG_SQL: "false"

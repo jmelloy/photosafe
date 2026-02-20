@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: photosafe
+
+commonLabels:
+  app.kubernetes.io/managed-by: kustomize
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secret.yaml
+  - postgres.yaml
+  - backend.yaml
+  - frontend.yaml
+  - ingress.yaml
+
+images:
+  - name: ghcr.io/OWNER/photosafe-backend
+    newTag: latest
+  - name: ghcr.io/OWNER/photosafe-frontend
+    newTag: latest

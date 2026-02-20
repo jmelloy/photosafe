@@ -1,0 +1,52 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: photosafe-ingress
+  namespace: photosafe
+  labels:
+    app.kubernetes.io/name: photosafe
+    app.kubernetes.io/part-of: photosafe
+  annotations:
+    # Adjust these annotations based on your ingress controller.
+    # The defaults below are for nginx-ingress.
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: photosafe.example.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8000
+          - path: /docs
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8000
+          - path: /openapi.json
+            pathType: Exact
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 5173
+  # Uncomment and configure for TLS
+  # tls:
+  #   - hosts:
+  #       - photosafe.example.com
+  #     secretName: photosafe-tls

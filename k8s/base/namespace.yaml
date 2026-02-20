@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: photosafe
+  labels:
+    app.kubernetes.io/name: photosafe
+    app.kubernetes.io/part-of: photosafe
