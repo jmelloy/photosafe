@@ -57,6 +57,9 @@ jobs:
       - name: Set up kubectl
         uses: azure/setup-kubectl@v4
 
+      - name: Set up Kustomize
+        uses: imranismail/setup-kustomize@v2
+
       - name: Configure kubeconfig
         run: |
           mkdir -p ~/.kube
@@ -79,7 +82,7 @@ jobs:
           sed -i "s|ghcr.io/OWNER/photosafe-frontend|ghcr.io/${REPO}-frontend|g" frontend.yaml
 
           # Set the image tag
-          kubectl kustomize edit set image \
+          kustomize edit set image \
             "ghcr.io/${REPO}-backend=ghcr.io/${REPO}-backend:${{ steps.tag.outputs.tag }}" \
             "ghcr.io/${REPO}-frontend=ghcr.io/${REPO}-frontend:${{ steps.tag.outputs.tag }}"
 
