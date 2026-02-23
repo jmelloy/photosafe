@@ -1,0 +1,107 @@
+name: Deploy to Kubernetes
+
+on:
+  workflow_run:
+    workflows: ["Build and Push Docker Images"]
+    types: [completed]
+    branches: ["main"]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to deploy (git SHA or 'latest')"
+        required: false
+        default: "latest"
+        type: string
+      environment:
+        description: "Target environment"
+        required: false
+        default: "production"
+        type: choice
+        options:
+          - production
+          - staging
+
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE: ghcr.io/${{ github.repository }}-backend
+  FRONTEND_IMAGE: ghcr.io/${{ github.repository }}-frontend
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Only deploy if the triggering build succeeded, or if manually dispatched
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    environment:
+      name: ${{ inputs.environment || 'production' }}
+
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Determine image tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.image_tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Update image tags with Kustomize
+        working-directory: k8s/base
+        run: |
+          # Replace placeholder OWNER with actual repository owner
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+
+          # Update kustomization.yaml with correct image references
+          sed -i "s|ghcr.io/OWNER/photosafe-backend|ghcr.io/${REPO}-backend|g" kustomization.yaml
+          sed -i "s|ghcr.io/OWNER/photosafe-frontend|ghcr.io/${REPO}-frontend|g" kustomization.yaml
+
+          # Also update the deployment manifests
+          sed -i "s|ghcr.io/OWNER/photosafe-backend|ghcr.io/${REPO}-backend|g" backend.yaml
+          sed -i "s|ghcr.io/OWNER/photosafe-frontend|ghcr.io/${REPO}-frontend|g" frontend.yaml
+
+          # Set the image tag
+          kubectl kustomize edit set image \
+            "ghcr.io/${REPO}-backend=ghcr.io/${REPO}-backend:${{ steps.tag.outputs.tag }}" \
+            "ghcr.io/${REPO}-frontend=ghcr.io/${REPO}-frontend:${{ steps.tag.outputs.tag }}"
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -k k8s/base/
+
+      - name: Wait for backend rollout
+        run: |
+          kubectl rollout status deployment/backend -n photosafe --timeout=300s
+
+      - name: Wait for frontend rollout
+        run: |
+          kubectl rollout status deployment/frontend -n photosafe --timeout=300s
+
+      - name: Verify deployment
+        run: |
+          echo "--- Pods ---"
+          kubectl get pods -n photosafe
+          echo ""
+          echo "--- Services ---"
+          kubectl get svc -n photosafe
+          echo ""
+          echo "--- Ingress ---"
+          kubectl get ingress -n photosafe
