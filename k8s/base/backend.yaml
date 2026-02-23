@@ -27,7 +27,7 @@ metadata:
     app.kubernetes.io/component: api
     app.kubernetes.io/part-of: photosafe
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: backend
@@ -79,10 +79,10 @@ spec:
           resources:
             requests:
               cpu: 250m
-              memory: 256Mi
+              memory: 128Mi
             limits:
               cpu: "1"
-              memory: 512Mi
+              memory: 256Mi
           readinessProbe:
             httpGet:
               path: /
