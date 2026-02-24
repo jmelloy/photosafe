@@ -101,4 +101,4 @@ spec:
               path: /
               port: 8000
             initialDelaySeconds: 30
-            periodSeconds: 30
+            periodSeconds: 60
