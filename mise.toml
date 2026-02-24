@@ -1,2 +1,2 @@
-[tools]
-uv = "latest"
+[env]
+_.python.venv = { path = "backend/.venv" }

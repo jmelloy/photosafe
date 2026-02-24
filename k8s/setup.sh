@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
 NAMESPACE="photosafe"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BASE_DIR="${SCRIPT_DIR}/base"
@@ -72,13 +71,13 @@ fi
 
 # Replace OWNER placeholder with actual repo
 if [ -n "$REPO" ]; then
-    sed -i "s|ghcr.io/OWNER/photosafe-backend|ghcr.io/${REPO}-backend|g" "$WORK_DIR"/*.yaml
-    sed -i "s|ghcr.io/OWNER/photosafe-frontend|ghcr.io/${REPO}-frontend|g" "$WORK_DIR"/*.yaml
+    sed -i '' "s|ghcr.io/OWNER/photosafe-backend|ghcr.io/${REPO}-backend|g" "$WORK_DIR"/*.yaml
+    sed -i '' "s|ghcr.io/OWNER/photosafe-frontend|ghcr.io/${REPO}-frontend|g" "$WORK_DIR"/*.yaml
 fi
 
 # Set image tag in kustomization
 if [ -n "$REPO" ]; then
-    sed -i "s|newTag: latest|newTag: ${IMAGE_TAG}|g" "$WORK_DIR/kustomization.yaml"
+    sed -i '' "s|newTag: latest|newTag: ${IMAGE_TAG}|g" "$WORK_DIR/kustomization.yaml"
 fi
 
 # ── Apply ─────────────────────────────────────────────────────────────
