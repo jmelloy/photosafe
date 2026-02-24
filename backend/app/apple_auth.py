@@ -1,6 +1,7 @@
 """Apple/iCloud authentication service with 2FA support"""
 
 import json
+import logging
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -12,6 +13,8 @@ from requests.utils import dict_from_cookiejar
 from sqlmodel import Session, select
 
 from app.models import AppleAuthSession, AppleCredential
+
+logger = logging.getLogger(__name__)
 
 
 class AppleAuthService:
@@ -27,7 +30,11 @@ class AppleAuthService:
             encryption_key = Fernet.generate_key().decode()
         else:
             if not encryption_key:
-                raise ValueError("Encryption key for Apple credentials is not set")
+                encryption_key = Fernet.generate_key().decode()
+                logger.warning(
+                    "APPLE_CREDENTIALS_ENCRYPTION_KEY not set, using a temporary key. "
+                    "Credentials will not persist across restarts!"
+                )
 
         self.cipher = Fernet(
             encryption_key.encode()
