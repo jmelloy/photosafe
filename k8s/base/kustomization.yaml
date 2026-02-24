@@ -16,7 +16,7 @@ resources:
   - ingress.yaml
 
 images:
-  - name: ghcr.io/OWNER/photosafe-backend
+  - name: ghcr.io/jmelloy/photosafe-backend
     newTag: latest
-  - name: ghcr.io/OWNER/photosafe-frontend
+  - name: ghcr.io/jmelloy/photosafe-frontend
     newTag: latest
