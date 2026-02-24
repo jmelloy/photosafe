@@ -73,9 +73,6 @@ spec:
                 name: photosafe-config
             - secretRef:
                 name: photosafe-secrets
-          volumeMounts:
-            - name: uploads
-              mountPath: /app/uploads
           resources:
             requests:
               cpu: 250m
@@ -95,22 +92,3 @@ spec:
               port: 8000
             initialDelaySeconds: 30
             periodSeconds: 30
-      volumes:
-        - name: uploads
-          persistentVolumeClaim:
-            claimName: photosafe-uploads
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: photosafe-uploads
-  namespace: photosafe
-  labels:
-    app.kubernetes.io/name: backend
-    app.kubernetes.io/component: storage
-    app.kubernetes.io/part-of: photosafe
-spec:
-  accessModes: ["ReadWriteMany"]
-  resources:
-    requests:
-      storage: 2Gi
