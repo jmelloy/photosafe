@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/part-of: photosafe
 data:
   POSTGRES_DB: photosafe
-  POSTGRES_USER: photosafe
+  POSTGRES_USER: postgres
   DATABASE_HOST: postgres
   DATABASE_PORT: "5432"
   PYTHONUNBUFFERED: "1"

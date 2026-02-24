@@ -44,8 +44,13 @@ spec:
           image: ghcr.io/OWNER/photosafe-backend:latest
           command: ["alembic", "upgrade", "head"]
           env:
+            - name: PHOTOSAFE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: photosafe-secrets
+                  key: PHOTOSAFE_PASSWORD
             - name: DATABASE_URL
-              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(DATABASE_HOST):$(DATABASE_PORT)/$(POSTGRES_DB)"
+              value: "postgresql://photosafe:$(PHOTOSAFE_PASSWORD)@$(DATABASE_HOST):$(DATABASE_PORT)/photosafe"
           envFrom:
             - configMapRef:
                 name: photosafe-config
@@ -64,8 +69,13 @@ spec:
             - --port
             - "8000"
           env:
+            - name: PHOTOSAFE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: photosafe-secrets
+                  key: PHOTOSAFE_PASSWORD
             - name: DATABASE_URL
-              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(DATABASE_HOST):$(DATABASE_PORT)/$(POSTGRES_DB)"
+              value: "postgresql://photosafe:$(PHOTOSAFE_PASSWORD)@$(DATABASE_HOST):$(DATABASE_PORT)/photosafe"
             - name: GIT_SHA
               value: "unknown"
           envFrom:

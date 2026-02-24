@@ -43,14 +43,16 @@ if grep -q "CHANGE_ME" "$SECRETS_FILE"; then
     echo "Generating secrets..."
     POSTGRES_PASSWORD=$(openssl rand -hex 16)
     SECRET_KEY=$(openssl rand -hex 32)
+    PHOTOSAFE_PASSWORD=$(openssl rand -hex 16)
 
     GENERATED_SECRETS=$(mktemp)
     sed \
         -e "s/POSTGRES_PASSWORD: \"CHANGE_ME\"/POSTGRES_PASSWORD: \"${POSTGRES_PASSWORD}\"/" \
         -e "s/SECRET_KEY: \"CHANGE_ME\"/SECRET_KEY: \"${SECRET_KEY}\"/" \
+        -e "s/PHOTOSAFE_PASSWORD: \"CHANGE_ME\"/PHOTOSAFE_PASSWORD: \"${PHOTOSAFE_PASSWORD}\"/" \
         "$SECRETS_FILE" > "$GENERATED_SECRETS"
 
-    echo "  POSTGRES_PASSWORD and SECRET_KEY generated."
+    echo "  POSTGRES_PASSWORD, SECRET_KEY, and PHOTOSAFE_PASSWORD generated."
     echo "  (Stored in temporary file; originals in git are unchanged.)"
     echo ""
 else

@@ -61,11 +61,18 @@ spec:
                 secretKeyRef:
                   name: photosafe-secrets
                   key: POSTGRES_PASSWORD
+            - name: PHOTOSAFE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: photosafe-secrets
+                  key: PHOTOSAFE_PASSWORD
             - name: PGDATA
               value: /var/lib/postgresql/data/pgdata
           volumeMounts:
             - name: postgres-data
               mountPath: /var/lib/postgresql/data
+            - name: postgres-init-scripts
+              mountPath: /docker-entrypoint-initdb.d
           resources:
             requests:
               cpu: 250m
@@ -78,7 +85,7 @@ spec:
               command:
                 - pg_isready
                 - -U
-                - photosafe
+                - postgres
             initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
@@ -86,9 +93,13 @@ spec:
               command:
                 - pg_isready
                 - -U
-                - photosafe
+                - postgres
             initialDelaySeconds: 15
             periodSeconds: 20
+      volumes:
+        - name: postgres-init-scripts
+          configMap:
+            name: postgres-init-scripts
   volumeClaimTemplates:
     - metadata:
         name: postgres-data
