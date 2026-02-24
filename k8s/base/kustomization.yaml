@@ -3,9 +3,6 @@ kind: Kustomization
 
 namespace: photosafe
 
-commonLabels:
-  app.kubernetes.io/managed-by: kustomize
-
 resources:
   - namespace.yaml
   - configmap.yaml
@@ -20,3 +17,7 @@ images:
     newTag: latest
   - name: ghcr.io/jmelloy/photosafe-frontend
     newTag: latest
+labels:
+  - includeSelectors: true
+    pairs:
+      app.kubernetes.io/managed-by: kustomize
