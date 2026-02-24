@@ -1,8 +1,7 @@
 """Utility functions for photo processing"""
 
 import json
-from typing import Dict, Any, List
-from datetime import datetime, timezone
+from typing import Dict, Any
 from sqlalchemy import delete
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import select, Session
@@ -13,7 +12,6 @@ from .models import (
     VersionRead,
     PhotoRead,
     SearchData,
-    PlaceSummary,
 )
 
 # Batch size for committing search_data population
@@ -356,7 +354,8 @@ def bulk_update_place_summaries(db: Session) -> int:
 
     # Bulk insert with aggregated data from photos
     # Group by latitude and longitude, selecting the most detailed place data
-    sql = text("""
+    sql = text(
+        """
         WITH aggregated_places AS (
             SELECT 
                 latitude, 
@@ -410,13 +409,10 @@ def bulk_update_place_summaries(db: Session) -> int:
             place_data,
             NOW() as updated_at
         FROM aggregated_places
-    """)
+    """
+    )
 
     result = db.execute(sql)
     db.commit()
 
-    # Count the number of summaries created
-    count_result = db.execute(text("SELECT COUNT(*) FROM place_summaries"))
-    row_count = count_result.scalar() or 0
-
-    return row_count
+    return result.rowcount

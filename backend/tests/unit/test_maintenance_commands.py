@@ -5,17 +5,13 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-from click.testing import CliRunner
 
 from cli.maintenance_commands import (
     compare_versions,
     delete_orphaned_files,
     get_s3_objects_from_csv,
-    maintenance,
     print_report,
 )
-from app.models import Version
 
 
 class TestGetS3ObjectsFromCsv:

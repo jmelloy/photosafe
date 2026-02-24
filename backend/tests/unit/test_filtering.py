@@ -1,6 +1,5 @@
 """Tests for photo filtering functionality"""
 
-import os
 from uuid import uuid4
 
 import pytest

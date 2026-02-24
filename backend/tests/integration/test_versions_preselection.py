@@ -2,7 +2,6 @@
 
 import uuid
 
-import pytest
 
 
 def test_list_photos_includes_versions(client):

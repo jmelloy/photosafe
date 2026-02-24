@@ -13,7 +13,6 @@ from app.models import (
     AppleAuth2FAResponse,
     AppleAuthInitiateRequest,
     AppleAuthSessionRead,
-    AppleCredential,
     AppleCredentialCreate,
     AppleCredentialRead,
     AppleCredentialUpdate,

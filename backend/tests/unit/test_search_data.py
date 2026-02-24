@@ -3,7 +3,7 @@
 import pytest
 from datetime import datetime, timezone
 from uuid import uuid4
-from app.models import Photo, SearchData, User
+from app.models import Photo, SearchData
 from app.utils import populate_search_data_for_photo
 from sqlmodel import select
 

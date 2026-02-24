@@ -1,6 +1,5 @@
 """Integration tests for search API endpoints"""
 
-import pytest
 from datetime import datetime, timezone
 from uuid import uuid4
 from app.models import Photo

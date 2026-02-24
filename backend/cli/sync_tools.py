@@ -330,7 +330,7 @@ def get_icloud_from_stored_credentials(credential_id=None, user_id=None):
                     return api
                 else:
                     click.echo(
-                        f"No valid authenticated session found. "
+                        "No valid authenticated session found. "
                         "Please authenticate via the web interface at /settings/apple",
                         err=True,
                     )

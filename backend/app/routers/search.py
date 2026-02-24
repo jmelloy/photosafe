@@ -4,7 +4,6 @@ from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, or_, func
 from sqlmodel import select
 
 from ..database import get_db

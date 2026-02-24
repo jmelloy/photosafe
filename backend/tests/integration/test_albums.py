@@ -2,7 +2,6 @@
 
 import uuid
 
-import pytest
 
 
 def create_test_user_and_login(client):

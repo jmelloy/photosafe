@@ -1,6 +1,5 @@
 """Tests for /photos/blocks endpoint"""
 
-import os
 from datetime import datetime
 from uuid import uuid4
 

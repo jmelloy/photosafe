@@ -2,7 +2,6 @@
 
 import uuid
 
-import pytest
 from sqlmodel import select
 
 from app.models import Library, Photo

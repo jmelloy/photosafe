@@ -1,20 +1,14 @@
 """Tests for photo import with metadata and EXIF extraction"""
 
 import json
-import os
 import tempfile
 from pathlib import Path
 
 import pytest
-from alembic import command
-from alembic.config import Config
-from click.testing import CliRunner
 from PIL import Image
-from sqlalchemy import create_engine, delete, select
-from sqlalchemy.orm import sessionmaker
-from sqlmodel import Session, SQLModel
+from sqlalchemy import select
 
-from app.models import Album, Library, Photo, User, Version, album_photos
+from app.models import Photo
 from cli.import_commands import extract_exif_data, import_photos, parse_meta_json
 
 

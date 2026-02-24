@@ -1,20 +1,13 @@
 """Tests for CLI commands"""
 
 import json
-import os
 import tempfile
 import uuid
 from pathlib import Path
 
-import pytest
-from alembic import command
-from alembic.config import Config
-from click.testing import CliRunner
-from sqlalchemy import create_engine, delete, select, text
-from sqlalchemy.orm import sessionmaker
-from sqlmodel import Session, SQLModel
+from sqlalchemy import select
 
-from app.models import Album, Library, Photo, User, Version, album_photos
+from app.models import Library, Photo, User
 from cli.import_commands import import_photos
 from cli.library_commands import library
 from cli.user_commands import user

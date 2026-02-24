@@ -133,7 +133,7 @@ class AppleAuthService:
         # Create PyiCloudService instance
         try:
             api = PyiCloudService(credential.apple_id, password)
-        except Exception as e:
+        except Exception:
             # Authentication failed
             return None, None
 
@@ -222,7 +222,7 @@ class AppleAuthService:
         # Trust the session
         try:
             api.trust_session()
-        except Exception as e:
+        except Exception:
             # Non-fatal, continue
             pass
 
@@ -296,7 +296,7 @@ class AppleAuthService:
             db.commit()
 
             return api
-        except Exception as e:
+        except Exception:
             return None
 
     def get_session_by_token(

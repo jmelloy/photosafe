@@ -6,7 +6,7 @@ import gzip
 import os
 import sys
 import tempfile
-from typing import Any, Dict, List, Sequence, Tuple
+from typing import Any, Dict, List, Sequence
 from urllib.parse import urlparse, unquote
 
 import boto3
@@ -15,7 +15,7 @@ import click
 from sqlmodel import Session, select
 
 from app.database import engine
-from app.models import Version, Photo
+from app.models import Version
 
 from cli.sync_tools import list_bucket
 

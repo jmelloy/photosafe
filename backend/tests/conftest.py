@@ -23,7 +23,7 @@ from app.models import (
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlmodel import Session, SQLModel
+from sqlmodel import Session
 
 # Define the fixtures directory
 FIXTURES_DIR = Path(__file__).parent / "fixtures"

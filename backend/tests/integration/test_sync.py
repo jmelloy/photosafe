@@ -6,7 +6,6 @@ from unittest.mock import MagicMock, patch
 from dateutil import parser
 
 import pytest
-from click.testing import CliRunner
 
 from cli.sync_commands import sync
 
