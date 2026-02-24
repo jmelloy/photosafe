@@ -115,7 +115,6 @@ class TestSyncCommands:
         assert "Filter by library name" in result.output
 
 
-
 class TestMacOSSyncWithFixtures:
     """Test macOS sync functionality using fixtures"""
 

@@ -116,7 +116,7 @@ def get_current_user(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    
+
     # First try JWT token
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -128,7 +128,7 @@ def get_current_user(
     except JWTError:
         # Not a valid JWT, try as Personal Access Token
         pass
-    
+
     # Try Personal Access Token
     pat = verify_personal_access_token(db, token)
     if pat is not None:
@@ -136,11 +136,11 @@ def get_current_user(
         pat.last_used_at = datetime.now(timezone.utc)
         db.add(pat)
         db.commit()
-        
+
         user = db.exec(select(User).where(User.id == pat.user_id)).first()
         if user is not None:
             return user
-    
+
     raise credentials_exception
 
 
@@ -156,7 +156,7 @@ def get_current_active_user(current_user: User = Depends(get_current_user)) -> U
 
 def generate_personal_access_token() -> str:
     """Generate a secure random token for Personal Access Tokens
-    
+
     Returns a URL-safe token string of 32 bytes (43 characters in base64)
     """
     return secrets.token_urlsafe(32)
@@ -164,10 +164,10 @@ def generate_personal_access_token() -> str:
 
 def hash_token(token: str) -> str:
     """Hash a token using bcrypt for secure storage
-    
+
     Args:
         token: The plain text token to hash
-        
+
     Returns:
         The bcrypt hash as a string
     """
@@ -177,19 +177,16 @@ def hash_token(token: str) -> str:
 
 
 def create_personal_access_token(
-    db: Session, 
-    user: User, 
-    name: str, 
-    expires_in_days: Optional[int] = None
+    db: Session, user: User, name: str, expires_in_days: Optional[int] = None
 ) -> tuple[PersonalAccessToken, str]:
     """Create a new Personal Access Token for a user
-    
+
     Args:
         db: Database session
         user: User to create token for
         name: User-friendly name for the token
         expires_in_days: Optional expiration in days from now
-        
+
     Returns:
         Tuple of (PersonalAccessToken object, plain text token)
         The plain text token is only available at creation time!
@@ -197,12 +194,12 @@ def create_personal_access_token(
     # Generate token
     token = generate_personal_access_token()
     token_hash = hash_token(token)
-    
+
     # Calculate expiration if specified
     expires_at = None
     if expires_in_days is not None:
         expires_at = datetime.now(timezone.utc) + timedelta(days=expires_in_days)
-    
+
     # Create PAT record
     pat = PersonalAccessToken(
         user_id=user.id,
@@ -210,26 +207,28 @@ def create_personal_access_token(
         token_hash=token_hash,
         expires_at=expires_at,
     )
-    
+
     db.add(pat)
     db.commit()
     db.refresh(pat)
-    
+
     return pat, token
 
 
-def verify_personal_access_token(db: Session, token: str) -> Optional[PersonalAccessToken]:
+def verify_personal_access_token(
+    db: Session, token: str
+) -> Optional[PersonalAccessToken]:
     """Verify a Personal Access Token and return the PAT record if valid
-    
+
     Args:
         db: Database session
         token: Plain text token to verify
-        
+
     Returns:
         PersonalAccessToken object if valid, None otherwise
     """
     # Get all PATs (we need to check each one since tokens are hashed with bcrypt)
-    # 
+    #
     # Performance Note: This loads all PATs to check each hash. This is acceptable
     # because users typically have only a few PATs (5-20 max). Bcrypt verification
     # is fast enough for this scale (~10ms per token).
@@ -239,30 +238,33 @@ def verify_personal_access_token(db: Session, token: str) -> Optional[PersonalAc
     # - Use a faster hash like SHA256 with HMAC
     # - Implement token caching
     pats = db.exec(select(PersonalAccessToken)).all()
-    
+
     for pat in pats:
         try:
             # Check if token matches this PAT's hash
             if bcrypt.checkpw(token.encode("utf-8"), pat.token_hash.encode("utf-8")):
                 # Check if token is expired
-                if pat.expires_at is not None and datetime.now(timezone.utc) > pat.expires_at:
+                if (
+                    pat.expires_at is not None
+                    and datetime.now(timezone.utc) > pat.expires_at
+                ):
                     return None
                 return pat
         except (ValueError, UnicodeDecodeError):
             # Invalid hash format, malformed token, or encoding error - skip this token
             continue
-    
+
     return None
 
 
 def revoke_personal_access_token(db: Session, user: User, token_id: int) -> bool:
     """Revoke (delete) a Personal Access Token
-    
+
     Args:
         db: Database session
         user: User who owns the token
         token_id: ID of the token to revoke
-        
+
     Returns:
         True if token was revoked, False if not found or not owned by user
     """
@@ -271,10 +273,10 @@ def revoke_personal_access_token(db: Session, user: User, token_id: int) -> bool
         .where(PersonalAccessToken.id == token_id)
         .where(PersonalAccessToken.user_id == user.id)
     ).first()
-    
+
     if pat is None:
         return False
-    
+
     db.delete(pat)
     db.commit()
     return True

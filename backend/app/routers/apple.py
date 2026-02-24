@@ -46,7 +46,9 @@ async def list_apple_credentials(
     db: Session = Depends(get_db),
 ):
     """List all Apple/iCloud credentials for the current user"""
-    credentials = apple_auth_service.get_user_credentials(db=db, user_id=current_user.id)
+    credentials = apple_auth_service.get_user_credentials(
+        db=db, user_id=current_user.id
+    )
     return credentials
 
 
@@ -87,8 +89,11 @@ async def update_apple_credential(
     # Update fields
     if credential_data.password is not None:
         from app.apple_auth import AppleAuthService
+
         service = AppleAuthService()
-        credential.encrypted_password = service._encrypt_password(credential_data.password)
+        credential.encrypted_password = service._encrypt_password(
+            credential_data.password
+        )
 
     if credential_data.is_active is not None:
         credential.is_active = credential_data.is_active
@@ -129,7 +134,9 @@ async def initiate_apple_auth(
     Returns a session with awaiting_2fa_code=True if 2FA is required.
     """
     # Verify credential ownership
-    credential = apple_auth_service.get_credential(db=db, credential_id=request.credential_id)
+    credential = apple_auth_service.get_credential(
+        db=db, credential_id=request.credential_id
+    )
     if not credential:
         raise HTTPException(status_code=404, detail="Credential not found")
 
@@ -167,7 +174,9 @@ async def submit_2fa_code(
         raise HTTPException(status_code=404, detail="Session not found")
 
     # Verify ownership via credential
-    credential = apple_auth_service.get_credential(db=db, credential_id=auth_session.credential_id)
+    credential = apple_auth_service.get_credential(
+        db=db, credential_id=auth_session.credential_id
+    )
     if not credential or credential.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
@@ -204,7 +213,9 @@ async def get_auth_session(
         raise HTTPException(status_code=404, detail="Session not found")
 
     # Verify ownership via credential
-    credential = apple_auth_service.get_credential(db=db, credential_id=auth_session.credential_id)
+    credential = apple_auth_service.get_credential(
+        db=db, credential_id=auth_session.credential_id
+    )
     if not credential or credential.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
 

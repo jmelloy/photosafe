@@ -156,14 +156,14 @@ async def create_token(
     db: Session = Depends(get_db),
 ):
     """Create a new Personal Access Token
-    
+
     The token value is only shown once in the response.
     Store it securely as it cannot be retrieved later.
     """
     pat, token = create_personal_access_token(
         db, current_user, token_data.name, token_data.expires_in_days
     )
-    
+
     return PersonalAccessTokenResponse(
         id=pat.id,
         user_id=pat.user_id,
@@ -181,7 +181,9 @@ async def list_tokens(
 ):
     """List all Personal Access Tokens for the current user"""
     tokens = db.exec(
-        select(PersonalAccessToken).where(PersonalAccessToken.user_id == current_user.id)
+        select(PersonalAccessToken).where(
+            PersonalAccessToken.user_id == current_user.id
+        )
     ).all()
     return tokens
 

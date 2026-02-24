@@ -356,8 +356,7 @@ def bulk_update_place_summaries(db: Session) -> int:
 
     # Bulk insert with aggregated data from photos
     # Group by latitude and longitude, selecting the most detailed place data
-    sql = text(
-        """
+    sql = text("""
         WITH aggregated_places AS (
             SELECT 
                 latitude, 
@@ -411,8 +410,7 @@ def bulk_update_place_summaries(db: Session) -> int:
             place_data,
             NOW() as updated_at
         FROM aggregated_places
-    """
-    )
+    """)
 
     result = db.execute(sql)
     db.commit()

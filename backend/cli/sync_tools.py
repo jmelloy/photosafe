@@ -194,7 +194,7 @@ def sum_bucket(s3, bucket, print_every=1000):
     d = {}
     for i, (key, size, etag, last_modified) in enumerate(list_bucket(s3, bucket)):
         directory_name = "/".join(key.split("/")[0:-1]) + "/" if "/" in key else ""
-        (sz, items) = d.get(directory_name, (0, 0))
+        sz, items = d.get(directory_name, (0, 0))
         sz += size
         items += 1
         d[directory_name] = (sz, items)
@@ -305,35 +305,41 @@ def get_icloud_from_stored_credentials(credential_id=None, user_id=None):
                 click.echo(
                     f"No valid authenticated session found for credential ID {credential_id}. "
                     "Please authenticate via the web interface at /settings/apple",
-                    err=True
+                    err=True,
                 )
                 return None
         elif user_id:
             # Get first active credential for user
             from app.models import AppleCredential
+
             credential = db.exec(
                 select(AppleCredential)
-                .where(AppleCredential.user_id == user_id, AppleCredential.is_active == True)
+                .where(
+                    AppleCredential.user_id == user_id,
+                    AppleCredential.is_active == True,
+                )
                 .order_by(AppleCredential.last_authenticated_at.desc())
             ).first()
 
             if credential:
                 api = apple_auth_service.get_authenticated_api(db, credential.id)
                 if api:
-                    click.echo(f"Using stored Apple credentials for {credential.apple_id}")
+                    click.echo(
+                        f"Using stored Apple credentials for {credential.apple_id}"
+                    )
                     return api
                 else:
                     click.echo(
                         f"No valid authenticated session found. "
                         "Please authenticate via the web interface at /settings/apple",
-                        err=True
+                        err=True,
                     )
                     return None
             else:
                 click.echo(
                     "No Apple credentials found in database. "
                     "Please add credentials via the web interface at /settings/apple",
-                    err=True
+                    err=True,
                 )
                 return None
         else:

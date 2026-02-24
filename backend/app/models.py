@@ -48,7 +48,9 @@ class User(SQLModel, table=True):
     # Relationships
     photos: List["Photo"] = Relationship(back_populates="owner")
     libraries: List["Library"] = Relationship(back_populates="owner")
-    personal_access_tokens: List["PersonalAccessToken"] = Relationship(back_populates="user")
+    personal_access_tokens: List["PersonalAccessToken"] = Relationship(
+        back_populates="user"
+    )
     apple_credentials: List["AppleCredential"] = Relationship(back_populates="user")
 
 
@@ -60,7 +62,9 @@ class PersonalAccessToken(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True, index=True)
     user_id: int = Field(foreign_key="users.id", index=True)
     name: str = Field(sa_type=String)  # User-friendly name for the token
-    token_hash: str = Field(sa_type=String, index=True, unique=True)  # Hashed token value
+    token_hash: str = Field(
+        sa_type=String, index=True, unique=True
+    )  # Hashed token value
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     last_used_at: Optional[datetime] = None
     expires_at: Optional[datetime] = None  # Optional expiration
@@ -94,7 +98,8 @@ class AppleCredential(SQLModel, table=True):
     # Relationships
     user: Optional["User"] = Relationship(back_populates="apple_credentials")
     auth_sessions: List["AppleAuthSession"] = Relationship(
-        back_populates="credential", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+        back_populates="credential",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
 
 
@@ -114,13 +119,17 @@ class AppleAuthSession(SQLModel, table=True):
     trusted_devices: Optional[List[Dict[str, Any]]] = Field(
         default=None, sa_column=Column(JSONB, nullable=True)
     )  # For 2SA
-    session_token: Optional[str] = Field(default=None, sa_type=String, index=True, unique=True)  # Unique token for this auth session
+    session_token: Optional[str] = Field(
+        default=None, sa_type=String, index=True, unique=True
+    )  # Unique token for this auth session
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     expires_at: Optional[datetime] = None
     last_used_at: Optional[datetime] = None
 
     # Relationships
-    credential: Optional["AppleCredential"] = Relationship(back_populates="auth_sessions")
+    credential: Optional["AppleCredential"] = Relationship(
+        back_populates="auth_sessions"
+    )
 
 
 class Library(SQLModel, table=True):
@@ -738,14 +747,14 @@ class Task(SQLModel, table=True):
 
 class PlaceSummary(SQLModel, table=True):
     """Summary table for place data to enable efficient map queries
-    
+
     One record per unique location (latitude, longitude pair).
     Aggregates data from all photos at that location.
     """
 
     __tablename__ = "place_summaries"
     __table_args__ = (
-        UniqueConstraint('latitude', 'longitude', name='uq_place_summaries_lat_lon'),
+        UniqueConstraint("latitude", "longitude", name="uq_place_summaries_lat_lon"),
     )
 
     id: Optional[int] = Field(default=None, primary_key=True, index=True)

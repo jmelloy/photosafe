@@ -19,7 +19,6 @@ from app.models import Version, Photo
 
 from cli.sync_tools import list_bucket
 
-
 # Expected S3 CSV column names
 S3_CSV_COLUMNS = ["bucket", "key", "size", "lastmodifieddate", "etag"]
 
@@ -130,13 +129,14 @@ def get_s3_objects_from_csv(csv_path: str) -> Dict[str, Dict[str, Any]]:
             # Read the first line to detect the header
             first_line = f.readline().strip()
             f.seek(0)  # Reset to beginning
-            
+
             # Check if first line looks like a header by parsing it properly
             reader_sample = csv.reader([first_line], skipinitialspace=True)
             first_values = next(reader_sample)
-            is_header = any(val.strip().lower() in S3_CSV_COLUMNS 
-                          for val in first_values)
-            
+            is_header = any(
+                val.strip().lower() in S3_CSV_COLUMNS for val in first_values
+            )
+
             if is_header:
                 # Use the actual header from the file
                 reader = csv.DictReader(f, skipinitialspace=True)
@@ -282,7 +282,7 @@ def format_size_kb(size_bytes: int) -> str:
 
 def print_report(issues: Dict[str, List], show_orphaned: bool = True):
     """Print comparison report
-    
+
     Args:
         issues: Dictionary of issues found during comparison
         show_orphaned: If True, show details of orphaned files. If False, only show count and total size.
@@ -356,7 +356,7 @@ def print_report(issues: Dict[str, List], show_orphaned: bool = True):
             f"\n⚠️  ORPHANED IN S3: {len(issues['orphaned_in_s3'])} files "
             f"({format_size_mb(total_size)} MB total)"
         )
-        
+
         if show_orphaned:
             # Show detailed information about orphaned files
             click.echo("-" * 80)

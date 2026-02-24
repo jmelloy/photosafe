@@ -523,7 +523,7 @@ def icloud(
             click.echo(
                 "Failed to authenticate with stored credentials. "
                 "Please ensure you have authenticated via the web interface at /settings/apple",
-                err=True
+                err=True,
             )
             raise click.Abort()
     else:
@@ -793,7 +793,7 @@ def icloud(
         total_updated_all += total_updated
 
     # Process shared albums
-    if hasattr(api.photos, 'shared_albums') and api.photos.shared_albums:
+    if hasattr(api.photos, "shared_albums") and api.photos.shared_albums:
         click.echo("Processing shared albums")
         for album_name, shared_album in api.photos.shared_albums.items():
             click.echo(f"Shared Album: Shared: {album_name}")
@@ -813,7 +813,9 @@ def icloud(
 
                 r = auth.post(
                     "/api/photos/batch/",
-                    data=json.dumps(batch_data, cls=DateTimeEncoder).replace("\\u0000", ""),
+                    data=json.dumps(batch_data, cls=DateTimeEncoder).replace(
+                        "\\u0000", ""
+                    ),
                     headers={"Content-Type": "application/json"},
                 )
 
@@ -834,7 +836,9 @@ def icloud(
                                 err=True,
                             )
                 else:
-                    click.echo(f"Batch request failed: {r.status_code} {r.text}", err=True)
+                    click.echo(
+                        f"Batch request failed: {r.status_code} {r.text}", err=True
+                    )
                     r.raise_for_status()
 
                 photo_batch.clear()

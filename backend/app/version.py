@@ -5,7 +5,6 @@ import re
 import subprocess
 from pathlib import Path
 
-
 # Cache git SHA at module load time
 _cached_git_sha: str | None = None
 

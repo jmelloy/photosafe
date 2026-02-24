@@ -11,14 +11,14 @@ def test_create_personal_access_token(client, test_user):
         data={"username": "testuser", "password": "testpassword123"},
     )
     jwt_token = login_response.json()["access_token"]
-    
+
     # Create PAT
     response = client.post(
         "/api/auth/tokens",
         json={"name": "Test Token"},
         headers={"Authorization": f"Bearer {jwt_token}"},
     )
-    
+
     assert response.status_code == 201
     data = response.json()
     assert data["name"] == "Test Token"
@@ -26,7 +26,7 @@ def test_create_personal_access_token(client, test_user):
     assert "id" in data
     assert data["user_id"] == test_user.id
     assert data["expires_at"] is None  # No expiration set
-    
+
     # Token should be a string
     token = data["token"]
     assert isinstance(token, str)
@@ -41,18 +41,18 @@ def test_create_personal_access_token_with_expiration(client, test_user):
         data={"username": "testuser", "password": "testpassword123"},
     )
     jwt_token = login_response.json()["access_token"]
-    
+
     # Create PAT with 30 day expiration
     response = client.post(
         "/api/auth/tokens",
         json={"name": "Expiring Token", "expires_in_days": 30},
         headers={"Authorization": f"Bearer {jwt_token}"},
     )
-    
+
     assert response.status_code == 201
     data = response.json()
     assert data["expires_at"] is not None
-    
+
     # Check expiration is approximately 30 days from now
     # Parse ISO timestamp and ensure it's timezone-aware
     expires_at_str = data["expires_at"].replace("Z", "").replace("+00:00", "")
@@ -70,7 +70,7 @@ def test_authenticate_with_personal_access_token(client, test_user):
         data={"username": "testuser", "password": "testpassword123"},
     )
     jwt_token = login_response.json()["access_token"]
-    
+
     # Create PAT
     pat_response = client.post(
         "/api/auth/tokens",
@@ -78,13 +78,13 @@ def test_authenticate_with_personal_access_token(client, test_user):
         headers={"Authorization": f"Bearer {jwt_token}"},
     )
     pat_token = pat_response.json()["token"]
-    
+
     # Use PAT to authenticate
     me_response = client.get(
         "/api/auth/me",
         headers={"Authorization": f"Bearer {pat_token}"},
     )
-    
+
     assert me_response.status_code == 200
     data = me_response.json()
     assert data["username"] == "testuser"
@@ -99,7 +99,7 @@ def test_pat_works_for_protected_endpoints(client, test_user):
         data={"username": "testuser", "password": "testpassword123"},
     )
     jwt_token = login_response.json()["access_token"]
-    
+
     # Create PAT
     pat_response = client.post(
         "/api/auth/tokens",
@@ -107,7 +107,7 @@ def test_pat_works_for_protected_endpoints(client, test_user):
         headers={"Authorization": f"Bearer {jwt_token}"},
     )
     pat_token = pat_response.json()["token"]
-    
+
     # Create a photo using JWT
     photo_response = client.post(
         "/api/photos/",
@@ -119,7 +119,7 @@ def test_pat_works_for_protected_endpoints(client, test_user):
         headers={"Authorization": f"Bearer {jwt_token}"},
     )
     assert photo_response.status_code == 201
-    
+
     # List photos using PAT
     photos_response = client.get(
         "/api/photos/",
@@ -139,7 +139,7 @@ def test_list_personal_access_tokens(client, test_user):
         data={"username": "testuser", "password": "testpassword123"},
     )
     jwt_token = login_response.json()["access_token"]
-    
+
     # Create multiple PATs
     client.post(
         "/api/auth/tokens",
@@ -151,19 +151,19 @@ def test_list_personal_access_tokens(client, test_user):
         json={"name": "Token 2"},
         headers={"Authorization": f"Bearer {jwt_token}"},
     )
-    
+
     # List tokens
     response = client.get(
         "/api/auth/tokens",
         headers={"Authorization": f"Bearer {jwt_token}"},
     )
-    
+
     assert response.status_code == 200
     tokens = response.json()
     assert len(tokens) == 2
     assert tokens[0]["name"] == "Token 1"
     assert tokens[1]["name"] == "Token 2"
-    
+
     # Token values should not be in the list response
     assert "token" not in tokens[0]
     assert "token" not in tokens[1]
@@ -177,7 +177,7 @@ def test_revoke_personal_access_token(client, test_user):
         data={"username": "testuser", "password": "testpassword123"},
     )
     jwt_token = login_response.json()["access_token"]
-    
+
     # Create PAT
     pat_response = client.post(
         "/api/auth/tokens",
@@ -186,21 +186,21 @@ def test_revoke_personal_access_token(client, test_user):
     )
     token_id = pat_response.json()["id"]
     pat_token = pat_response.json()["token"]
-    
+
     # Verify PAT works
     me_response = client.get(
         "/api/auth/me",
         headers={"Authorization": f"Bearer {pat_token}"},
     )
     assert me_response.status_code == 200
-    
+
     # Revoke PAT
     revoke_response = client.delete(
         f"/api/auth/tokens/{token_id}",
         headers={"Authorization": f"Bearer {jwt_token}"},
     )
     assert revoke_response.status_code == 204
-    
+
     # Verify PAT no longer works
     me_response2 = client.get(
         "/api/auth/me",
@@ -228,28 +228,28 @@ def test_cannot_revoke_other_users_token(client):
             "password": "password123",
         },
     )
-    
+
     # User1 creates a token
     login1 = client.post(
         "/api/auth/login",
         data={"username": "user1", "password": "password123"},
     )
     token1 = login1.json()["access_token"]
-    
+
     pat_response = client.post(
         "/api/auth/tokens",
         json={"name": "User1 Token"},
         headers={"Authorization": f"Bearer {token1}"},
     )
     token_id = pat_response.json()["id"]
-    
+
     # User2 tries to revoke user1's token
     login2 = client.post(
         "/api/auth/login",
         data={"username": "user2", "password": "password123"},
     )
     token2 = login2.json()["access_token"]
-    
+
     revoke_response = client.delete(
         f"/api/auth/tokens/{token_id}",
         headers={"Authorization": f"Bearer {token2}"},
@@ -278,12 +278,12 @@ def test_pat_unauthenticated_creation(client):
 def test_cli_create_token(runner, test_user):
     """Test creating a PAT via CLI"""
     from cli.main import cli
-    
+
     result = runner.invoke(
         cli,
         ["user", "create-token", "testuser", "--name", "CLI Token"],
     )
-    
+
     assert result.exit_code == 0
     assert "Personal Access Token created successfully" in result.output
     assert "Token:" in result.output
@@ -294,13 +294,13 @@ def test_cli_list_tokens(runner, test_user, db_session):
     """Test listing PATs via CLI"""
     from cli.main import cli
     from app.auth import create_personal_access_token
-    
+
     # Create some tokens
     create_personal_access_token(db_session, test_user, "Token 1", None)
     create_personal_access_token(db_session, test_user, "Token 2", 30)
-    
+
     result = runner.invoke(cli, ["user", "list-tokens", "testuser"])
-    
+
     assert result.exit_code == 0
     assert "Token 1" in result.output
     assert "Token 2" in result.output
@@ -310,15 +310,15 @@ def test_cli_revoke_token(runner, test_user, db_session):
     """Test revoking a PAT via CLI"""
     from cli.main import cli
     from app.auth import create_personal_access_token
-    
+
     # Create token
     pat, _ = create_personal_access_token(db_session, test_user, "Revoke Me", None)
-    
+
     result = runner.invoke(
         cli,
         ["user", "revoke-token", "testuser", str(pat.id)],
         input="y\n",
     )
-    
+
     assert result.exit_code == 0
     assert "revoked successfully" in result.output

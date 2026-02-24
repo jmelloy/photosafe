@@ -12,7 +12,6 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB
 
-
 # revision identifiers, used by Alembic.
 revision: str = "b2c3d4e5f6g7"
 down_revision: Union[str, None] = "a1b2c3d4e5f6"
@@ -63,15 +62,21 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("credential_id", sa.Integer(), nullable=False),
         sa.Column("session_data", JSONB, nullable=True),
-        sa.Column("is_authenticated", sa.Boolean(), nullable=False, server_default="false"),
+        sa.Column(
+            "is_authenticated", sa.Boolean(), nullable=False, server_default="false"
+        ),
         sa.Column("requires_2fa", sa.Boolean(), nullable=False, server_default="false"),
-        sa.Column("awaiting_2fa_code", sa.Boolean(), nullable=False, server_default="false"),
+        sa.Column(
+            "awaiting_2fa_code", sa.Boolean(), nullable=False, server_default="false"
+        ),
         sa.Column("trusted_devices", JSONB, nullable=True),
         sa.Column("session_token", sa.String(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("expires_at", sa.DateTime(), nullable=True),
         sa.Column("last_used_at", sa.DateTime(), nullable=True),
-        sa.ForeignKeyConstraint(["credential_id"], ["apple_credentials.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["credential_id"], ["apple_credentials.id"], ondelete="CASCADE"
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
 

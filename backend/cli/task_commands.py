@@ -404,9 +404,9 @@ def backfill_place_summaries(rebuild: bool, batch_size: int):
         try:
             # Use bulk operation instead of per-photo loop
             summary_count = bulk_update_place_summaries(db)
-            
+
             click.echo(f"Processed {photo_count} photos...")
-            
+
             # Update task progress
             update_task_progress(db, task_record, photo_count)
             mark_task_completed(db, task_record)
@@ -414,7 +414,7 @@ def backfill_place_summaries(rebuild: bool, batch_size: int):
             click.echo("\nCompleted!")
             click.echo(f"  Processed: {photo_count} photos")
             click.echo(f"  Place summaries created: {summary_count}")
-            
+
         except Exception as e:
             click.echo(f"Error during bulk update: {e}", err=True)
             mark_task_failed(db, task_record, str(e))
