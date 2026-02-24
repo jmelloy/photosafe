@@ -9,12 +9,13 @@ metadata:
   annotations:
     # Adjust these annotations based on your ingress controller.
     # The defaults below are for nginx-ingress.
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
     nginx.ingress.kubernetes.io/proxy-body-size: "100m"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
 spec:
   ingressClassName: nginx
   rules:
-    - host: photosafe.example.com
+    - host: photosafe.melloy.life
       http:
         paths:
           - path: /api
@@ -45,8 +46,7 @@ spec:
                 name: frontend
                 port:
                   number: 5173
-  # Uncomment and configure for TLS
-  # tls:
-  #   - hosts:
-  #       - photosafe.example.com
-  #     secretName: photosafe-tls
+  tls:
+    - hosts:
+        - photosafe.melloy.life
+      secretName: photosafe-tls
