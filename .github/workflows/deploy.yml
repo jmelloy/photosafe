@@ -83,26 +83,26 @@ jobs:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
         run: |
           sops decrypt -i k8s/base/secret.yaml
+      
+      - name: Generate build version
+        id: version
+        run: |
+          BUILD_VERSION="$(date -u +'%Y.%m.%d.%H%M').$(git rev-parse --short HEAD)"
+          echo "build_version=${BUILD_VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Update image tags with Kustomize
         working-directory: k8s/base
         run: |
           # Replace placeholder OWNER with actual repository owner
-          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-
-          # Update kustomization.yaml with correct image references
-          sed -i "s|ghcr.io/OWNER/photosafe-backend|ghcr.io/${REPO}-backend|g" kustomization.yaml
-          sed -i "s|ghcr.io/OWNER/photosafe-frontend|ghcr.io/${REPO}-frontend|g" kustomization.yaml
-
-          # Also update the deployment manifests
-          sed -i "s|ghcr.io/OWNER/photosafe-backend|ghcr.io/${REPO}-backend|g" backend.yaml
-          sed -i "s|ghcr.io/OWNER/photosafe-frontend|ghcr.io/${REPO}-frontend|g" frontend.yaml
+          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          BUILD_VERSION=${{ steps.version.outputs.build_version }}
 
           # Set the image tag
           kustomize edit set image \
-            "ghcr.io/${REPO}-backend=ghcr.io/${REPO}-backend:${{ steps.tag.outputs.tag }}" \
-            "ghcr.io/${REPO}-frontend=ghcr.io/${REPO}-frontend:${{ steps.tag.outputs.tag }}"
+            "ghcr.io/OWNER/photosafe-backend=ghcr.io/${REPO_OWNER}-backend:${{ steps.tag.outputs.tag }}" \
+            "ghcr.io/OWNER/photosafe-frontend=ghcr.io/${REPO_OWNER}-frontend:${{ steps.tag.outputs.tag }}"
+          
+          kustomize edit add annotation app.kubernetes.io/version:${BUILD_VERSION} --force
 
       - name: Deploy to Kubernetes
         run: |
