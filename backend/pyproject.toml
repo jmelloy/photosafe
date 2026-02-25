@@ -17,19 +17,15 @@ dependencies = [
     "uvicorn[standard]>=0.32.1",
     "python-multipart>=0.0.18",
     "pydantic>=2.10.3",
-    "aiofiles>=24.1.0",
     "pillow>=11.0.0",
     "python-jose[cryptography]>=3.4.0",
     "bcrypt>=4,<6",
-    "pydantic-settings>=2.6.1",
     "alembic>=1.17.2",
     "psycopg2-binary>=2.9.10",
     "python-ulid>=2.3.0",
     "requests>=2.31",
     "python-dateutil>=2.8.0",
     "tqdm>=4.66",
-    "pytz>=2024.1",
-    "ruff>=0.14.10",
     "python-gazetteer>=0.1.0",
     "pillow-heif>=1.1.1",
     "pyicloud @ git+https://github.com/jmelloy/pyicloud.git",
@@ -38,6 +34,10 @@ dependencies = [
 [project.optional-dependencies]
 macos = [
     "osxphotos>=0.60",
+]
+
+dev = [
+    "ruff>=0.14.10",
 ]
 
 test = [
