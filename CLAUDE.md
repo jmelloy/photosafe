@@ -177,6 +177,23 @@ TEST_DATABASE_URL=postgresql://photosafe:photosafe@localhost:5433/photosafe_test
 - [ ] Build succeeds (`npm run build`)
 - [ ] Migration created (if models changed)
 
+## Secrets Management (SOPS + age)
+
+Kubernetes secrets in `k8s/**/secret*.yaml` are encrypted with [SOPS](https://github.com/getsops/sops) using age encryption. Config is in `.sops.yaml`.
+
+```bash
+# Edit secrets (decrypts, opens editor, re-encrypts on save)
+sops k8s/base/secret.yaml
+
+# Decrypt to stdout
+sops decrypt k8s/base/secret.yaml
+
+# Encrypt in-place (after editing plaintext)
+sops encrypt -i k8s/base/secret.yaml
+```
+
+**Private key location**: `~/.config/sops/age/keys.txt` (SOPS default lookup path). Never commit this file.
+
 ## Additional Docs
 
 - `backend/SYNC_COMMANDS.md` - Sync functionality

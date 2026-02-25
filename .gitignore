@@ -464,3 +464,6 @@ dump/Michelle/*
 dump/invoke/*
 
 ouptut/*
+
+# SOPS age keys
+*.agekey
