@@ -1,16 +1,18 @@
 """Photo API endpoints"""
 
+import logging
 import os
-import shutil
 import uuid as uuid_lib
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional, Dict
 
-from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
+from fastapi import APIRouter, Depends, Form, HTTPException, File, UploadFile
 from sqlalchemy.orm import joinedload
 from sqlalchemy import func, or_
 from sqlmodel import select, Session
+
+logger = logging.getLogger(__name__)
 
 from ..database import get_db
 from ..models import (
@@ -581,38 +583,99 @@ async def delete_photo(
 @router.post("/upload", response_model=PhotoRead)
 async def upload_photo(
     file: UploadFile = File(...),
+    version: str = Form("original"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """Upload a new photo (legacy endpoint for backwards compatibility)"""
+    """Upload a photo file. Tries S3 first, falls back to local uploads directory.
+
+    The `version` form field specifies the version type for the upload
+    (e.g. "original", "thumb", "medium", "edited", "live"). Defaults to "original".
+    """
     # Validate file type
-    if not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="File must be an image")
+    if not file.content_type.startswith("image/") and not file.content_type.startswith("video/"):
+        raise HTTPException(status_code=400, detail="File must be an image or video")
 
-    # Generate unique filename
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{timestamp}_{file.filename}"
-    file_path = UPLOAD_DIR / filename
+    photo_uuid = str(uuid_lib.uuid4())
+    file_data = await file.read()
+    file_size = len(file_data)
 
-    # Save file
-    try:
-        with file_path.open("wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
+    s3_key = None
+    file_path = None
+    s3_bucket = os.getenv("S3_BUCKET")
 
-    # Create database record with minimal fields
-    db_photo = Photo(
-        uuid=str(uuid_lib.uuid4()),
+    # Try S3 upload first
+    if s3_bucket:
+        try:
+            import boto3
+
+            s3_prefix = os.getenv("S3_PREFIX", f"{current_user.username}")
+            s3_key = f"{s3_prefix}/{photo_uuid}/{version}/{file.filename}"
+            s3_client = boto3.client("s3")
+            s3_client.put_object(
+                Bucket=s3_bucket,
+                Key=s3_key,
+                Body=file_data,
+                ContentType=file.content_type,
+            )
+            logger.info("Uploaded to S3: s3://%s/%s", s3_bucket, s3_key)
+        except Exception as e:
+            logger.warning("S3 upload failed, falling back to local storage: %s", e)
+            s3_key = None
+
+    # Fall back to local storage if S3 didn't work
+    if not s3_key:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{timestamp}_{file.filename}"
+        file_path = UPLOAD_DIR / filename
+        try:
+            with file_path.open("wb") as buffer:
+                buffer.write(file_data)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
+
+    # Map version to the corresponding s3 path field on Photo
+    s3_field_map = {
+        "original": "s3_original_path",
+        "thumb": "s3_thumbnail_path",
+        "edited": "s3_edited_path",
+        "live": "s3_live_path",
+    }
+
+    photo_kwargs = dict(
+        uuid=photo_uuid,
         original_filename=file.filename,
         date=datetime.now(timezone.utc),
-        filename=filename,
-        file_path=str(file_path),
         content_type=file.content_type,
-        file_size=os.path.getsize(file_path),
+        file_size=file_size,
         owner_id=current_user.id,
     )
+
+    if s3_key:
+        photo_kwargs["s3_key_path"] = s3_key
+        s3_field = s3_field_map.get(version)
+        if s3_field:
+            photo_kwargs[s3_field] = s3_key
+    else:
+        photo_kwargs["filename"] = filename
+        photo_kwargs["file_path"] = str(file_path)
+
+    db_photo = Photo(**photo_kwargs)
     db.add(db_photo)
+    db.flush()
+
+    # Create a Version record
+    version_path = s3_key if s3_key else str(file_path)
+    ext = Path(file.filename).suffix.lstrip(".") if file.filename else None
+    db_version = Version(
+        photo_uuid=db_photo.uuid,
+        version=version,
+        s3_path=version_path,
+        filename=file.filename,
+        size=file_size,
+        type=ext,
+    )
+    db.add(db_version)
     db.commit()
     db.refresh(db_photo)
 
