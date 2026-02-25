@@ -15,10 +15,10 @@ resources:
 
 images:
   - name: ghcr.io/OWNER/photosafe-backend
-    newName: ghcr.io/jmelloy/photosafe-backend
+    newName: ghcr.io/OWNER/photosafe-backend
     newTag: latest
   - name: ghcr.io/OWNER/photosafe-frontend
-    newName: ghcr.io/jmelloy/photosafe-frontend
+    newName: ghcr.io/OWNER/photosafe-frontend
     newTag: latest
 labels:
   - includeSelectors: true
