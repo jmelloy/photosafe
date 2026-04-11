@@ -33,7 +33,7 @@ dependencies = [
 
 [project.optional-dependencies]
 macos = [
-    "osxphotos>=0.60",
+    "osxphotos>=0.75.6",
 ]
 
 dev = [
