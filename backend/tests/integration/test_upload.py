@@ -1,7 +1,6 @@
 """Tests for the photo upload endpoint with S3-first fallback behavior."""
 
 import os
-import sys
 from unittest.mock import MagicMock, patch
 
 from app.models import Photo, Version
@@ -64,12 +63,10 @@ def test_upload_to_s3_success(client, db_session):
     file_content = b"fake image content"
     files = {"file": ("photo.jpg", file_content, "image/jpeg")}
 
-    mock_boto3 = MagicMock()
     mock_s3 = MagicMock()
-    mock_boto3.client.return_value = mock_s3
 
     with patch.dict(os.environ, {"S3_BUCKET": "test-bucket", "S3_PREFIX": "uploads"}):
-        with patch.dict(sys.modules, {"boto3": mock_boto3}):
+        with patch("app.routers.photos.boto3.client", return_value=mock_s3):
             response = client.post(
                 "/api/photos/upload",
                 files=files,
@@ -104,13 +101,11 @@ def test_upload_falls_back_to_local_on_s3_failure(client, db_session):
     file_content = b"fake image content"
     files = {"file": ("test.jpg", file_content, "image/jpeg")}
 
-    mock_boto3 = MagicMock()
     mock_s3 = MagicMock()
     mock_s3.put_object.side_effect = Exception("S3 connection error")
-    mock_boto3.client.return_value = mock_s3
 
     with patch.dict(os.environ, {"S3_BUCKET": "test-bucket"}):
-        with patch.dict(sys.modules, {"boto3": mock_boto3}):
+        with patch("app.routers.photos.boto3.client", return_value=mock_s3):
             response = client.post(
                 "/api/photos/upload",
                 files=files,
