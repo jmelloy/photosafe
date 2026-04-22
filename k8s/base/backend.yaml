@@ -43,6 +43,13 @@ spec:
         - name: run-migrations
           image: ghcr.io/OWNER/photosafe-backend:latest
           command: ["alembic", "upgrade", "head"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 96Mi
+            limits:
+              cpu: 500m
+              memory: 192Mi
           env:
             - name: PHOTOSAFE_PASSWORD
               valueFrom:
@@ -86,10 +93,10 @@ spec:
           resources:
             requests:
               cpu: 250m
-              memory: 128Mi
+              memory: 96Mi
             limits:
               cpu: "1"
-              memory: 256Mi
+              memory: 192Mi
           readinessProbe:
             httpGet:
               path: /

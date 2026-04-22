@@ -99,8 +99,8 @@ jobs:
 
           # Set the image tag
           kustomize edit set image \
-            "ghcr.io/OWNER/photosafe-backend=ghcr.io/${REPO_OWNER}-backend:${{ steps.tag.outputs.tag }}" \
-            "ghcr.io/OWNER/photosafe-frontend=ghcr.io/${REPO_OWNER}-frontend:${{ steps.tag.outputs.tag }}"
+            "ghcr.io/OWNER/photosafe-backend=ghcr.io/${REPO_OWNER}/photosafe-backend:${{ steps.tag.outputs.tag }}" \
+            "ghcr.io/OWNER/photosafe-frontend=ghcr.io/${REPO_OWNER}/photosafe-frontend:${{ steps.tag.outputs.tag }}"
           
           kustomize edit add annotation app.kubernetes.io/version:${BUILD_VERSION} --force
 
