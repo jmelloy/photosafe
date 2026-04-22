@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional, Dict
 
+import boto3
 from fastapi import APIRouter, Depends, Form, HTTPException, File, UploadFile
 from sqlalchemy.orm import joinedload
 from sqlalchemy import func, or_
@@ -607,8 +608,6 @@ async def upload_photo(
     # Try S3 upload first
     if s3_bucket:
         try:
-            import boto3
-
             s3_prefix = os.getenv("S3_PREFIX", f"{current_user.username}")
             s3_key = f"{s3_prefix}/{photo_uuid}/{version}/{file.filename}"
             s3_client = boto3.client("s3")

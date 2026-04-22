@@ -66,25 +66,12 @@ def test_upload_to_s3_success(client, db_session):
     mock_s3 = MagicMock()
 
     with patch.dict(os.environ, {"S3_BUCKET": "test-bucket", "S3_PREFIX": "uploads"}):
-        with patch("app.routers.photos.boto3", create=True) as mock_boto3:
-            mock_boto3.client.return_value = mock_s3
-            # Patch the import inside the endpoint
-            import importlib
-            import app.routers.photos as photos_module
-
-            original_import = __builtins__.__import__ if hasattr(__builtins__, '__import__') else __import__
-
-            def patched_import(name, *args, **kwargs):
-                if name == "boto3":
-                    return mock_boto3
-                return original_import(name, *args, **kwargs)
-
-            with patch("builtins.__import__", side_effect=patched_import):
-                response = client.post(
-                    "/api/photos/upload",
-                    files=files,
-                    headers={"Authorization": f"Bearer {token}"},
-                )
+        with patch("app.routers.photos.boto3.client", return_value=mock_s3):
+            response = client.post(
+                "/api/photos/upload",
+                files=files,
+                headers={"Authorization": f"Bearer {token}"},
+            )
 
     assert response.status_code == 200
     data = response.json()
@@ -118,14 +105,7 @@ def test_upload_falls_back_to_local_on_s3_failure(client, db_session):
     mock_s3.put_object.side_effect = Exception("S3 connection error")
 
     with patch.dict(os.environ, {"S3_BUCKET": "test-bucket"}):
-        def patched_import(name, *args, **kwargs):
-            if name == "boto3":
-                m = MagicMock()
-                m.client.return_value = mock_s3
-                return m
-            return __import__(name, *args, **kwargs)
-
-        with patch("builtins.__import__", side_effect=patched_import):
+        with patch("app.routers.photos.boto3.client", return_value=mock_s3):
             response = client.post(
                 "/api/photos/upload",
                 files=files,
