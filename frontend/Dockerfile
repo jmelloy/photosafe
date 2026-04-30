@@ -38,6 +38,9 @@ RUN npm install --no-save vite@${VITE_VERSION}
 # Copy built files from builder stage
 COPY --from=builder /app/dist ./dist
 
+# Copy vite config so `vite preview` reads `preview.allowedHosts` at runtime
+COPY --from=builder /app/vite.config.ts ./vite.config.ts
+
 # Expose port
 EXPOSE 5173
 

@@ -37,6 +37,9 @@ export default defineConfig({
       },
     },
   },
+  preview: {
+    allowedHosts: ["localhost", "photosafe.melloy.life"],
+  },
   test: {
     globals: true,
     environment: "jsdom",
