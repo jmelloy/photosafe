@@ -116,7 +116,7 @@ services:
       - VITE_API_URL=${VITE_API_URL:-http://backend:8000}
       - GIT_SHA=${GIT_SHA:-production}
     # Production command uses preview mode
-    command: npm run preview -- --host 0.0.0.0
+    command: npm run preview -- --host 0.0.0.0 --port 5173
     depends_on:
       - backend
     restart: ${RESTART_POLICY:-always}
