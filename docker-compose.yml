@@ -109,23 +109,17 @@ services:
       dockerfile: Dockerfile
     container_name: photosafe-frontend
     ports:
-      - "${FRONTEND_PORT:-5000:5173}"
-    # Production: no volume mounts, built files are in the image
-    # Override in docker-compose.override.yml for development
-    environment:
-      - VITE_API_URL=${VITE_API_URL:-http://backend:8000}
-      - GIT_SHA=${GIT_SHA:-production}
-    # Production command uses preview mode
-    command: npm run preview -- --host 0.0.0.0 --port 5173
+      - "${FRONTEND_PORT:-5000:80}"
+    # Built files baked into the image; no command/env/volume overrides needed at runtime.
     depends_on:
       - backend
     restart: ${RESTART_POLICY:-always}
     healthcheck:
-      test: ["CMD-SHELL", 'node -e "require(''http'').get(''http://localhost:5173'', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on(''error'', () => process.exit(1))" || exit 1']
+      test: ["CMD-SHELL", "wget -qO- --timeout=3 http://localhost/ > /dev/null || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s
+      start_period: 30s
     networks:
       - photosafe-network
 
