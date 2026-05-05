@@ -5,6 +5,9 @@ exifread
 PyYAML
 python-ulid
 tqdm
+playwright
 
 # Note: exiftool must be installed separately
 # brew install exiftool
+
+# Note: after installing playwright, run: playwright install webkit
