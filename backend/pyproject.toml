@@ -27,7 +27,7 @@ dependencies = [
     "python-dateutil>=2.8.0",
     "tqdm>=4.67.3",
     "python-gazetteer>=0.1.0",
-    "pillow-heif>=1.1.1",
+    "pillow-heif>=1.3.0",
     "pyicloud @ git+https://github.com/jmelloy/pyicloud.git",
 ]
 
